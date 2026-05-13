@@ -1562,6 +1562,7 @@
     if(!driveTokenClient)return;
     driveTokenClient.requestAccessToken({prompt:'select_account'});
   }
+  window.driveSignIn=driveSignIn;
 
   function driveSignOut(){
     if(driveAccessToken)google.accounts.oauth2.revoke(driveAccessToken);
@@ -1574,6 +1575,7 @@
     globalState.calDefs=[];globalState.calendars=[];
     document.getElementById('mainContainer').innerHTML='';
   }
+  window.driveSignOut=driveSignOut;
 
   function driveShowLogin(show){
     driveHideLoading();
@@ -1683,6 +1685,7 @@
     _drivePendingRemote=null;
     driveSave();
   }
+  window.driveKeepLocal=driveKeepLocal;
 
   function driveApplyRemote(){
     const remote=_drivePendingRemote;_drivePendingRemote=null;
@@ -1691,6 +1694,7 @@
     applyRemoteData(remote,remote._canonicalIso);
     driveToast('✅ Données mises à jour depuis Google Drive');
   }
+  window.driveApplyRemote=driveApplyRemote;
 
   async function driveCheckOnConnect(){
     driveHideLoading();driveShowLogin(false);
