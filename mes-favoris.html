@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Mes Favoris v1.0.2 — https://github.com/[votre-repo] -->
+<!-- Mes Favoris v1.1.7 -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Favoris — v1.0.2</title>
+<title>Mes Favoris — v1.1.7</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -648,7 +648,7 @@
   /* iOS fix — prevent auto-zoom on input focus (triggered when font-size < 16px) */
   @supports (-webkit-touch-callout: none) {
     .modal-field, .modal-input, .palette-input, .palette-tags-input,
-    .topbar-search input, #authToken, #authGist, #authFilename, #newViewName {
+    .topbar-search input, #newViewName {
       font-size: 16px !important;
     }
   }
@@ -812,85 +812,117 @@
     /* hide desktop Ajouter btn on mobile (FAB takes over) */
     .sort-bar .btn-primary { display: none; }
   }
+  .vmenu-item { display:block;width:100%;text-align:left;padding:7px 10px;border:none;background:transparent;font-family:'Geist',sans-serif;font-size:12.5px;cursor:pointer;border-radius:6px;color:var(--text); }
+  .vmenu-item:hover { background:var(--surface-2); }
+  .vmenu-danger { color:#ff7088; }
+  .vmenu-danger:hover { background:rgba(255,112,136,.1) !important; }
+  .vmenu-drive { color:var(--accent); }
+  .vmenu-drive:hover { background:var(--accent-glow) !important; }
+  .drop-overlay {
+    position: fixed; inset: 0; z-index: 900;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 14px;
+    border: 3px dashed var(--accent);
+    pointer-events: none;
+  }
+  .drop-overlay.active { display: flex; }
+  .drop-icon { font-size: 48px; opacity: .9; }
+  .drop-label {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 1.5rem;
+    color: var(--accent);
+  }
+  .drop-sublabel {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  /* ── GOOGLE DRIVE OVERLAYS ── */
+  .drive-login-overlay, .drive-loading-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: var(--bg);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 20px; padding: 20px;
+  }
+  .drive-login-overlay.open, .drive-loading-overlay.open { display: flex; }
+  .drive-update-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(6px);
+    display: none; align-items: center; justify-content: center;
+  }
+  .drive-update-overlay.open { display: flex; }
+  .drive-update-card {
+    width: 100%; max-width: 440px; margin: 0 16px;
+    background: var(--surface); border: 1px solid var(--border-bright);
+    border-radius: 14px; padding: 28px 24px;
+    display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 24px 80px rgba(0,0,0,.7);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
 
-<!-- ── AUTH SCREEN ── -->
-<div id="authScreen" style="display:none;position:fixed;inset:0;z-index:2000;background:var(--bg);
-  align-items:center;justify-content:center;flex-direction:column;gap:0;padding:20px;">
-  <div style="width:100%;max-width:420px;background:var(--surface);border:1px solid var(--border-bright);
+<!-- ── GOOGLE DRIVE OVERLAYS ── -->
+
+<!-- Login overlay -->
+<div class="drive-login-overlay" id="driveLoginOverlay">
+  <div style="width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border-bright);
     border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.7)">
-    <!-- Header -->
-    <div style="padding:28px 28px 0">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:24px">
+    <div style="padding:28px 28px 24px;text-align:center">
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px">
         <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;position:relative;box-shadow:0 0 16px var(--accent-glow)">
           <span style="position:absolute;inset:7px;background:var(--bg);border-radius:2px;display:block"></span>
         </div>
         <span style="font-family:'Instrument Serif',serif;font-style:italic;font-size:22px;letter-spacing:-.02em">Mes favoris</span>
       </div>
-      <p style="font-size:12.5px;color:var(--text-2);margin-bottom:22px;line-height:1.6">
-        Connectez votre compte GitHub pour stocker vos favoris dans un Gist privé.
-        Accessible depuis n'importe quel appareil.
+      <p style="font-size:12.5px;color:var(--text-2);margin-bottom:24px;line-height:1.6">
+        Vos favoris sont stockés exclusivement sur Google Drive.<br>Connectez-vous pour y accéder.
       </p>
-
-      <!-- Token -->
-      <div style="margin-bottom:14px">
-        <div style="font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--text-3);text-transform:uppercase;margin-bottom:6px">
-          Personal Access Token GitHub
-        </div>
-        <input id="authToken" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-          style="width:100%;height:38px;padding:0 12px;background:var(--bg-2);border:1px solid var(--border);
-          border-radius:8px;color:var(--text);font-family:'Geist Mono',monospace;font-size:12px;outline:none">
-        <div style="font-size:11px;color:var(--text-3);margin-top:5px">
-          <a href="https://github.com/settings/tokens/new?scopes=gist&description=Mes+Favoris"
-             target="_blank" rel="noopener"
-             style="color:var(--accent);text-decoration:none">Créer un token</a>
-          · scope requis : <code style="font-family:'Geist Mono',monospace;background:var(--surface-2);padding:1px 5px;border-radius:3px">gist</code>
-        </div>
-      </div>
-
-      <!-- Gist ID (optional) -->
-      <div style="margin-bottom:14px">
-        <div style="font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--text-3);text-transform:uppercase;margin-bottom:6px">
-          Gist ID existant <span style="color:var(--text-3);font-weight:400;letter-spacing:0;text-transform:none;font-family:'Geist',sans-serif"> — laisser vide pour en créer un nouveau</span>
-        </div>
-        <input id="authGist" type="text" placeholder="a1b2c3d4e5f6… (optionnel)"
-          style="width:100%;height:38px;padding:0 12px;background:var(--bg-2);border:1px solid var(--border);
-          border-radius:8px;color:var(--text);font-family:'Geist Mono',monospace;font-size:12px;outline:none">
-      </div>
-
-      <!-- Filename -->
-      <div style="margin-bottom:20px">
-        <div style="font-family:'Geist Mono',monospace;font-size:9.5px;letter-spacing:.1em;color:var(--text-3);text-transform:uppercase;margin-bottom:6px">
-          Nom du fichier JSON dans le Gist
-        </div>
-        <input id="authFilename" type="text" placeholder="mes-favoris.json"
-          style="width:100%;height:38px;padding:0 12px;background:var(--bg-2);border:1px solid var(--border);
-          border-radius:8px;color:var(--text);font-family:'Geist Mono',monospace;font-size:12px;outline:none">
-        <div style="font-size:11px;color:var(--text-3);margin-top:5px">
-          Laissez vide pour utiliser <code style="font-family:'Geist Mono',monospace;background:var(--surface-2);padding:1px 5px;border-radius:3px">mes-favoris.json</code> — si votre fichier s'appelle <code style="font-family:'Geist Mono',monospace;background:var(--surface-2);padding:1px 5px;border-radius:3px">favoris.json</code>, indiquez-le ici.
-        </div>
-      </div>
-
-      <div id="authError" style="display:none;background:rgba(255,112,136,.1);border:1px solid rgba(255,112,136,.3);
-        color:#ff7088;border-radius:7px;padding:9px 12px;font-size:12px;margin-bottom:14px"></div>
-    </div>
-
-    <!-- Footer -->
-    <div style="padding:16px 28px 24px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--text-3);line-height:1.5">
-        Token stocké localement.<br>Aucune donnée envoyée à un tiers.
-      </div>
-      <button id="connectBtn" onclick="handleConnect()"
-        style="height:36px;padding:0 20px;background:var(--accent);color:#0a0a0a;border:none;
+      <button onclick="driveSignIn()"
+        style="height:38px;padding:0 24px;background:var(--accent);color:#0a0a0a;border:none;
         border-radius:8px;font-family:'Geist',sans-serif;font-size:13px;font-weight:700;
-        cursor:pointer;white-space:nowrap;transition:all .15s"
-        onmouseover="this.style.background='#d6ff7a'" onmouseout="this.style.background='var(--accent)'">
-        Connecter →
+        cursor:pointer;transition:all .15s">
+        🔑 Se connecter avec Google
+      </button>
+      <div id="driveLoginStatus" style="margin-top:12px;font-family:'Geist Mono',monospace;font-size:10.5px;color:var(--text-3)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading overlay -->
+<div class="drive-loading-overlay" id="driveLoadingOverlay">
+  <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;position:relative;box-shadow:0 0 16px var(--accent-glow)">
+    <span style="position:absolute;inset:7px;background:var(--bg);border-radius:2px;display:block"></span>
+  </div>
+  <div style="font-family:'Instrument Serif',serif;font-style:italic;font-size:1.4rem;color:var(--text)">Mes favoris</div>
+  <div style="font-family:'Geist Mono',monospace;font-size:11px;color:var(--text-3)">Connexion à Google Drive…</div>
+  <div style="width:32px;height:32px;border:2.5px solid var(--border-bright);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+</div>
+
+<!-- Update prompt overlay -->
+<div class="drive-update-overlay" id="driveUpdateOverlay">
+  <div class="drive-update-card">
+    <div style="font-family:'Instrument Serif',serif;font-style:italic;font-size:1.3rem;color:var(--text)">☁ Mise à jour disponible</div>
+    <div style="font-size:12.5px;color:var(--text-2);line-height:1.6" id="driveUpdateMsg"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="driveKeepLocal()" class="secondary-btn">Garder local</button>
+      <button onclick="driveApplyRemote()" class="save-btn">
+        Mettre à jour
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </button>
     </div>
   </div>
+</div>
+
+<!-- ── DRAG & DROP OVERLAY ── -->
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-icon">🔗</div>
+  <div class="drop-label">Déposer le lien</div>
+  <div class="drop-sublabel">Le titre sera récupéré automatiquement</div>
 </div>
 
 <!-- ── APP CONTENT ── -->
@@ -913,21 +945,26 @@
       <span class="kbd">⌘K</span>
     </div>
 
-    <button class="topbar-btn icon-btn" title="Importer">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-    </button>
     <button class="theme-toggle" id="themeToggle" title="Mode clair / sombre">
       <!-- icon injected by JS -->
     </button>
-    <button class="topbar-btn icon-btn" id="settingsBtn" title="Réglages / Déconnecter">
-      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-    </button>
+    <input type="file" id="importFileInput" accept=".json" style="display:none">
     <!-- Sync indicator -->
     <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
       <span id="syncDot" style="width:6px;height:6px;border-radius:50%;background:var(--text-3);transition:background .3s;flex-shrink:0"></span>
-      <span id="syncLabel" style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--text-3);min-width:60px"></span>
+      <span id="syncLabel" style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--text-3)"></span>
     </div>
-    <div class="avatar" title="">JC</div>
+    <!-- Version menu button -->
+    <button id="versionMenuBtn" style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;white-space:nowrap;transition:color .2s,border-color .2s;flex-shrink:0"></button>
+    <!-- Version dropdown menu -->
+    <div id="versionMenu" style="display:none;position:fixed;background:var(--surface);border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.4);border:1px solid var(--border-bright);padding:6px;z-index:500;min-width:170px;flex-direction:column;gap:2px;">
+      <div style="font-size:9.5px;font-family:'Geist Mono',monospace;color:var(--text-3);padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:4px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Menu</div>
+      <button class="vmenu-item" onclick="document.getElementById('importFileInput').click();document.getElementById('versionMenu').style.display='none'">⬆ Importer</button>
+      <button class="vmenu-item" onclick="exportData();document.getElementById('versionMenu').style.display='none'">⬇ Exporter</button>
+      <button class="vmenu-item vmenu-danger" id="razBtn">🗑 Remise à zéro</button>
+      <div style="height:1px;background:var(--border);margin:4px 0;"></div>
+      <button class="vmenu-item vmenu-drive" id="driveMenuBtn">☁ Drive</button>
+    </div>
   </div>
 
   <!-- MAIN -->
@@ -1065,6 +1102,47 @@
   </div>
 </div>
 
+<!-- EDIT VIEW MODAL -->
+<div class="modal-wrap" id="editViewWrap" onclick="handleModalClick(event, 'editViewWrap')">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-icon">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      </span>
+      <span class="modal-title-text">Modifier la vue</span>
+      <span class="modal-esc" onclick="closeEditView()">esc</span>
+    </div>
+    <div class="modal-body">
+      <div class="field-group">
+        <div class="modal-section">Nom</div>
+        <input type="text" class="modal-field" id="editViewName" placeholder="Nom de la vue" autocomplete="off">
+      </div>
+      <div class="field-group" style="margin-bottom:0">
+        <div class="modal-section">Couleur</div>
+        <div class="color-picker" id="editColorPicker">
+          <div class="color-swatch active" style="background:#c9ff5b" data-color="#c9ff5b" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#ff6b9d" data-color="#ff6b9d" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#6cb4ff" data-color="#6cb4ff" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#ffb84d" data-color="#ffb84d" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#b88aff" data-color="#b88aff" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#ff7e5f" data-color="#ff7e5f" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#5fffd4" data-color="#5fffd4" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#ff5fa0" data-color="#ff5fa0" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#a0a0ff" data-color="#a0a0ff" onclick="pickEditColor(this)"></div>
+          <div class="color-swatch" style="background:#ffd93d" data-color="#ffd93d" onclick="pickEditColor(this)"></div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="secondary-btn danger" onclick="removeViewFromEdit()">Supprimer</button>
+      <button class="save-btn" onclick="saveEditView()">
+        Enregistrer
+        <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
 <!-- CREATE VIEW MODAL -->
 <div class="modal-wrap" id="createViewWrap" onclick="handleModalClick(event, 'createViewWrap')">
   <div class="modal">
@@ -1117,67 +1195,28 @@
 
 <script>
 // ═══════════════════════════════════════════════════
-// ── GITHUB GIST BACKEND
+// ── APP VERSION & GOOGLE DRIVE BACKEND
 // ═══════════════════════════════════════════════════
 
-const LS_TOKEN    = 'mf_gh_token';
-const LS_GIST     = 'mf_gist_id';
-const LS_FILENAME = 'mf_filename';
-const DEFAULT_FILENAME = 'mes-favoris.json';
+const APP_VERSION = '1.1.7';
 
-let ghToken   = localStorage.getItem(LS_TOKEN)    || '';
-let gistId    = localStorage.getItem(LS_GIST)     || '';
-let gistFile  = localStorage.getItem(LS_FILENAME) || DEFAULT_FILENAME;
-let syncTimer = null;
-let isSyncing = false;
+const DRIVE_FILE_NAME = 'mes_favoris.json';
+const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
+const DRIVE_SCOPE     = 'https://www.googleapis.com/auth/drive.appdata';
+const DRIVE_LS        = 'mf.drive.'; // app-specific prefix — no collision with other apps
+const DRIVE_CACHE_KEY = 'mf.drive.cache'; // local data cache for instant display on reload
 
-// ── API HELPERS ──
-async function ghFetch(path, opts = {}) {
-  const res = await fetch(`https://api.github.com${path}`, {
-    ...opts,
-    headers: {
-      'Authorization': `Bearer ${ghToken}`,
-      'Accept': 'application/vnd.github+json',
-      'Content-Type': 'application/json',
-      ...(opts.headers || {})
-    }
-  });
-  if (!res.ok) throw new Error(`GitHub ${res.status}: ${await res.text()}`);
-  return res.json();
-}
-
-async function loadFromGist() {
-  const gist = await ghFetch(`/gists/${gistId}`);
-  const raw  = gist.files[gistFile]?.content;
-  if (!raw) throw new Error('Fichier introuvable dans le Gist');
-  return JSON.parse(raw);
-}
-
-async function saveToGist(data) {
-  await ghFetch(`/gists/${gistId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      files: { [gistFile]: { content: JSON.stringify(data, null, 2) } }
-    })
-  });
-}
-
-async function createGist() {
-  const initial = { views: defaultViews, bookmarks: [] };
-  const gist = await ghFetch('/gists', {
-    method: 'POST',
-    body: JSON.stringify({
-      description: 'Mes Favoris — données',
-      public: false,
-      files: { [gistFile]: { content: JSON.stringify(initial, null, 2) } }
-    })
-  });
-  return gist.id;
-}
+let driveTokenClient  = null;
+let driveAccessToken  = null;
+let driveFileId       = null;
+let _drivePendingRemote = null;
+let _drivePollTimer   = null;
+let _driveSaveTimer   = null;
+let _driveInitResolve = null;
+const driveInitReady  = new Promise(res => { _driveInitResolve = res; });
 
 // ── SYNC STATUS ──
 function setSyncStatus(status) {
-  // status: 'idle' | 'syncing' | 'ok' | 'error'
   const dot = document.getElementById('syncDot');
   const lbl = document.getElementById('syncLabel');
   if (!dot) return;
@@ -1193,12 +1232,123 @@ function setSyncStatus(status) {
   if (status === 'ok') setTimeout(() => { lbl.textContent = ''; }, 2500);
 }
 
+// ── DRIVE LIBRARY LOADER ──
+function driveLoadLibs() {
+  return new Promise(resolve => {
+    let gapiReady = false, gisReady = false;
+    const check = () => { if (gapiReady && gisReady) resolve(); };
+    const s1 = document.createElement('script');
+    s1.src = 'https://apis.google.com/js/api.js';
+    s1.onload = () => { gapi.load('client', async () => { await gapi.client.init({}); gapiReady = true; check(); }); };
+    document.head.appendChild(s1);
+    const s2 = document.createElement('script');
+    s2.src = 'https://accounts.google.com/gsi/client';
+    s2.onload = () => { gisReady = true; check(); };
+    document.head.appendChild(s2);
+  });
+}
+
+async function driveInit() {
+  await driveLoadLibs();
+  const hint        = sessionStorage.getItem(DRIVE_LS+'hint') || localStorage.getItem(DRIVE_LS+'hint') || '';
+  const wasConnected = localStorage.getItem(DRIVE_LS+'connected') === '1';
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id:  DRIVE_CLIENT_ID,
+    scope:      DRIVE_SCOPE,
+    login_hint: hint,
+    callback:   async (resp) => {
+      if (resp.error) { driveHideLoading(); driveShowLogin(true); return; }
+      driveAccessToken = resp.access_token;
+      gapi.client.setToken({ access_token: driveAccessToken });
+      try {
+        const ui = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+        const ud = await ui.json();
+        if (ud.email) { localStorage.setItem(DRIVE_LS+'hint', ud.email); sessionStorage.setItem(DRIVE_LS+'hint', ud.email); }
+        // Show initials in avatar
+        const initials = (ud.name || ud.email || 'G').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
+        const av = document.querySelector('.avatar');
+        if (av) { av.textContent = initials; av.title = ud.email || ''; }
+      } catch(e) {}
+      localStorage.setItem(DRIVE_LS+'connected', '1'); sessionStorage.setItem(DRIVE_LS+'connected', '1');
+      await driveCheckOnConnect();
+    }
+  });
+  _driveInitResolve();
+  if (wasConnected && hint) { driveShowLoading(); driveTokenClient.requestAccessToken({ prompt: 'none' }); }
+  else { driveShowLogin(true); }
+}
+
+async function driveSignIn() {
+  await driveInitReady;
+  if (!driveTokenClient) return;
+  driveTokenClient.requestAccessToken({ prompt: 'select_account' });
+}
+
+function handleDisconnect() {
+  if (!confirm('Déconnecter Google Drive ? Les données locales restent intactes.')) return;
+  if (driveAccessToken) google.accounts.oauth2.revoke(driveAccessToken);
+  driveAccessToken = null; driveFileId = null;
+  localStorage.removeItem(DRIVE_LS+'connected'); localStorage.removeItem(DRIVE_LS+'hint');
+  sessionStorage.removeItem(DRIVE_LS+'hint'); sessionStorage.removeItem(DRIVE_LS+'connected');
+  localStorage.removeItem(DRIVE_LS+'file_id'); localStorage.removeItem(DRIVE_LS+'last_sync'); localStorage.removeItem(DRIVE_LS+'last_sync_iso');
+  localStorage.removeItem(DRIVE_CACHE_KEY);
+  driveStopPolling();
+  views = defaultViews; bookmarks = [];
+  setSyncStatus('idle');
+  driveShowLogin(true);
+}
+
+function driveShowLogin(show) {
+  driveHideLoading();
+  document.getElementById('driveLoginOverlay').className = 'drive-login-overlay' + (show ? ' open' : '');
+}
+function driveShowLoading() { document.getElementById('driveLoadingOverlay').className = 'drive-loading-overlay open'; }
+function driveHideLoading() { document.getElementById('driveLoadingOverlay').className = 'drive-loading-overlay'; }
+
+async function driveGetFileId() {
+  if (driveFileId) return driveFileId;
+  const cached = localStorage.getItem(DRIVE_LS+'file_id');
+  if (cached) { driveFileId = cached; return driveFileId; }
+  const resp = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id)`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+  const data = await resp.json();
+  if (data.files && data.files.length > 0) {
+    driveFileId = data.files[0].id;
+    localStorage.setItem(DRIVE_LS+'file_id', driveFileId);
+    return driveFileId;
+  }
+  return null;
+}
+
 function scheduleSave() {
-  clearTimeout(syncTimer);
+  if (!driveAccessToken) return;
+  clearTimeout(_driveSaveTimer);
   setSyncStatus('syncing');
-  syncTimer = setTimeout(async () => {
+  _driveSaveTimer = setTimeout(async () => {
     try {
-      await saveToGist({ views, bookmarks });
+      const payload = JSON.stringify({ views, bookmarks }, null, 2);
+      const fileId = await driveGetFileId();
+      let url, method;
+      if (fileId) {
+        url = 'https://www.googleapis.com/upload/drive/v3/files/' + fileId + '?uploadType=media&fields=id,modifiedTime';
+        method = 'PATCH';
+      } else {
+        const meta = { name: DRIVE_FILE_NAME, parents: ['appDataFolder'] };
+        const form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' }));
+        form.append('file', new Blob([payload], { type: 'application/json' }));
+        const cr = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime', { method: 'POST', headers: { Authorization: 'Bearer ' + driveAccessToken }, body: form });
+        const cd = await cr.json();
+        driveFileId = cd.id; localStorage.setItem(DRIVE_LS+'file_id', driveFileId);
+        const iso = cd.modifiedTime || new Date().toISOString();
+        localStorage.setItem(DRIVE_LS+'last_sync_iso', iso); localStorage.setItem(DRIVE_LS+'last_sync', new Date(iso).toLocaleString('fr-FR'));
+        localStorage.setItem(DRIVE_CACHE_KEY, JSON.stringify({ views, bookmarks }));
+        setSyncStatus('ok'); return;
+      }
+      const resp = await fetch(url, { method, headers: { Authorization: 'Bearer ' + driveAccessToken, 'Content-Type': 'application/json' }, body: payload });
+      const data = await resp.json();
+      const iso = data.modifiedTime || new Date().toISOString();
+      localStorage.setItem(DRIVE_LS+'last_sync_iso', iso); localStorage.setItem(DRIVE_LS+'last_sync', new Date(iso).toLocaleString('fr-FR'));
+      localStorage.setItem(DRIVE_CACHE_KEY, JSON.stringify({ views, bookmarks }));
       setSyncStatus('ok');
     } catch(e) {
       setSyncStatus('error');
@@ -1207,90 +1357,87 @@ function scheduleSave() {
   }, 1500);
 }
 
-// ═══════════════════════════════════════════════════
-// ── AUTH SCREEN
-// ═══════════════════════════════════════════════════
-
-function showAuthScreen() {
-  document.getElementById('authScreen').style.display = 'flex';
-  document.getElementById('appContent').style.display = 'none';
-}
-
-function hideAuthScreen() {
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('appContent').style.display = '';
-}
-
-async function handleConnect() {
-  const token    = document.getElementById('authToken').value.trim();
-  const gist     = document.getElementById('authGist').value.trim();
-  const filename = document.getElementById('authFilename').value.trim() || DEFAULT_FILENAME;
-  if (!token) { authError('Token requis'); return; }
-
-  setAuthLoading(true);
+async function driveFetchAndCompare() {
+  if (!driveAccessToken) return;
   try {
-    ghToken  = token;
-    gistFile = filename;
+    const fileId = await driveGetFileId(); if (!fileId) return;
+    const metaResp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?fields=modifiedTime', { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+    const meta = await metaResp.json();
+    const remoteIso = meta.modifiedTime;
+    const remoteSyncedAt = remoteIso ? new Date(remoteIso) : null;
+    const localIso = localStorage.getItem(DRIVE_LS+'last_sync_iso');
+    const localSyncedAt = localIso ? new Date(localIso) : null;
 
-    const user = await ghFetch('/user');
-
-    if (gist) {
-      gistId = gist;
-      // Try to load — auto-detect file if not found under given name
-      const gistData = await ghFetch(`/gists/${gistId}`);
-      const files = Object.keys(gistData.files);
-      if (!gistData.files[gistFile]) {
-        // File not found — suggest existing files
-        const jsonFiles = files.filter(f => f.endsWith('.json'));
-        if (jsonFiles.length === 1) {
-          // Auto-fix: use the only JSON file found
-          gistFile = jsonFiles[0];
-          document.getElementById('authFilename').value = gistFile;
-        } else if (jsonFiles.length > 1) {
-          authError(`Fichier "${gistFile}" introuvable. Fichiers JSON disponibles : ${jsonFiles.join(', ')}`);
-          setAuthLoading(false); return;
-        } else {
-          authError(`Fichier "${gistFile}" introuvable dans ce Gist. Fichiers disponibles : ${files.join(', ')}`);
-          setAuthLoading(false); return;
-        }
-      }
-    } else {
-      gistId = await createGist();
+    // First load: no local sync timestamp yet — always fetch and apply silently
+    if (!localSyncedAt) {
+      const contentResp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+      const remote = await contentResp.json();
+      localStorage.setItem(DRIVE_LS+'last_sync_iso', remoteIso);
+      localStorage.setItem(DRIVE_LS+'last_sync', new Date(remoteIso).toLocaleString('fr-FR'));
+      applyRemoteData(remote);
+      return;
     }
 
-    localStorage.setItem(LS_TOKEN,    token);
-    localStorage.setItem(LS_GIST,     gistId);
-    localStorage.setItem(LS_FILENAME, gistFile);
+    // Subsequent polls: only alert if remote strictly newer than last push
+    if (!remoteSyncedAt || remoteSyncedAt <= localSyncedAt) return;
+    if (document.getElementById('driveUpdateOverlay').classList.contains('open')) return;
 
-    const initials = (user.name || user.login || 'U').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
-    document.querySelector('.avatar').textContent = initials;
-    document.querySelector('.avatar').title = user.login;
-
-    await initApp();
-    hideAuthScreen();
-  } catch(e) {
-    authError('Connexion échouée : ' + (e.message || 'vérifiez le token et le Gist ID'));
-  }
-  setAuthLoading(false);
+    const contentResp = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+    const remote = await contentResp.json();
+    if (!remote.bookmarks && !remote.views) return;
+    _drivePendingRemote = { ...remote, _canonicalIso: remoteIso };
+    const dateStr = remoteSyncedAt.toLocaleString('fr-FR');
+    document.getElementById('driveUpdateMsg').innerHTML =
+      'Une version plus récente est disponible sur Google Drive.<br>' +
+      '<b>Drive :</b> ' + (remote.bookmarks||[]).length + ' favori(s) — <i>' + dateStr + '</i><br>' +
+      '<b>Local :</b> ' + bookmarks.length + ' favori(s)';
+    document.getElementById('driveUpdateOverlay').classList.add('open');
+  } catch(e) { /* silent */ }
 }
 
-function handleDisconnect() {
-  localStorage.removeItem(LS_TOKEN);
-  localStorage.removeItem(LS_GIST);
-  ghToken = ''; gistId = '';
-  location.reload();
+function applyRemoteData(remote) {
+  if (remote.views)     { views     = remote.views;     }
+  if (remote.bookmarks) { bookmarks = (remote.bookmarks).map(b => ({ ...b, addedAt: b.addedAt || now, clicks: b.clicks || 0 })); }
+  localStorage.setItem(DRIVE_CACHE_KEY, JSON.stringify({ views, bookmarks }));
+  renderPills();
+  render();
 }
 
-function authError(msg) {
-  const el = document.getElementById('authError');
-  el.textContent = msg;
-  el.style.display = 'block';
+function driveKeepLocal() {
+  document.getElementById('driveUpdateOverlay').classList.remove('open');
+  _drivePendingRemote = null;
+  scheduleSave();
 }
-function setAuthLoading(on) {
-  const btn = document.getElementById('connectBtn');
-  btn.textContent = on ? 'Connexion…' : 'Connecter';
-  btn.disabled = on;
+
+function driveApplyRemote() {
+  const remote = _drivePendingRemote; _drivePendingRemote = null;
+  if (!remote) return;
+  document.getElementById('driveUpdateOverlay').classList.remove('open');
+  const iso = remote._canonicalIso || new Date().toISOString();
+  localStorage.setItem(DRIVE_LS+'last_sync_iso', iso);
+  localStorage.setItem(DRIVE_LS+'last_sync', new Date(iso).toLocaleString('fr-FR'));
+  applyRemoteData(remote);
+  showToast('✓ Données mises à jour depuis Google Drive');
 }
+
+async function driveCheckOnConnect() {
+  driveHideLoading(); driveShowLogin(false);
+  setSyncStatus('ok');
+  updateVersionBtn();
+  await driveFetchAndCompare();
+  driveStartPolling();
+}
+
+function driveStartPolling() {
+  driveStopPolling();
+  _drivePollTimer = setInterval(() => { if (document.visibilityState === 'visible' && driveAccessToken) driveFetchAndCompare(); }, 15000);
+}
+function driveStopPolling() { if (_drivePollTimer) { clearInterval(_drivePollTimer); _drivePollTimer = null; } }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && driveAccessToken) driveFetchAndCompare();
+  else driveStopPolling();
+});
 
 // ═══════════════════════════════════════════════════
 // ── APP STATE
@@ -1310,27 +1457,42 @@ const defaultViews = [
 let views     = defaultViews;
 let bookmarks = [];
 
+// Load local cache immediately so data appears before Drive reconnects
+(function loadCache() {
+  try {
+    const cached = JSON.parse(localStorage.getItem(DRIVE_CACHE_KEY));
+    if (cached) {
+      if (cached.views && cached.views.length)     views     = cached.views;
+      if (cached.bookmarks && cached.bookmarks.length) bookmarks = cached.bookmarks.map(b => ({ ...b, addedAt: b.addedAt || now, clicks: b.clicks || 0 }));
+    }
+  } catch(e) {}
+})();
+
+const LS_UI = 'mf.ui';
+function saveUIPrefs() {
+  localStorage.setItem(LS_UI, JSON.stringify({ collection: currentCollection, sort: currentSort }));
+}
+
 let currentCollection = 'all';
 let currentSort       = 'usage';
+
+// Restore UI prefs from previous session
+(function restoreUIPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(LS_UI));
+    if (p) {
+      if (p.collection) currentCollection = p.collection;
+      if (p.sort)       currentSort       = p.sort;
+    }
+  } catch(e) {}
+})();
 let pickedCol         = 'work';
 let pickedColor       = '#c9ff5b';
 let editMode          = false;
 let editingBookmarkId = null;
 
 async function initApp() {
-  try {
-    const data = await loadFromGist();
-    views     = data.views     || defaultViews;
-    bookmarks = (data.bookmarks || []).map(b => ({
-      ...b,
-      addedAt: b.addedAt || now,
-      clicks:  b.clicks  || 0,
-    }));
-  } catch(e) {
-    // New gist or parse error — start fresh
-    views     = defaultViews;
-    bookmarks = [];
-  }
+  // Data is loaded via driveFetchAndCompare on connect — just render defaults
   renderPills();
   render();
 }
@@ -1372,7 +1534,23 @@ function renderPills() {
     const pill  = document.createElement('div');
     pill.className = `pill editable col-${v.id} ${currentCollection === v.id ? 'active' : ''}`;
     pill.dataset.col = v.id;
+    pill.title = 'Clic : filtrer · Clic droit : modifier';
+
+    // Left click: filter (unless on remove button)
     pill.onclick = (e) => { if (!e.target.closest('.pill-remove')) filterCollection(v.id, pill); };
+
+    // Right click: open edit modal
+    pill.addEventListener('contextmenu', e => { e.preventDefault(); openEditView(v.id); });
+
+    // Long press on mobile
+    let _lpTimer = null;
+    pill.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse') return;
+      _lpTimer = setTimeout(() => { openEditView(v.id); _lpTimer = null; }, 500);
+    });
+    pill.addEventListener('pointerup',   () => { clearTimeout(_lpTimer); _lpTimer = null; });
+    pill.addEventListener('pointerleave',() => { clearTimeout(_lpTimer); _lpTimer = null; });
+
     pill.innerHTML = `
       <span class="pill-dot" style="background:${v.color}"></span>
       ${v.name}
@@ -1447,6 +1625,87 @@ function createView() {
   scheduleSave();
   showToast(`Vue "${name}" créée`);
 }
+
+// ── EDIT VIEW ──
+let editingViewId = null;
+let editPickedColor = '#c9ff5b';
+
+function openEditView(id) {
+  const v = views.find(x => x.id === id);
+  if (!v) return;
+  editingViewId = id;
+  editPickedColor = v.color;
+  document.getElementById('editViewName').value = v.name;
+  // Sync color swatches
+  document.querySelectorAll('#editColorPicker .color-swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.color === v.color);
+  });
+  document.getElementById('editViewWrap').classList.add('open');
+  setTimeout(() => document.getElementById('editViewName').focus(), 150);
+}
+function closeEditView() {
+  document.getElementById('editViewWrap').classList.remove('open');
+  editingViewId = null;
+}
+function pickEditColor(el) {
+  document.querySelectorAll('#editColorPicker .color-swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  editPickedColor = el.dataset.color;
+}
+function saveEditView() {
+  const v = views.find(x => x.id === editingViewId);
+  if (!v) return;
+  const name = document.getElementById('editViewName').value.trim();
+  if (!name) { showToast('Donnez un nom à la vue'); return; }
+  v.name = name;
+  v.color = editPickedColor;
+  closeEditView();
+  renderPills();
+  injectViewStyles();
+  render();
+  scheduleSave();
+  showToast('Vue modifiée');
+}
+function removeViewFromEdit() {
+  const id = editingViewId;
+  closeEditView();
+  removeView(id);
+}
+
+// ── IMPORT / EXPORT ──
+function exportData() {
+  const data = { views, bookmarks, exportedAt: new Date().toISOString(), version: APP_VERSION };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'mes-favoris-' + new Date().toISOString().slice(0, 10) + '.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('Export téléchargé');
+}
+
+document.getElementById('importFileInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!data.bookmarks) throw new Error('Format invalide');
+      if (!confirm(`Importer ${data.bookmarks.length} favori(s) et ${(data.views||[]).length} vue(s) ?\nLes données actuelles seront remplacées.`)) return;
+      if (data.views)     views     = data.views;
+      if (data.bookmarks) bookmarks = data.bookmarks.map(b => ({ ...b, addedAt: b.addedAt || Date.now(), clicks: b.clicks || 0 }));
+      renderPills();
+      render();
+      scheduleSave();
+      showToast(`✓ ${bookmarks.length} favoris importés`);
+    } catch(err) {
+      showToast('⚠ Fichier invalide');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+});
 
 // ── MODAL COL GRID ──
 function renderModalColGrid() {
@@ -1544,6 +1803,7 @@ function filterCollection(col, el) {
       p.classList.remove('active');
   });
   if (el) el.classList.add('active');
+  saveUIPrefs();
   render();
 }
 
@@ -1560,6 +1820,7 @@ function setSort(sort, label) {
   document.getElementById('currentSort').textContent = label;
   document.querySelectorAll('.sort-option').forEach(o => o.classList.toggle('active', o.dataset.sort === sort));
   document.getElementById('sortMenu').classList.remove('open');
+  saveUIPrefs();
   render();
 }
 
@@ -1722,7 +1983,7 @@ function showToast(msg) {
 // ── KEYBOARD ──
 document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'k') { e.preventDefault(); openPalette(); }
-  else if (e.key === 'Escape')  { closePalette(); closeCreateView(); }
+  else if (e.key === 'Escape')  { closePalette(); closeCreateView(); closeEditView(); }
   else if (e.key === '/' && !document.activeElement.matches('input,textarea')) {
     e.preventDefault(); document.getElementById('searchInput').focus();
   }
@@ -1766,20 +2027,193 @@ function toggleTheme() {
 
 document.getElementById('themeToggle').addEventListener('click', toggleTheme);
 
-// ── SETTINGS: disconnect ──
-document.getElementById('settingsBtn').addEventListener('click', () => {
-  if (confirm('Déconnecter et effacer le token ?')) handleDisconnect();
+// ── VERSION MENU ──
+const vMenuBtn = document.getElementById('versionMenuBtn');
+const vMenu    = document.getElementById('versionMenu');
+
+function updateVersionBtn() {
+  vMenuBtn.textContent = 'v' + APP_VERSION;
+  // reflect drive status
+  if (driveAccessToken) {
+    vMenuBtn.style.color = 'var(--accent)';
+    vMenuBtn.style.borderColor = 'var(--accent)';
+    document.getElementById('driveMenuBtn').textContent = '☁ ✓ Drive — Déconnecter';
+  } else {
+    vMenuBtn.style.color = 'var(--text-3)';
+    vMenuBtn.style.borderColor = 'var(--border)';
+    document.getElementById('driveMenuBtn').textContent = '☁ Drive — Connecter';
+  }
+}
+
+vMenuBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const isOpen = vMenu.style.display === 'flex';
+  vMenu.style.display = isOpen ? 'none' : 'flex';
+  if (!isOpen) {
+    const r = vMenuBtn.getBoundingClientRect();
+    vMenu.style.top  = (r.bottom + 6) + 'px';
+    vMenu.style.right = (window.innerWidth - r.right) + 'px';
+    vMenu.style.left = 'auto';
+    updateVersionBtn();
+  }
 });
+document.addEventListener('click', () => { vMenu.style.display = 'none'; });
+
+document.getElementById('razBtn').addEventListener('click', () => {
+  vMenu.style.display = 'none';
+  if (!confirm('Supprimer TOUS les favoris et vues personnalisées ?\nUn export automatique sera effectué avant.')) return;
+  exportData();
+  views     = defaultViews;
+  bookmarks = [];
+  localStorage.removeItem(DRIVE_CACHE_KEY);
+  renderPills(); render();
+  scheduleSave();
+  showToast('🗑 Données supprimées (export sauvegardé)');
+});
+
+document.getElementById('driveMenuBtn').addEventListener('click', () => {
+  vMenu.style.display = 'none';
+  if (driveAccessToken) handleDisconnect();
+  else driveSignIn();
+});
+
+// ── DRAG & DROP ──
+(function initDragDrop() {
+  let dragCounter = 0;
+  const overlay = document.getElementById('dropOverlay');
+
+  function hasUrl(dt) {
+    return dt.types && (dt.types.includes('text/uri-list') || dt.types.includes('text/plain'));
+  }
+
+  document.addEventListener('dragenter', e => {
+    if (!hasUrl(e.dataTransfer)) return;
+    e.preventDefault();
+    dragCounter++;
+    overlay.classList.add('active');
+  });
+
+  document.addEventListener('dragleave', () => {
+    dragCounter--;
+    if (dragCounter <= 0) { dragCounter = 0; overlay.classList.remove('active'); }
+  });
+
+  document.addEventListener('dragover', e => {
+    if (!hasUrl(e.dataTransfer)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+
+  async function fetchTitle(url) {
+    // Try multiple strategies to get the real page title
+
+    // Strategy 1: allorigins with raw=true (returns raw HTML bytes)
+    try {
+      const r = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url), { signal: AbortSignal.timeout(6000) });
+      const html = await r.text();
+      const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (m && m[1]) {
+        const t = m[1].trim()
+          .replace(/\r?\n/g, ' ')
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+          .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+          .replace(/&[a-z]+;/g, ' ')
+          .replace(/\s+/g, ' ').trim();
+        if (t && t.length > 0) return t;
+      }
+    } catch(e) {}
+
+    // Strategy 2: corsproxy.io
+    try {
+      const r = await fetch('https://corsproxy.io/?' + encodeURIComponent(url), { signal: AbortSignal.timeout(6000) });
+      const html = await r.text();
+      const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (m && m[1]) {
+        const t = m[1].trim()
+          .replace(/\r?\n/g, ' ')
+          .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+          .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(+n))
+          .replace(/\s+/g, ' ').trim();
+        if (t && t.length > 0) return t;
+      }
+    } catch(e) {}
+
+    return null;
+  }
+
+  document.addEventListener('drop', async e => {
+    e.preventDefault();
+    dragCounter = 0;
+    overlay.classList.remove('active');
+
+    // Extract URL
+    let url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '';
+    url = url.split('\n').map(u => u.trim()).filter(u => u && !u.startsWith('#'))[0] || '';
+    if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) return;
+
+    let domain = '';
+    try {
+      domain = new URL(url).hostname.replace(/^www\./, '');
+    } catch(err) { return; }
+
+    // Pre-fill modal immediately with URL as placeholder title
+    editingBookmarkId = null;
+
+    // Presélect la vue en cours (si c'est une vue custom), sinon la première vue
+    const validViewIds = views.map(v => v.id);
+    pickedCol = validViewIds.includes(currentCollection) ? currentCollection : (views[0]?.id || '');
+
+    document.getElementById('paletteUrl').value   = url;
+    document.getElementById('paletteTitle').value  = domain; // temp while fetching
+    document.getElementById('paletteTags').value   = '';
+    renderModalColGrid();
+
+    const preview = document.getElementById('palettePreview');
+    document.getElementById('ppFavicon').innerHTML = faviconHTML(domain, '🔗');
+    document.getElementById('ppTitle').textContent = domain;
+    document.getElementById('ppUrl').textContent   = domain;
+    preview.classList.add('show');
+
+    document.getElementById('saveBtnLabel').textContent = 'Enregistrer';
+    document.getElementById('paletteWrap').classList.add('open');
+
+    showToast('⏳ Récupération du titre…');
+
+    // Fetch real title in background
+    const title = await fetchTitle(url);
+    const finalTitle = title || url;
+
+    document.getElementById('paletteTitle').value  = finalTitle;
+    document.getElementById('ppTitle').textContent = finalTitle;
+
+    showToast(title ? '✓ Titre récupéré' : '⚠ Titre non disponible — URL utilisée');
+    setTimeout(() => document.getElementById('paletteTitle').focus(), 50);
+  });
+})();
 
 // ═══════════════════════════════════════════════════
 // ── BOOT
 // ═══════════════════════════════════════════════════
-if (ghToken && gistId) {
-  hideAuthScreen();
-  initApp();
-} else {
-  showAuthScreen();
-}
+// Init version button immediately
+vMenuBtn.textContent = 'v' + APP_VERSION;
+
+// Restore sort label from saved prefs
+(function restoreSortUI() {
+  const sortLabels = { usage: 'Utilisation', alpha: 'Alphabétique', date: 'Date d\'ajout' };
+  const lbl = sortLabels[currentSort] || 'Utilisation';
+  const el = document.getElementById('currentSort');
+  if (el) el.textContent = lbl;
+  document.querySelectorAll('.sort-option').forEach(o => o.classList.toggle('active', o.dataset.sort === currentSort));
+})();
+
+// Render cached data immediately (before Drive reconnects)
+renderPills();
+render();
+
+// Then connect to Drive
+driveInit();
 </script>
 </body>
 </html>
