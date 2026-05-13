@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mes Calendriers v5.3.1</title>
+<title>Mes Calendriers v5.3.2</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -596,7 +596,7 @@
 <script>
 (() => {
   'use strict';
-  const APP_VERSION = 'v5.3.1';
+  const APP_VERSION = 'v5.3.2';
   const LOCK_BEFORE_ISO='2025-10-06';
   const DOUBLE_DELAY=280,TAP_MAX=350,MOVE_TOL=10;
   const CALS_META_KEY='suiviSante.calendars';
@@ -1638,12 +1638,28 @@
       const localIso=localStorage.getItem(DRIVE_LS+'last_sync_iso');
       const localSyncedAt=localIso?new Date(localIso):null;
       const stateEmpty=globalState.calDefs.length===0;
-      if(!stateEmpty&&remoteSyncedAt&&localSyncedAt&&remoteSyncedAt<=localSyncedAt)return;
+
+      if(stateEmpty){
+        // First load after login — always fetch and apply silently
+        const contentResp=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',{headers:{Authorization:'Bearer '+driveAccessToken}});
+        const remote=await contentResp.json();
+        if(!remote.calendars)return;
+        // Store remote timestamp as reference so polls can detect newer versions
+        localStorage.setItem(DRIVE_LS+'last_sync_iso',remoteIso);
+        localStorage.setItem(DRIVE_LS+'last_sync',new Date(remoteIso).toLocaleString('fr-FR'));
+        applyRemoteData(remote,remoteIso);
+        return;
+      }
+
+      // Data in memory: only alert if remote is STRICTLY newer than our last push
+      if(!remoteSyncedAt)return;
+      if(localSyncedAt&&remoteSyncedAt<=localSyncedAt)return; // We are up to date
+
+      // Fetch content only now that we know it's newer
+      if(document.getElementById('driveUpdateOverlay').classList.contains('open'))return;
       const contentResp=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',{headers:{Authorization:'Bearer '+driveAccessToken}});
       const remote=await contentResp.json();
       if(!remote.calendars)return;
-      if(stateEmpty){applyRemoteData(remote,remoteIso);return;}
-      if(document.getElementById('driveUpdateOverlay').classList.contains('open'))return;
       _drivePendingRemote={...remote,_canonicalIso:remoteIso};
       const dateStr=remoteSyncedAt?remoteSyncedAt.toLocaleString('fr-FR'):'';
       document.getElementById('driveUpdateMsg').innerHTML=
@@ -1659,9 +1675,9 @@
       localStorage.setItem(CALS_META_KEY,JSON.stringify(remote.calendars));
       remote.calendars.forEach(def=>{const d=remote.data&&remote.data[def.id];if(d){localStorage.setItem('suiviSante.days.'+def.id,JSON.stringify(d.days||{}));localStorage.setItem('suiviSante.notes.'+def.id,JSON.stringify(d.notes||{}));localStorage.setItem('suiviSante.meds.'+def.id,JSON.stringify(d.meds||[]));}if(def.title)localStorage.setItem('suiviSante.title.'+def.id,def.title);});
     }
-    const iso=remoteIso||new Date().toISOString();
-    localStorage.setItem(DRIVE_LS+'last_sync_iso',iso);
-    localStorage.setItem(DRIVE_LS+'last_sync',new Date(iso).toLocaleString('fr-FR'));
+    // NOTE: do NOT update DRIVE_LS+'last_sync_iso' here — that is only set after a push (driveSave).
+    // The caller (driveFetchAndCompare on first load) sets it explicitly before calling us.
+    localStorage.setItem(DRIVE_LS+'last_sync',new Date(remoteIso||Date.now()).toLocaleString('fr-FR'));
     document.getElementById('mainContainer').innerHTML='';
     globalState.calDefs=[];globalState.calendars=[];
     migrateOldData();
@@ -1682,6 +1698,10 @@
     const remote=_drivePendingRemote;_drivePendingRemote=null;
     if(!remote)return;
     document.getElementById('driveUpdateOverlay').classList.remove('open');
+    // Store remote timestamp as new reference — poll won't re-prompt unless Drive gets newer again
+    const iso=remote._canonicalIso||new Date().toISOString();
+    localStorage.setItem(DRIVE_LS+'last_sync_iso',iso);
+    localStorage.setItem(DRIVE_LS+'last_sync',new Date(iso).toLocaleString('fr-FR'));
     applyRemoteData(remote,remote._canonicalIso);
     driveToast('✅ Données mises à jour depuis Google Drive');
   }
