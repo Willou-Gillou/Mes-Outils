@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- Mes Favoris v1.2.0 -->
+<!-- Mes Favoris v1.1.6 -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Favoris — v1.2.0</title>
+<title>Mes Favoris — v1.1.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -812,16 +812,6 @@
     /* hide desktop Ajouter btn on mobile (FAB takes over) */
     .sort-bar .btn-primary { display: none; }
   }
-  .quick-filter {
-    display: flex; align-items: center; gap: 5px;
-    padding: 4px 10px; border-radius: 20px;
-    border: 1.5px solid var(--border); background: transparent;
-    font-family: 'Geist', sans-serif; font-size: 11.5px; font-weight: 500;
-    color: var(--text-2); cursor: pointer; white-space: nowrap;
-    transition: all 0.15s;
-  }
-  .quick-filter:hover { border-color: var(--border-bright); color: var(--text); }
-  .quick-filter.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
   .vmenu-item { display:block;width:100%;text-align:left;padding:7px 10px;border:none;background:transparent;font-family:'Geist',sans-serif;font-size:12.5px;cursor:pointer;border-radius:6px;color:var(--text); }
   .vmenu-item:hover { background:var(--surface-2); }
   .vmenu-danger { color:#ff7088; }
@@ -1027,16 +1017,6 @@
           Ajouter
         </button>
         <div class="sort-right">
-        <!-- Quick filters -->
-        <button class="quick-filter" id="qf-recent" data-qf="recent" onclick="toggleQuickFilter('recent')" title="Ajoutés dans les 7 derniers jours">
-          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          Récents
-        </button>
-        <button class="quick-filter" id="qf-top" data-qf="top" onclick="toggleQuickFilter('top')" title="Les plus cliqués">
-          <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M2 12l3-3 4 4 5-5 4 4 4-4"/><path d="M2 20h20"/></svg>
-          Les + consultés
-        </button>
-        <div style="width:1px;height:16px;background:var(--border);flex-shrink:0"></div>
         <button class="sort-trigger" onclick="toggleSortMenu(event)">
           <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M7 12h10M11 18h2"/></svg>
           <span id="currentSort">Utilisation</span>
@@ -1218,7 +1198,7 @@
 // ── APP VERSION & GOOGLE DRIVE BACKEND
 // ═══════════════════════════════════════════════════
 
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.1.6';
 
 const DRIVE_FILE_NAME = 'mes_favoris.json';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
@@ -1488,26 +1468,8 @@ let bookmarks = [];
   } catch(e) {}
 })();
 
-const LS_UI = 'mf.ui';
-function saveUIPrefs() {
-  localStorage.setItem(LS_UI, JSON.stringify({ collection: currentCollection, sort: currentSort, quickFilter }));
-}
-
 let currentCollection = 'all';
 let currentSort       = 'usage';
-let quickFilter       = null; // 'recent' | 'top' | null
-
-// Restore UI prefs from previous session
-(function restoreUIPrefs() {
-  try {
-    const p = JSON.parse(localStorage.getItem(LS_UI));
-    if (p) {
-      if (p.collection)   currentCollection = p.collection;
-      if (p.sort)         currentSort       = p.sort;
-      if (p.quickFilter !== undefined) quickFilter = p.quickFilter;
-    }
-  } catch(e) {}
-})();
 let pickedCol         = 'work';
 let pickedColor       = '#c9ff5b';
 let editMode          = false;
@@ -1745,18 +1707,12 @@ function getFilteredData() {
   else if (currentCollection === 'recent') data = data.filter(b => (now - b.addedAt) < 7*day);
   else if (currentCollection !== 'all')    data = data.filter(b => b.collection === currentCollection);
 
-  // Quick filters applied on top
-  if      (quickFilter === 'recent') data = data.filter(b => (now - b.addedAt) < 7*day);
-  else if (quickFilter === 'top')    data = data.filter(b => b.clicks > 0).sort((a,b) => b.clicks - a.clicks);
-
   const q = document.getElementById('searchInput').value.toLowerCase();
   if (q) data = data.filter(b => b.title.toLowerCase().includes(q) || b.domain.includes(q));
 
-  if (quickFilter !== 'top') { // top already sorted above
-    if      (currentSort === 'alpha') data.sort((a,b) => a.title.localeCompare(b.title, 'fr'));
-    else if (currentSort === 'usage') data.sort((a,b) => b.clicks - a.clicks);
-    else                              data.sort((a,b) => b.addedAt - a.addedAt);
-  }
+  if      (currentSort === 'alpha') data.sort((a,b) => a.title.localeCompare(b.title, 'fr'));
+  else if (currentSort === 'usage') data.sort((a,b) => b.clicks - a.clicks);
+  else                              data.sort((a,b) => b.addedAt - a.addedAt);
 
   return data;
 }
@@ -1831,19 +1787,7 @@ function filterCollection(col, el) {
       p.classList.remove('active');
   });
   if (el) el.classList.add('active');
-  saveUIPrefs();
   render();
-}
-
-function toggleQuickFilter(qf) {
-  quickFilter = (quickFilter === qf) ? null : qf;
-  document.querySelectorAll('.quick-filter').forEach(b => b.classList.toggle('active', b.dataset.qf === quickFilter));
-  saveUIPrefs();
-  render();
-}
-
-function restoreQuickFilterUI() {
-  document.querySelectorAll('.quick-filter').forEach(b => b.classList.toggle('active', b.dataset.qf === quickFilter));
 }
 
 function onSearch() { render(); }
@@ -1859,7 +1803,6 @@ function setSort(sort, label) {
   document.getElementById('currentSort').textContent = label;
   document.querySelectorAll('.sort-option').forEach(o => o.classList.toggle('active', o.dataset.sort === sort));
   document.getElementById('sortMenu').classList.remove('open');
-  saveUIPrefs();
   render();
 }
 
@@ -2237,18 +2180,6 @@ document.getElementById('driveMenuBtn').addEventListener('click', () => {
 // ═══════════════════════════════════════════════════
 // Init version button immediately
 vMenuBtn.textContent = 'v' + APP_VERSION;
-
-// Restore sort label from saved prefs
-(function restoreSortUI() {
-  const sortLabels = { usage: 'Utilisation', alpha: 'Alphabétique', date: 'Date d\'ajout' };
-  const lbl = sortLabels[currentSort] || 'Utilisation';
-  const el = document.getElementById('currentSort');
-  if (el) el.textContent = lbl;
-  document.querySelectorAll('.sort-option').forEach(o => o.classList.toggle('active', o.dataset.sort === currentSort));
-})();
-
-// Restore quick filter UI
-restoreQuickFilterUI();
 
 // Render cached data immediately (before Drive reconnects)
 renderPills();
