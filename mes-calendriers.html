@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mes Calendriers v5.3.2</title>
+<title>Mes Calendriers v5.4.6</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -132,8 +132,19 @@
   .med-chip .chip-capsule .cc-l{flex:1;height:100%;}
   .med-chip .chip-capsule .cc-r{flex:1;height:100%;filter:brightness(0.72);}
   .med-chip.active{border-width:2px;background:#f0f4ff;}
+  /* v5.4.0 — Sport pratiqué très visible (popup notes) */
+  .med-chip.sport-chip{padding:7px 14px 7px 10px;font-size:14px;}
+  .med-chip.sport-chip.active{
+    background:#1565c0;color:#fff;border-color:#0d47a1;font-weight:700;
+    box-shadow:0 2px 8px rgba(21,101,192,0.35);transform:scale(1.04);
+  }
+  .med-chip.sport-chip.active .sport-chip-icon{filter:drop-shadow(0 0 2px rgba(255,255,255,0.5));}
 
   .note-textarea{flex:1 1 auto;min-height:70px;width:100%;border-radius:10px;border:1px solid var(--border);padding:10px;font-size:16px;resize:vertical;background:#fff;color:var(--text);overflow-y:auto;font-family:'DM Sans',Arial,sans-serif;}
+  /* v5.4.4 — bouton "Ajouter l'heure" sous la zone de note (jour d'aujourd'hui) */
+  .note-add-date-row{display:flex;justify-content:flex-start;flex-shrink:0;}
+  .note-add-date-row .btn{background:#eef4ff;border-color:#c8d8f8;color:#1a6fc4;font-weight:600;}
+  .note-add-date-row .btn:hover{background:#dbe7ff;}
   .note-actions{display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;}
   .btn{padding:9px 13px;border-radius:10px;border:1px solid var(--border);cursor:pointer;background:#f6f7fb;font-size:13px;font-family:'DM Sans',Arial,sans-serif;}
   .btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
@@ -296,8 +307,10 @@
   /* modale edit cal */
   .ecal-bd{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;}
   .ecal-bd.open{display:block;}
-  .ecal-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:18px;padding:24px;width:min(380px,92vw);z-index:201;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none;flex-direction:column;gap:14px;}
+  .ecal-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:18px;padding:24px;width:min(380px,92vw);z-index:201;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
   .ecal-modal.open{display:flex;}
+  /* v5.4.0 — Boutons d'action collés en bas pour rester accessibles */
+  .ecal-foot{position:sticky;bottom:-24px;background:#fff;margin:0 -24px -24px;padding:12px 24px;border-top:1px solid var(--border);z-index:2;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
   .ecal-modal h3{margin:0;font-size:17px;font-weight:700;}
   .ecal-lbl{font-size:12px;color:var(--muted);margin-bottom:3px;}
   .ecal-inp{width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--border);font-family:'DM Sans',Arial,sans-serif;font-size:14px;background:#f6f7fb;}
@@ -306,7 +319,6 @@
   .ecal-col{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .12s;}
   .ecal-col.sel{border-color:#222;}
   .ecal-col:hover{transform:scale(1.15);}
-  .ecal-foot{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:4px;}
   .ecal-btn{padding:9px 16px;border-radius:10px;border:1px solid var(--border);background:#f6f7fb;cursor:pointer;font-size:14px;font-family:'DM Sans',Arial,sans-serif;}
   .ecal-btn.prim{border:none;background:var(--accent);color:#fff;}
   .ecal-btn.dng{border-color:#ffd2d2;background:#fff0f0;color:#c00;}
@@ -396,6 +408,9 @@
       <div class="consult-chips" id="consultChipsList"></div>
     </div>
     <textarea id="noteTextarea" class="note-textarea" placeholder="Note libre..."></textarea>
+    <div class="note-add-date-row" id="noteAddDateRow" style="display:none;">
+      <button class="btn" id="noteAddDateBtn" type="button">🕒 Ajouter l'heure</button>
+    </div>
     <div class="note-actions">
       <button class="btn btn-danger" id="noteDeleteBtn">Supprimer</button>
       <button class="btn"            id="noteCancelBtn">Annuler</button>
@@ -596,7 +611,7 @@
 <script>
 (() => {
   'use strict';
-  const APP_VERSION = 'v5.3.2';
+  const APP_VERSION = 'v5.4.6';
   const LOCK_BEFORE_ISO='2025-10-06';
   const DOUBLE_DELAY=280,TAP_MAX=350,MOVE_TOL=10;
   const CALS_META_KEY='suiviSante.calendars';
@@ -990,13 +1005,125 @@
   const noteTitleEl=document.getElementById('noteModalTitle');
   const noteTextarea=document.getElementById('noteTextarea');
   let activeCal=null,editingISO=null,currentMedsTaken=[],currentConsults=[];
+  /* v5.4.4 — Insertion d'un horodatage :
+     - clic sur médicament (Santé) -> "HH:MM : Prise du/des médicament(s) X."
+     - clic sur sport (Sport)      -> "HH:MM : Pratique du/des sport(s) X."
+     - bouton "Ajouter l'heure"    -> nouvel horodatage à l'heure courante
+     Tout cela est limité au jour d'aujourd'hui. */
+  let _isToday=false;         // true si la note ouverte concerne aujourd'hui
+  let _stampPrefix=null;      // ex: "14:23 : " — dernier horodatage inséré
+  let _stampMedsText='';      // ex: "Prise du/des médicament(s) Doliprane. "
+  /* v5.4.6 — Médicaments/sports déjà cochés à l'ouverture de la note.
+     Seuls les médicaments AJOUTÉS dans cette session (NON sélectionné -> sélectionné)
+     déclenchent l'insertion automatique d'un horodatage. */
+  let _baselineMeds=new Set();
+
+  // Liste des médicaments/sports ajoutés depuis l'ouverture (pas dans la baseline)
+  function _newlySelectedIds(){
+    return currentMedsTaken.filter(id=>!_baselineMeds.has(id));
+  }
+
+  function _buildMedsTextForStamp(){
+    if(!activeCal)return '';
+    const ids=_newlySelectedIds();
+    if(ids.length===0)return '';
+    const meds=loadMeds(activeCal.id);
+    const medMap={};meds.forEach(m=>medMap[m.id]=m);
+    const names=ids.map(id=>medMap[id]?medMap[id].name:null).filter(Boolean);
+    if(names.length===0)return '';
+    const verb=activeCal.type==='sport' ? 'Pratique du/des sport(s) ' : 'Prise du/des médicament(s) ';
+    return verb+names.join(', ')+'. ';
+  }
+
+  // Insère un nouvel horodatage en bas de la zone de note.
+  // includeMeds=true (par défaut) -> ajoute "Prise du/des médicament(s) ..." si des chips sont cochés.
+  // includeMeds=false             -> n'ajoute que "HH:MM : " (utilisé par le bouton "Ajouter l'heure").
+  function _insertNewStamp(includeMeds=true){
+    const now=new Date();
+    const hh=String(now.getHours()).padStart(2,'0');
+    const mm=String(now.getMinutes()).padStart(2,'0');
+    const prefix=hh+':'+mm+' : ';
+    const medsText=includeMeds ? _buildMedsTextForStamp() : '';
+    const cur=noteTextarea.value;
+    const sep=(cur && !cur.endsWith('\n')) ? '\n' : '';
+    noteTextarea.value=cur+sep+prefix+medsText;
+    _stampPrefix=prefix;
+    _stampMedsText=medsText;
+    noteTextarea.scrollTop=noteTextarea.scrollHeight;
+  }
+
+  // Met à jour le texte des médicaments/sports sur la ligne du stamp actif
+  function _refreshStampMeds(){
+    if(!_stampPrefix)return;
+    const txt=noteTextarea.value;
+    const idx=txt.lastIndexOf(_stampPrefix);
+    if(idx<0){_stampPrefix=null;_stampMedsText='';return;}
+    const afterPrefixStart=idx+_stampPrefix.length;
+    let lineEnd=txt.indexOf('\n',afterPrefixStart);
+    if(lineEnd<0)lineEnd=txt.length;
+    const currentLineContent=txt.slice(afterPrefixStart,lineEnd);
+    // Retire l'ancien meds-text s'il est en début de ligne
+    let userPart=currentLineContent;
+    if(_stampMedsText && userPart.startsWith(_stampMedsText)){
+      userPart=userPart.slice(_stampMedsText.length);
+    }
+    const newMedsText=_buildMedsTextForStamp();
+    noteTextarea.value=txt.slice(0,afterPrefixStart)+newMedsText+userPart+txt.slice(lineEnd);
+    _stampMedsText=newMedsText;
+  }
+
+  // Supprime totalement la ligne horodatée active (et son saut de ligne précédent si présent)
+  function _removeActiveStamp(){
+    if(!_stampPrefix)return;
+    const txt=noteTextarea.value;
+    const idx=txt.lastIndexOf(_stampPrefix);
+    if(idx<0){_stampPrefix=null;_stampMedsText='';return;}
+    let lineEnd=txt.indexOf('\n',idx+_stampPrefix.length);
+    if(lineEnd<0)lineEnd=txt.length;
+    let cutStart=idx;
+    if(cutStart>0 && txt[cutStart-1]==='\n')cutStart--;
+    else if(lineEnd<txt.length && txt[lineEnd]==='\n')lineEnd++;
+    noteTextarea.value=txt.slice(0,cutStart)+txt.slice(lineEnd);
+    _stampPrefix=null;_stampMedsText='';
+  }
+
+  // Appelé sur clic utilisateur d'un chip médicament/sport (jour d'aujourd'hui uniquement)
+  // Règle (v5.4.6) : seul l'événement "non sélectionné -> sélectionné" sur un médicament
+  // hors baseline déclenche/met à jour le stamp. Décocher un médicament déjà coché à
+  // l'ouverture n'a aucun effet sur la note.
+  function _onUserMedToggle(medId){
+    if(!_isToday)return;
+    // Si le médicament toggle fait partie de la baseline, on ignore (aucun changement).
+    if(_baselineMeds.has(medId))return;
+    const newlyCount=_newlySelectedIds().length;
+    if(!_stampPrefix){
+      // Pas encore de stamp -> on en crée un si au moins un nouveau med est coché
+      if(newlyCount>0)_insertNewStamp();
+    } else {
+      if(newlyCount>0){_refreshStampMeds();}
+      else{_removeActiveStamp();}
+    }
+  }
+
+  // Bouton "Ajouter l'heure" — insère un horodatage SANS les médicaments déjà cochés
+  function _onAddDateClick(){
+    if(!_isToday)return;
+    _insertNewStamp(false);
+    noteTextarea.focus();
+    const len=noteTextarea.value.length;
+    try{noteTextarea.setSelectionRange(len,len);}catch{}
+  }
 
   function openNoteModal(cal,iso){
     activeCal=cal;editingISO=iso;
+    _stampPrefix=null;_stampMedsText='';
+    _isToday=(iso===toISO(new Date()));
     noteTitleEl.textContent='Note du '+iso;
     const noteData=cal.notes[iso]||{};
     noteTextarea.value=noteData.text||'';
     currentMedsTaken=[...(noteData.meds||[])];currentConsults=[...(noteData.consults||[])];
+    // v5.4.6 — Snapshot des médicaments/sports déjà cochés à l'ouverture (baseline)
+    _baselineMeds=new Set(currentMedsTaken);
 
     const meds=loadMeds(cal.id);
     const takenList=document.getElementById('medsTakenList');
@@ -1010,15 +1137,16 @@
       else{
         takenSection.style.display='block';
         meds.forEach(med=>{
-          const chip=document.createElement('div');chip.className='med-chip';
+          const chip=document.createElement('div');chip.className='med-chip sport-chip';
           const isTaken=currentMedsTaken.includes(med.id);
           if(isTaken){chip.classList.add('active');}
-          const iconSpan=document.createElement('span');iconSpan.textContent=med.icon||'🏅';iconSpan.style.fontSize='18px';
+          const iconSpan=document.createElement('span');iconSpan.className='sport-chip-icon';iconSpan.textContent=med.icon||'🏅';iconSpan.style.fontSize='20px';
           const label=document.createElement('span');label.textContent=med.name;
           chip.appendChild(iconSpan);chip.appendChild(label);
           chip.onclick=()=>{
             if(currentMedsTaken.includes(med.id)){currentMedsTaken=currentMedsTaken.filter(x=>x!==med.id);chip.classList.remove('active');}
             else{currentMedsTaken.push(med.id);chip.classList.add('active');}
+            _onUserMedToggle(med.id);
           };
           takenList.appendChild(chip);
         });
@@ -1037,6 +1165,7 @@
         chip.onclick=()=>{
           if(currentMedsTaken.includes(med.id)){currentMedsTaken=currentMedsTaken.filter(x=>x!==med.id);chip.classList.remove('active');chip.style.borderColor='';}
           else{currentMedsTaken.push(med.id);chip.classList.add('active');chip.style.borderColor=med.color;}
+          _onUserMedToggle(med.id);
         };
         takenList.appendChild(chip);
       });
@@ -1061,6 +1190,8 @@
         cl.appendChild(ch);
       });
     })();
+    // v5.4.4 — Affiche "Ajouter l'heure" uniquement pour la note d'aujourd'hui (santé + sport)
+    document.getElementById('noteAddDateRow').style.display=_isToday?'flex':'none';
     setTimeout(()=>noteTextarea.focus(),0);
   }
 
@@ -1068,7 +1199,10 @@
     noteBackdrop.classList.remove('open');noteModal.classList.remove('open');
     noteBackdrop.setAttribute('hidden','');noteModal.setAttribute('hidden','');
     document.body.style.overflow='';activeCal=null;editingISO=null;currentMedsTaken=[];
+    _stampPrefix=null;_stampMedsText='';_isToday=false;_baselineMeds=new Set();
   }
+
+  document.getElementById('noteAddDateBtn').onclick=_onAddDateClick;
 
   document.getElementById('noteSaveBtn').onclick=()=>{
     if(!activeCal||!editingISO)return;
@@ -1240,10 +1374,18 @@
       if(!cal.notesVisible){cal.el.notesList.style.display='none';return;}
       const prefix=`${cal.current.year}-${String(cal.current.month+1).padStart(2,'0')}`;
       const meds=loadMeds(cal.id);const medMap={};meds.forEach(m=>medMap[m.id]=m);
+      const _isSport=cal.type==='sport';
       const entries=Object.entries(cal.notes).filter(([d])=>d.startsWith(prefix)).sort();
       cal.el.notesList.innerHTML=entries.length===0?'<em>Aucune note pour ce mois.</em>':
         '<strong>Notes du mois :</strong><ul>'+entries.map(([d,n])=>{
-          const medsStr=n.meds&&n.meds.length?n.meds.map(id=>{const m=medMap[id];return m?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${m.color};border:2px solid #000;margin-right:3px;vertical-align:middle;"></span>${m.name}`:''}).filter(Boolean).join(', '):'';
+          const medsStr=n.meds&&n.meds.length?n.meds.map(id=>{
+            const m=medMap[id];if(!m)return '';
+            if(_isSport){
+              return `<span style="font-size:14px;vertical-align:middle;margin-right:3px;">${m.icon||'🏅'}</span>${m.name}`;
+            }
+            // v5.4.0 — icône gélule au lieu d'un rond
+            return `<span style="display:inline-flex;vertical-align:middle;margin-right:4px;width:14px;height:8px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,0.25);transform:rotate(-25deg);"><span style="flex:1;background:${m.color};"></span><span style="flex:1;background:${m.color};filter:brightness(0.72);"></span></span>${m.name}`;
+          }).filter(Boolean).join(', '):'';
           return`<li><strong>${d}</strong>${medsStr?' — '+medsStr:''}${n.text?' : '+n.text:''}</li>`;
         }).join('')+'</ul>';
       cal.el.notesList.style.display='block';
@@ -1405,7 +1547,14 @@
       if(entries.length===0){notesList.innerHTML='<em>Aucune note sur cette période.</em>';}
       else{
         notesList.innerHTML='<ul>'+entries.map(([d,n])=>{
-          const medsStr=n.meds&&n.meds.length?n.meds.map(id=>{const m=medMap[id];return m?`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${m.color};border:1px solid #000;margin-right:3px;vertical-align:middle;"></span>${m.name}`:''}).filter(Boolean).join(', '):'';
+          const medsStr=n.meds&&n.meds.length?n.meds.map(id=>{
+            const m=medMap[id];if(!m)return '';
+            if(isSport){
+              return `<span style="font-size:14px;vertical-align:middle;margin-right:3px;">${m.icon||'🏅'}</span>${m.name}`;
+            }
+            // v5.4.0 — icône gélule au lieu d'un rond
+            return `<span style="display:inline-flex;vertical-align:middle;margin-right:4px;width:14px;height:8px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,0.25);transform:rotate(-25deg);"><span style="flex:1;background:${m.color};"></span><span style="flex:1;background:${m.color};filter:brightness(0.72);"></span></span>${m.name}`;
+          }).filter(Boolean).join(', '):'';
           const consultsStr=(!isSport&&n.consults&&n.consults.length)?n.consults.map(cid=>{const ct=CONSULT_TYPES.find(x=>x.id===cid);return ct?`${ct.icon} ${ct.label}`:''}).filter(Boolean).join(', '):'';
           return`<li><strong>${d}</strong>${medsStr?' — '+medsStr:''}${consultsStr?' · '+consultsStr:''}${n.text?' : '+n.text:''}</li>`;
         }).join('')+'</ul>';
@@ -1548,8 +1697,11 @@
       }
     });
     _driveInitResolve();
-    if(wasConnected&&hint){driveShowLoading();driveTokenClient.requestAccessToken({prompt:'none'});}
-    else{driveShowLogin(true);}
+    // v5.4.2 — Safari bloque les pop-ups non déclenchés par un clic utilisateur.
+    // On affiche donc toujours l'écran de connexion (bouton "Se connecter") plutôt
+    // que de lancer requestAccessToken automatiquement. Le sélecteur de compte
+    // apparaîtra au clic sur le bouton (geste utilisateur => pop-up autorisé).
+    driveShowLogin(true);
   }
 
   async function driveSignIn(){
@@ -1798,6 +1950,7 @@
 
     document.getElementById('ecalBd').classList.add('open');
     document.getElementById('ecalModal').classList.add('open');
+    document.getElementById('ecalModal').scrollTop=0;
     document.getElementById('ecalTitle').focus();
   }
 
