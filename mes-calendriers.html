@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mes Calendriers v5.4.6</title>
+<title>Mes Calendriers v5.5.0</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -394,7 +394,6 @@
 
 <main class="container" id="mainContainer"></main>
 
-<!-- MODAL NOTE -->
 <div class="note-backdrop" id="noteBackdrop" hidden></div>
 <div class="note-modal" id="noteModal" role="dialog" aria-modal="true" hidden>
   <div class="note-card">
@@ -419,7 +418,6 @@
   </div>
 </div>
 
-<!-- CONFIRM -->
 <div class="confirm-backdrop" id="confirmBackdrop"></div>
 <div class="confirm-modal" id="confirmModal" role="dialog" aria-modal="true">
   <div class="confirm-card">
@@ -432,7 +430,6 @@
   </div>
 </div>
 
-<!-- PICK CALENDAR MODAL -->
 <div class="pick-backdrop" id="pickBackdrop"></div>
 <div class="pick-modal" id="pickModal" role="dialog" aria-modal="true">
   <div class="pick-card">
@@ -446,7 +443,6 @@
   </div>
 </div>
 
-<!-- RAPPORT 6 MOIS MODAL -->
 <div class="report-backdrop" id="reportBackdrop"></div>
 <div class="report-modal" id="reportModal" role="dialog" aria-modal="true">
   <div class="report-card">
@@ -465,7 +461,6 @@
   </div>
 </div>
 
-<!-- GOOGLE DRIVE: Login overlay -->
 <div class="drive-login-overlay" id="driveLoginOverlay">
   <div style="text-align:center;max-width:360px;padding:0 24px;">
     <div style="font-size:2rem;margin-bottom:8px;">📅</div>
@@ -476,14 +471,12 @@
   </div>
 </div>
 
-<!-- GOOGLE DRIVE: Loading overlay -->
 <div class="drive-loading-overlay" id="driveLoadingOverlay">
   <div style="font-size:1.4rem;font-weight:700;color:#222;">Mes Calendriers</div>
   <div style="font-size:0.9rem;color:#666;">Connexion à Google Drive…</div>
   <div style="width:36px;height:36px;border:3px solid #ddd;border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
 </div>
 
-<!-- GOOGLE DRIVE: Update prompt -->
 <div class="drive-update-overlay" id="driveUpdateOverlay">
   <div class="drive-update-card">
     <div style="font-weight:700;font-size:16px;">☁️ Mise à jour disponible</div>
@@ -495,7 +488,6 @@
   </div>
 </div>
 
-<!-- MODAL NOUVEAU CALENDRIER -->
 <div class="newcal-backdrop" id="newcalBackdrop"></div>
 <div class="newcal-modal" id="newcalModal" role="dialog" aria-modal="true">
   <div class="newcal-card">
@@ -525,8 +517,7 @@
       <div>
         <div class="newcal-label">Couleur principale du calendrier</div>
         <div class="newcal-color-row" id="newcalColorRow">
-          <!-- Généré par JS -->
-        </div>
+          </div>
       </div>
       <div class="newcal-actions">
         <button class="btn" id="newcalCancelBtn">Annuler</button>
@@ -537,7 +528,6 @@
   </div>
 </div>
 
-<!-- MODAL COULEUR MEDICAMENT -->
 <div class="medcolor-backdrop" id="medcolorBackdrop"></div>
 <div class="medcolor-modal" id="medcolorModal" role="dialog" aria-modal="true">
   <div class="medcolor-card">
@@ -561,7 +551,6 @@
 </div>
 
 
-<!-- ── v5.1 modale edit calendrier ── -->
 <div class="ecal-bd" id="ecalBd"></div>
 <div class="ecal-modal" id="ecalModal" role="dialog" aria-modal="true">
   <h3>✏️ Modifier le calendrier</h3>
@@ -597,7 +586,6 @@
     <button class="ecal-btn prim" id="ecalSaveBtn">Enregistrer</button>
   </div>
 </div>
-<!-- ── v5.1 modale réordonnement ── -->
 <div class="reord-bd" id="reordBd"></div>
 <div class="reord-modal" id="reordModal" role="dialog" aria-modal="true">
   <h3>↕️ Ordre des calendriers</h3>
@@ -611,7 +599,7 @@
 <script>
 (() => {
   'use strict';
-  const APP_VERSION = 'v5.4.6';
+  const APP_VERSION = 'v5.5.0';
   const LOCK_BEFORE_ISO='2025-10-06';
   const DOUBLE_DELAY=280,TAP_MAX=350,MOVE_TOL=10;
   const CALS_META_KEY='suiviSante.calendars';
@@ -1677,9 +1665,14 @@
     await driveLoadLibs();
     const hint=sessionStorage.getItem(DRIVE_LS+'hint')||localStorage.getItem(DRIVE_LS+'hint')||'';
     const wasConnected=localStorage.getItem(DRIVE_LS+'connected')==='1';
+    let resolved = false;
+    let timeoutId = null;
+
     driveTokenClient=google.accounts.oauth2.initTokenClient({
       client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPE,login_hint:hint,
       callback:async(resp)=>{
+        resolved = true;
+        if(timeoutId) clearTimeout(timeoutId);
         if(resp.error){
           driveHideLoading();
           driveShowLogin(true);
@@ -1697,11 +1690,26 @@
       }
     });
     _driveInitResolve();
-    // v5.4.2 — Safari bloque les pop-ups non déclenchés par un clic utilisateur.
-    // On affiche donc toujours l'écran de connexion (bouton "Se connecter") plutôt
-    // que de lancer requestAccessToken automatiquement. Le sélecteur de compte
-    // apparaîtra au clic sur le bouton (geste utilisateur => pop-up autorisé).
-    driveShowLogin(true);
+
+    if(wasConnected){
+      driveShowLoading();
+      timeoutId = setTimeout(()=>{
+        if(!resolved){
+          driveHideLoading();
+          driveShowLogin(true);
+          driveToast('Délai de connexion dépassé (5s), veuillez vous reconnecter.', true, 4000);
+        }
+      }, 5000);
+      try {
+        // Tente de récupérer un token silencieusement
+        driveTokenClient.requestAccessToken({prompt: 'none'});
+      } catch(e) {
+        driveHideLoading();
+        driveShowLogin(true);
+      }
+    } else {
+      driveShowLogin(true);
+    }
   }
 
   async function driveSignIn(){
