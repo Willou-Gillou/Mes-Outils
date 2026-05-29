@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mes Calendriers v5.5.1</title>
+<title>Mes Calendriers v5.5.2</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -441,6 +441,7 @@
   </div>
 </div>
 
+<!-- GOOGLE DRIVE SYNC -->
 <div class="drive-login-overlay" id="driveLoginOverlay">
   <div style="text-align:center;max-width:360px;padding:0 24px;">
     <div style="font-size:2rem;margin-bottom:8px;">📅</div>
@@ -578,7 +579,7 @@
 <script>
 (() => {
   'use strict';
-  const APP_VERSION = 'v5.5.1';
+  const APP_VERSION = 'v5.5.2';
   const LOCK_BEFORE_ISO='2025-10-06';
   const DOUBLE_DELAY=280,TAP_MAX=350,MOVE_TOL=10;
   const CALS_META_KEY='suiviSante.calendars';
@@ -1555,14 +1556,12 @@
   globalState.calDefs=savedDefs;
   savedDefs.forEach(def=>{createCalendarDOM(def);const cal=initCalendar(def);globalState.calendars.push(cal);});
 
-
   /* ── GOOGLE DRIVE SYNC AVEC COOKIES (FIX IFRAME) ── */
   const DRIVE_FILE_NAME='mes_calendriers.json';
   const DRIVE_CLIENT_ID='68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
   const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
   const DRIVE_LS='cal.drive.';  
 
-  // FONCTIONS COOKIES POUR CONTOURNER LE BLOCAGE LOCALSTORAGE EN IFRAME
   function _setCookie(name, value) {
       document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=31536000; SameSite=None; Secure";
   }
@@ -1612,6 +1611,19 @@
     const hint=_getCookie(DRIVE_LS+'hint')||sessionStorage.getItem(DRIVE_LS+'hint')||localStorage.getItem(DRIVE_LS+'hint')||'';
     const wasConnected=(_getCookie(DRIVE_LS+'connected')==='1')||(localStorage.getItem(DRIVE_LS+'connected')==='1');
 
+    // NOUVEAUTÉ : VÉRIFICATION DU CACHE DU TOKEN
+    const cachedToken = _getCookie(DRIVE_LS+'token') || localStorage.getItem(DRIVE_LS+'token');
+    const cachedExp = _getCookie(DRIVE_LS+'token_exp') || localStorage.getItem(DRIVE_LS+'token_exp');
+
+    // Si on a un token en cache et qu'il n'est pas expiré, on l'utilise direct (Bypass total de Google)
+    if (wasConnected && cachedToken && cachedExp && Date.now() < parseInt(cachedExp, 10)) {
+        driveAccessToken = cachedToken;
+        gapi.client.setToken({access_token: driveAccessToken});
+        _driveInitResolve();
+        await driveCheckOnConnect();
+        return; 
+    }
+
     driveTokenClient=google.accounts.oauth2.initTokenClient({
       client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPE,login_hint:hint,
       callback:async(resp)=>{
@@ -1622,6 +1634,14 @@
         }
         driveAccessToken=resp.access_token;
         gapi.client.setToken({access_token:driveAccessToken});
+        
+        // CACHE DU TOKEN (valable 1 heure)
+        const exp = Date.now() + ((resp.expires_in || 3599) * 1000) - 60000;
+        localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
+        localStorage.setItem(DRIVE_LS+'token_exp', exp.toString());
+        _setCookie(DRIVE_LS+'token', driveAccessToken);
+        _setCookie(DRIVE_LS+'token_exp', exp.toString());
+
         try{
           const ui=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+driveAccessToken}});
           const ud=await ui.json();
@@ -1674,10 +1694,14 @@
     
     localStorage.removeItem(DRIVE_LS+'connected');
     localStorage.removeItem(DRIVE_LS+'hint');
+    localStorage.removeItem(DRIVE_LS+'token');
+    localStorage.removeItem(DRIVE_LS+'token_exp');
     sessionStorage.removeItem(DRIVE_LS+'hint');
     sessionStorage.removeItem(DRIVE_LS+'connected');
     _deleteCookie(DRIVE_LS+'connected');
     _deleteCookie(DRIVE_LS+'hint');
+    _deleteCookie(DRIVE_LS+'token');
+    _deleteCookie(DRIVE_LS+'token_exp');
     
     localStorage.removeItem(DRIVE_LS+'file_id');localStorage.removeItem(DRIVE_LS+'last_sync');localStorage.removeItem(DRIVE_LS+'last_sync_iso');
     driveStopPolling();driveShowLogin(true);
