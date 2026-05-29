@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Mes Calendriers v5.5.0</title>
+<title>Mes Calendriers v5.5.1</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
@@ -31,7 +31,6 @@
   .calendar-card{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.08);margin-bottom:22px;position:relative;}
   .delete-cal-btn{position:absolute;top:10px;right:10px;width:26px;height:26px;border-radius:50%;background:#fff0f0;border:1px solid #ffd2d2;color:#c00;font-size:14px;cursor:pointer;display:grid;place-items:center;z-index:2;}
   .delete-cal-btn:hover{background:#ffd2d2;}
-  /* .calendar-header v5.1 ci-dessous */
   .cal-type-badge{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;letter-spacing:0.04em;flex-shrink:0;}
   .cal-type-badge.sante{background:#e8f5e9;color:#388e3c;}
   .cal-type-badge.sport{background:#e3f2fd;color:#1565c0;}
@@ -39,7 +38,6 @@
   .weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;color:var(--muted);font-size:13px;margin-top:8px;padding:0 16px;}
   .days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;padding:12px;}
 
-  /* CELLULE JOUR */
   .day{
     height:var(--day-size);border-radius:var(--day-radius);border:1px solid #ccc;
     background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -53,13 +51,11 @@
   .day.out{opacity:.4;}
   .day-num{line-height:1;}
 
-  /* Pictogramme gélule bi-color dans la cellule */
   .day-meds{display:flex;gap:3px;flex-wrap:wrap;justify-content:center;max-width:100%;padding:0 2px;}
   .capsule-icon{width:14px;height:8px;border-radius:4px;flex-shrink:0;overflow:hidden;display:flex;border:1px solid rgba(0,0,0,0.2);transform:rotate(-30deg);}
   .capsule-icon .cap-left{flex:1;height:100%;}
   .capsule-icon .cap-right{flex:1;height:100%;filter:brightness(0.75);}
 
-  /* Icône note (crayon) */
   .note-icon{position:absolute;top:2px;right:3px;font-size:10px;line-height:1;}
 
   .since-line{margin:10px 16px;font-size:13px;}
@@ -67,7 +63,6 @@
   .legend-item{display:flex;align-items:center;gap:5px;line-height:1;}
   .color-box{width:13px;height:13px;display:inline-block;border:1px solid rgba(0,0,0,0.1);border-radius:2px;}
 
-  /* Légende médicaments : gélule + nom */
   .legend-meds{font-size:12px;color:var(--muted);margin:2px 8px 8px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center;}
   .legend-med-item{display:flex;align-items:center;gap:6px;line-height:1;}
   .legend-capsule{width:18px;height:10px;border-radius:5px;flex-shrink:0;overflow:hidden;display:flex;border:1px solid rgba(0,0,0,0.2);transform:rotate(-30deg);}
@@ -102,7 +97,6 @@
   .med-row{display:flex;align-items:center;gap:6px;flex-shrink:0;}
   .med-row .drawer-input{flex:1;}
 
-  /* Swatch gélule dans le drawer */
   .med-capsule-swatch{width:28px;height:16px;border-radius:8px;flex-shrink:0;overflow:hidden;display:flex;border:2px solid rgba(255,255,255,0.3);transform:rotate(-20deg);cursor:pointer;transition:transform 0.2s;}
   .med-capsule-swatch:hover{transform:rotate(-20deg) scale(1.15);}
   .med-capsule-swatch .s-left{flex:1;height:100%;}
@@ -122,7 +116,6 @@
   .meds-section-title{font-size:12px;font-weight:bold;color:var(--muted);margin-bottom:6px;}
   .meds-taken-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
 
-  /* Chip médicament : gélule + nom */
   .med-chip{
     padding:5px 12px 5px 8px;border-radius:20px;font-size:13px;
     border:1px solid var(--border);background:#f6f7fb;cursor:pointer;
@@ -132,7 +125,6 @@
   .med-chip .chip-capsule .cc-l{flex:1;height:100%;}
   .med-chip .chip-capsule .cc-r{flex:1;height:100%;filter:brightness(0.72);}
   .med-chip.active{border-width:2px;background:#f0f4ff;}
-  /* v5.4.0 — Sport pratiqué très visible (popup notes) */
   .med-chip.sport-chip{padding:7px 14px 7px 10px;font-size:14px;}
   .med-chip.sport-chip.active{
     background:#1565c0;color:#fff;border-color:#0d47a1;font-weight:700;
@@ -141,7 +133,6 @@
   .med-chip.sport-chip.active .sport-chip-icon{filter:drop-shadow(0 0 2px rgba(255,255,255,0.5));}
 
   .note-textarea{flex:1 1 auto;min-height:70px;width:100%;border-radius:10px;border:1px solid var(--border);padding:10px;font-size:16px;resize:vertical;background:#fff;color:var(--text);overflow-y:auto;font-family:'DM Sans',Arial,sans-serif;}
-  /* v5.4.4 — bouton "Ajouter l'heure" sous la zone de note (jour d'aujourd'hui) */
   .note-add-date-row{display:flex;justify-content:flex-start;flex-shrink:0;}
   .note-add-date-row .btn{background:#eef4ff;border-color:#c8d8f8;color:#1a6fc4;font-weight:600;}
   .note-add-date-row .btn:hover{background:#dbe7ff;}
@@ -160,7 +151,7 @@
   .confirm-msg{font-size:13px;color:var(--muted);line-height:1.5;}
   .confirm-actions{display:flex;gap:8px;justify-content:flex-end;}
 
-  /* ── RAPPORT 6 MOIS ── */
+  /* RAPPORT 6 MOIS */
   .report-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:80;display:none;}
   .report-backdrop.open{display:block;}
   .report-modal{position:fixed;inset:0;display:none;align-items:flex-start;justify-content:center;z-index:90;padding:16px;overflow-y:auto;}
@@ -193,7 +184,6 @@
   .report-notes-list ul{margin:0;padding-left:18px;}
   .report-notes-list li{margin-bottom:4px;}
 
-  /* Modal choix calendrier */
   .pick-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:85;display:none;}
   .pick-backdrop.open{display:block;}
   .pick-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:95;padding:16px;}
@@ -225,8 +215,6 @@
     .report-meds-legend{page-break-after:avoid;page-break-inside:avoid;}
     .report-notes-section{page-break-before:always;}
     body{background:white;}
-  }
-  @media print{
     .report-card{max-width:100%!important;width:100%!important;overflow:hidden;}
     .report-grid{max-width:100%!important;width:100%!important;}
     .report-month-block{max-width:100%!important;width:100%!important;}
@@ -243,7 +231,7 @@
   .drive-loading-overlay.open{display:flex;}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  /* MODAL IMPORT VERSION */
+  /* MODALS */
   .import-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:none;}
   .import-backdrop.open{display:block;}
   .import-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:105;padding:16px;}
@@ -254,7 +242,6 @@
   .import-msg{font-size:14px;color:var(--muted);line-height:1.6;text-align:center;}
   .import-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
 
-  /* MODAL NOUVEAU CALENDRIER */
   .newcal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;display:none;}
   .newcal-backdrop.open{display:block;}
   .newcal-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:105;padding:16px;}
@@ -278,7 +265,6 @@
   .newcal-color-opt.selected{border-color:#222;}
   .newcal-actions{display:flex;gap:8px;justify-content:flex-end;}
 
-  /* MODAL COULEUR MEDICAMENT */
   .medcolor-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:300;display:none;}
   .medcolor-backdrop.open{display:block;}
   .medcolor-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:305;padding:16px;}
@@ -298,18 +284,15 @@
   .medcolor-custom-input{width:48px;height:36px;padding:2px;border-radius:8px;border:1px solid var(--border);cursor:pointer;}
   .medcolor-actions{display:flex;gap:8px;justify-content:flex-end;}
 
-  /* ── v5.1 ── */
   .edit-cal-btn{position:absolute;top:10px;right:42px;width:26px;height:26px;border-radius:50%;background:#f0f4ff;border:1px solid #c8d8f8;color:#1a6fc4;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:2;transition:background .15s;}
   .edit-cal-btn:hover{background:#d8e8ff;}
   .calendar-header{padding:12px 80px 12px 16px;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;}
   .cal-title-inp{font-weight:700;font-size:18px;border:none;background:transparent;font-family:'DM Sans',Arial,sans-serif;color:var(--text);flex:1;min-width:40px;outline:none;padding:2px 4px;border-radius:6px;margin:0;}
   .cal-title-inp:focus{background:#f0f4ff;}
-  /* modale edit cal */
   .ecal-bd{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;}
   .ecal-bd.open{display:block;}
   .ecal-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:18px;padding:24px;width:min(380px,92vw);z-index:201;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none;flex-direction:column;gap:14px;max-height:90vh;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
   .ecal-modal.open{display:flex;}
-  /* v5.4.0 — Boutons d'action collés en bas pour rester accessibles */
   .ecal-foot{position:sticky;bottom:-24px;background:#fff;margin:0 -24px -24px;padding:12px 24px;border-top:1px solid var(--border);z-index:2;display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
   .ecal-modal h3{margin:0;font-size:17px;font-weight:700;}
   .ecal-lbl{font-size:12px;color:var(--muted);margin-bottom:3px;}
@@ -322,14 +305,13 @@
   .ecal-btn{padding:9px 16px;border-radius:10px;border:1px solid var(--border);background:#f6f7fb;cursor:pointer;font-size:14px;font-family:'DM Sans',Arial,sans-serif;}
   .ecal-btn.prim{border:none;background:var(--accent);color:#fff;}
   .ecal-btn.dng{border-color:#ffd2d2;background:#fff0f0;color:#c00;}
-  /* modale médicaments dans edit cal */
   .ecal-meds-section{border-top:1px solid var(--border);padding-top:12px;display:flex;flex-direction:column;gap:8px;}
   .ecal-meds-title{font-size:13px;font-weight:600;color:var(--muted);}
   .ecal-med-row{display:flex;align-items:center;gap:8px;}
   .ecal-med-inp{flex:1;padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-family:'DM Sans',Arial,sans-serif;font-size:13px;background:#f6f7fb;}
   .ecal-med-del{width:26px;height:26px;border-radius:50%;border:1px solid #ffd2d2;background:#fff0f0;color:#c00;cursor:pointer;display:grid;place-items:center;font-size:13px;flex-shrink:0;}
   .ecal-med-add{padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:#f6f7fb;cursor:pointer;font-size:13px;font-family:'DM Sans',Arial,sans-serif;}
-  /* modale réordonnement */
+  
   .reord-bd{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;display:none;}
   .reord-bd.open{display:block;}
   .reord-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:18px;padding:24px;width:min(360px,92vw);z-index:201;box-shadow:0 12px 40px rgba(0,0,0,.25);display:none;flex-direction:column;gap:14px;max-height:80vh;overflow-y:auto;}
@@ -348,12 +330,10 @@
   .reord-btn{padding:9px 16px;border-radius:10px;border:1px solid var(--border);background:#f6f7fb;cursor:pointer;font-size:14px;font-family:'DM Sans',Arial,sans-serif;}
   .reord-btn.prim{border:none;background:var(--accent);color:#fff;}
 
-
   .ecal-state-row{display:flex;align-items:center;gap:8px;}
   .ecal-state-color{width:28px;height:28px;border-radius:6px;border:1px solid #ddd;cursor:pointer;padding:1px;flex-shrink:0;}
   .ecal-state-lbl{flex:1;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:#f6f7fb;}
 
-  /* v5.2.3 – icônes sport & consultations */
   .sport-icon-picker{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0 2px;}
   .sport-icon-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border);background:#f6f7fb;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
   .sport-icon-btn.sel{background:#00b8d4;border-color:#00b8d4;transform:scale(1.15);}
@@ -516,8 +496,7 @@
       </div>
       <div>
         <div class="newcal-label">Couleur principale du calendrier</div>
-        <div class="newcal-color-row" id="newcalColorRow">
-          </div>
+        <div class="newcal-color-row" id="newcalColorRow"></div>
       </div>
       <div class="newcal-actions">
         <button class="btn" id="newcalCancelBtn">Annuler</button>
@@ -549,7 +528,6 @@
     </div>
   </div>
 </div>
-
 
 <div class="ecal-bd" id="ecalBd"></div>
 <div class="ecal-modal" id="ecalModal" role="dialog" aria-modal="true">
@@ -586,6 +564,7 @@
     <button class="ecal-btn prim" id="ecalSaveBtn">Enregistrer</button>
   </div>
 </div>
+
 <div class="reord-bd" id="reordBd"></div>
 <div class="reord-modal" id="reordModal" role="dialog" aria-modal="true">
   <h3>↕️ Ordre des calendriers</h3>
@@ -599,7 +578,7 @@
 <script>
 (() => {
   'use strict';
-  const APP_VERSION = 'v5.5.0';
+  const APP_VERSION = 'v5.5.1';
   const LOCK_BEFORE_ISO='2025-10-06';
   const DOUBLE_DELAY=280,TAP_MAX=350,MOVE_TOL=10;
   const CALS_META_KEY='suiviSante.calendars';
@@ -789,20 +768,15 @@
     btn('Importer (JSON)','',()=>fi.click());
     divider();
 
-    /* Rapport 6 mois */
     sec('Rapports');
     btn('Rapport 6 derniers mois','',()=>{closeDrawer();setTimeout(()=>openPickModal((id,title,includeNotes)=>openReport(id,title,includeNotes)),200);});
     divider();
 
-
-
-    /* Calendriers */
     sec('Calendriers');
     btn('↕️ Modifier l\'ordre','',()=>{closeDrawer();setTimeout(openReordModal,150);});
     btn('＋ Nouveau calendrier','',()=>{closeDrawer();openNewCalModal();});
     divider();
 
-    /* Danger */
     sec('Zone dangereuse');
     btn('Réinitialiser TOUS les calendriers','danger',async()=>{
       const ok=await showConfirm('Réinitialiser tout','Effacer toutes les données de tous les calendriers ?');if(!ok)return;
@@ -878,7 +852,6 @@
     document.getElementById('newcalSinceInp').value='';
     document.querySelectorAll('.newcal-type-btn').forEach(b=>b.classList.remove('selected'));
 
-    // Build color options
     const row=document.getElementById('newcalColorRow');
     row.innerHTML='';
     let selectedCalColor = CAL_COLORS[0].value;
@@ -911,7 +884,6 @@
       document.getElementById('newcalForm').style.display='flex';
       document.getElementById('newcalCloseBtn').style.display='block';
 
-      // Placeholder selon type
       const defTitle = _newcalType==='sport' ? 'Ex: Calendrier running' : 'Ex: Calendrier migraines';
       document.getElementById('newcalTitleInp').placeholder=defTitle;
       const defSince = _newcalType==='sport' ? 'Ex: Depuis la dernière séance' : 'Ex: Depuis la dernière crise';
@@ -971,12 +943,10 @@
       <div class="notes-list" id="notesList_${def.id}"></div>
     `;
     container.appendChild(section);
-    // v5.1 titre éditable inline
     document.getElementById('calTitle_'+def.id).addEventListener('input',function(){
       const v=this.value.trim();
       if(v){localStorage.setItem('suiviSante.title.'+def.id,v);def.title=v;saveCalDefs();}
     });
-    // v5.1 bouton edit
     document.getElementById('editBtn_'+def.id).onclick=()=>openEcalModal(def.id);
 
     document.getElementById('delBtn_'+def.id).onclick=async()=>{
@@ -993,20 +963,11 @@
   const noteTitleEl=document.getElementById('noteModalTitle');
   const noteTextarea=document.getElementById('noteTextarea');
   let activeCal=null,editingISO=null,currentMedsTaken=[],currentConsults=[];
-  /* v5.4.4 — Insertion d'un horodatage :
-     - clic sur médicament (Santé) -> "HH:MM : Prise du/des médicament(s) X."
-     - clic sur sport (Sport)      -> "HH:MM : Pratique du/des sport(s) X."
-     - bouton "Ajouter l'heure"    -> nouvel horodatage à l'heure courante
-     Tout cela est limité au jour d'aujourd'hui. */
-  let _isToday=false;         // true si la note ouverte concerne aujourd'hui
-  let _stampPrefix=null;      // ex: "14:23 : " — dernier horodatage inséré
-  let _stampMedsText='';      // ex: "Prise du/des médicament(s) Doliprane. "
-  /* v5.4.6 — Médicaments/sports déjà cochés à l'ouverture de la note.
-     Seuls les médicaments AJOUTÉS dans cette session (NON sélectionné -> sélectionné)
-     déclenchent l'insertion automatique d'un horodatage. */
+  let _isToday=false;         
+  let _stampPrefix=null;      
+  let _stampMedsText='';      
   let _baselineMeds=new Set();
 
-  // Liste des médicaments/sports ajoutés depuis l'ouverture (pas dans la baseline)
   function _newlySelectedIds(){
     return currentMedsTaken.filter(id=>!_baselineMeds.has(id));
   }
@@ -1023,9 +984,6 @@
     return verb+names.join(', ')+'. ';
   }
 
-  // Insère un nouvel horodatage en bas de la zone de note.
-  // includeMeds=true (par défaut) -> ajoute "Prise du/des médicament(s) ..." si des chips sont cochés.
-  // includeMeds=false             -> n'ajoute que "HH:MM : " (utilisé par le bouton "Ajouter l'heure").
   function _insertNewStamp(includeMeds=true){
     const now=new Date();
     const hh=String(now.getHours()).padStart(2,'0');
@@ -1040,7 +998,6 @@
     noteTextarea.scrollTop=noteTextarea.scrollHeight;
   }
 
-  // Met à jour le texte des médicaments/sports sur la ligne du stamp actif
   function _refreshStampMeds(){
     if(!_stampPrefix)return;
     const txt=noteTextarea.value;
@@ -1050,7 +1007,6 @@
     let lineEnd=txt.indexOf('\n',afterPrefixStart);
     if(lineEnd<0)lineEnd=txt.length;
     const currentLineContent=txt.slice(afterPrefixStart,lineEnd);
-    // Retire l'ancien meds-text s'il est en début de ligne
     let userPart=currentLineContent;
     if(_stampMedsText && userPart.startsWith(_stampMedsText)){
       userPart=userPart.slice(_stampMedsText.length);
@@ -1060,7 +1016,6 @@
     _stampMedsText=newMedsText;
   }
 
-  // Supprime totalement la ligne horodatée active (et son saut de ligne précédent si présent)
   function _removeActiveStamp(){
     if(!_stampPrefix)return;
     const txt=noteTextarea.value;
@@ -1075,17 +1030,11 @@
     _stampPrefix=null;_stampMedsText='';
   }
 
-  // Appelé sur clic utilisateur d'un chip médicament/sport (jour d'aujourd'hui uniquement)
-  // Règle (v5.4.6) : seul l'événement "non sélectionné -> sélectionné" sur un médicament
-  // hors baseline déclenche/met à jour le stamp. Décocher un médicament déjà coché à
-  // l'ouverture n'a aucun effet sur la note.
   function _onUserMedToggle(medId){
     if(!_isToday)return;
-    // Si le médicament toggle fait partie de la baseline, on ignore (aucun changement).
     if(_baselineMeds.has(medId))return;
     const newlyCount=_newlySelectedIds().length;
     if(!_stampPrefix){
-      // Pas encore de stamp -> on en crée un si au moins un nouveau med est coché
       if(newlyCount>0)_insertNewStamp();
     } else {
       if(newlyCount>0){_refreshStampMeds();}
@@ -1093,7 +1042,6 @@
     }
   }
 
-  // Bouton "Ajouter l'heure" — insère un horodatage SANS les médicaments déjà cochés
   function _onAddDateClick(){
     if(!_isToday)return;
     _insertNewStamp(false);
@@ -1110,7 +1058,6 @@
     const noteData=cal.notes[iso]||{};
     noteTextarea.value=noteData.text||'';
     currentMedsTaken=[...(noteData.meds||[])];currentConsults=[...(noteData.consults||[])];
-    // v5.4.6 — Snapshot des médicaments/sports déjà cochés à l'ouverture (baseline)
     _baselineMeds=new Set(currentMedsTaken);
 
     const meds=loadMeds(cal.id);
@@ -1162,7 +1109,6 @@
     document.body.style.overflow='hidden';
     noteBackdrop.classList.add('open');noteModal.classList.add('open');
     noteBackdrop.removeAttribute('hidden');noteModal.removeAttribute('hidden');
-    // Chips consultation (santé uniquement)
     (()=>{
       const consultSect=document.getElementById('consultSection');
       if(activeCal.type==='sport'){consultSect.style.display='none';currentConsults=[];return;}
@@ -1178,7 +1124,6 @@
         cl.appendChild(ch);
       });
     })();
-    // v5.4.4 — Affiche "Ajouter l'heure" uniquement pour la note d'aujourd'hui (santé + sport)
     document.getElementById('noteAddDateRow').style.display=_isToday?'flex':'none';
     setTimeout(()=>noteTextarea.focus(),0);
   }
@@ -1249,7 +1194,6 @@
       const isSport=cal.type==='sport';
       const yr=cal.current.year, mo=cal.current.month;
       const prefix=yr+'-'+(mo+1<10?'0':'')+(mo+1)+'-';
-      // Médicaments / Sports
       if(allMeds.length===0){cal.el.legendMeds.innerHTML='';}
       else{
         const usedIds=new Set();
@@ -1270,7 +1214,6 @@
             }).join('');
         }
       }
-      // Consultations du mois (santé seulement)
       if(!isSport){
         const usedConsults=new Set();
         Object.keys(cal.notes).forEach(iso=>{
@@ -1317,12 +1260,9 @@
           });
           cell.appendChild(medsDiv);
         }
-        // Icônes consultation (même zone que médicaments, même taille)
         if(takenConsults.length>0){
-          // Utiliser le même medsDiv ou en créer un nouveau si pas de meds
           let consultDiv=cell.querySelector('.day-meds');
           if(!consultDiv){consultDiv=document.createElement('div');consultDiv.className='day-meds';cell.appendChild(consultDiv);}
-          // Dédupliquer les icônes (ex: kiné+chiro = même icône 🦴, afficher 1 seule fois)
           const seenIcons=new Set();
           takenConsults.forEach(cid=>{
             const ct=CONSULT_TYPES.find(x=>x.id===cid);
@@ -1371,7 +1311,6 @@
             if(_isSport){
               return `<span style="font-size:14px;vertical-align:middle;margin-right:3px;">${m.icon||'🏅'}</span>${m.name}`;
             }
-            // v5.4.0 — icône gélule au lieu d'un rond
             return `<span style="display:inline-flex;vertical-align:middle;margin-right:4px;width:14px;height:8px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,0.25);transform:rotate(-25deg);"><span style="flex:1;background:${m.color};"></span><span style="flex:1;background:${m.color};filter:brightness(0.72);"></span></span>${m.name}`;
           }).filter(Boolean).join(', '):'';
           return`<li><strong>${d}</strong>${medsStr?' — '+medsStr:''}${n.text?' : '+n.text:''}</li>`;
@@ -1505,7 +1444,6 @@
       });
       legendDiv.appendChild(itemsDiv);
     }
-    // Professionnels de santé consultés (santé seulement)
     if(!isSport){
       const usedConsultIds=new Set();
       Object.values(cal.notes||{}).forEach(n=>{(n.consults||[]).forEach(id=>usedConsultIds.add(id));});
@@ -1540,7 +1478,6 @@
             if(isSport){
               return `<span style="font-size:14px;vertical-align:middle;margin-right:3px;">${m.icon||'🏅'}</span>${m.name}`;
             }
-            // v5.4.0 — icône gélule au lieu d'un rond
             return `<span style="display:inline-flex;vertical-align:middle;margin-right:4px;width:14px;height:8px;border-radius:4px;overflow:hidden;border:1px solid rgba(0,0,0,0.25);transform:rotate(-25deg);"><span style="flex:1;background:${m.color};"></span><span style="flex:1;background:${m.color};filter:brightness(0.72);"></span></span>${m.name}`;
           }).filter(Boolean).join(', '):'';
           const consultsStr=(!isSport&&n.consults&&n.consults.length)?n.consults.map(cid=>{const ct=CONSULT_TYPES.find(x=>x.id===cid);return ct?`${ct.icon} ${ct.label}`:''}).filter(Boolean).join(', '):'';
@@ -1600,7 +1537,6 @@
       Object.keys(notes).forEach(k=>{if(typeof notes[k]==='string'){notes[k]={text:notes[k],meds:[]};changed=true;}});
       if(changed)persist('suiviSante.notes.'+id,notes);
     });
-    // Migration: ajouter type 'sante' aux anciens calendriers sans type
     const defs=loadLS(CALS_META_KEY);
     if(defs&&Array.isArray(defs)){
       let changed=false;
@@ -1619,15 +1555,25 @@
   globalState.calDefs=savedDefs;
   savedDefs.forEach(def=>{createCalendarDOM(def);const cal=initCalendar(def);globalState.calendars.push(cal);});
 
-  // Start Google Drive (shows login overlay or silently reconnects)
-  driveInit();
 
-  /* ── GOOGLE DRIVE SYNC ── */
+  /* ── GOOGLE DRIVE SYNC AVEC COOKIES (FIX IFRAME) ── */
   const DRIVE_FILE_NAME='mes_calendriers.json';
   const DRIVE_CLIENT_ID='68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
   const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
-  // App-specific localStorage key prefix — prevents collisions with other apps using same Drive client
-  const DRIVE_LS='cal.drive.';  // cal.drive.connected, cal.drive.hint, cal.drive.file_id, cal.drive.last_sync, cal.drive.last_sync_iso
+  const DRIVE_LS='cal.drive.';  
+
+  // FONCTIONS COOKIES POUR CONTOURNER LE BLOCAGE LOCALSTORAGE EN IFRAME
+  function _setCookie(name, value) {
+      document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=31536000; SameSite=None; Secure";
+  }
+  function _getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+      if (match) return decodeURIComponent(match[2]);
+      return null;
+  }
+  function _deleteCookie(name) {
+      document.cookie = name + "=; path=/; max-age=-1; SameSite=None; Secure";
+  }
 
   let driveTokenClient=null;
   let driveAccessToken=null;
@@ -1636,7 +1582,6 @@
   let drivePollInterval=null;
   let driveAutoSaveTimer=null;
 
-  // Toast
   const driveToastEl=(()=>{const el=document.createElement('div');el.className='drive-toast';document.body.appendChild(el);return el;})();
   let _driveToastTimer=null;
   function driveToast(msg,isErr=false,duration=2800){
@@ -1663,16 +1608,13 @@
 
   async function driveInit(){
     await driveLoadLibs();
-    const hint=sessionStorage.getItem(DRIVE_LS+'hint')||localStorage.getItem(DRIVE_LS+'hint')||'';
-    const wasConnected=localStorage.getItem(DRIVE_LS+'connected')==='1';
-    let resolved = false;
-    let timeoutId = null;
+    
+    const hint=_getCookie(DRIVE_LS+'hint')||sessionStorage.getItem(DRIVE_LS+'hint')||localStorage.getItem(DRIVE_LS+'hint')||'';
+    const wasConnected=(_getCookie(DRIVE_LS+'connected')==='1')||(localStorage.getItem(DRIVE_LS+'connected')==='1');
 
     driveTokenClient=google.accounts.oauth2.initTokenClient({
       client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPE,login_hint:hint,
       callback:async(resp)=>{
-        resolved = true;
-        if(timeoutId) clearTimeout(timeoutId);
         if(resp.error){
           driveHideLoading();
           driveShowLogin(true);
@@ -1683,25 +1625,31 @@
         try{
           const ui=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+driveAccessToken}});
           const ud=await ui.json();
-          if(ud.email){localStorage.setItem(DRIVE_LS+'hint',ud.email);sessionStorage.setItem(DRIVE_LS+'hint',ud.email);}
+          if(ud.email){
+            localStorage.setItem(DRIVE_LS+'hint',ud.email);
+            sessionStorage.setItem(DRIVE_LS+'hint',ud.email);
+            _setCookie(DRIVE_LS+'hint',ud.email);
+          }
         }catch(e){}
-        localStorage.setItem(DRIVE_LS+'connected','1');sessionStorage.setItem(DRIVE_LS+'connected','1');
+        
+        localStorage.setItem(DRIVE_LS+'connected','1');
+        sessionStorage.setItem(DRIVE_LS+'connected','1');
+        _setCookie(DRIVE_LS+'connected','1');
+        
         await driveCheckOnConnect();
       }
     });
     _driveInitResolve();
-
+    
     if(wasConnected){
       driveShowLoading();
-      timeoutId = setTimeout(()=>{
-        if(!resolved){
+      setTimeout(()=>{
+        if(!driveAccessToken){
           driveHideLoading();
           driveShowLogin(true);
-          driveToast('Délai de connexion dépassé (5s), veuillez vous reconnecter.', true, 4000);
         }
       }, 5000);
       try {
-        // Tente de récupérer un token silencieusement
         driveTokenClient.requestAccessToken({prompt: 'none'});
       } catch(e) {
         driveHideLoading();
@@ -1711,9 +1659,9 @@
       driveShowLogin(true);
     }
   }
+  driveInit();
 
   async function driveSignIn(){
-    // Wait for libs to finish loading before requesting token
     await driveInitReady;
     if(!driveTokenClient)return;
     driveTokenClient.requestAccessToken({prompt:'select_account'});
@@ -1723,8 +1671,14 @@
   function driveSignOut(){
     if(driveAccessToken)google.accounts.oauth2.revoke(driveAccessToken);
     driveAccessToken=null;driveFileId=null;
-    localStorage.removeItem(DRIVE_LS+'connected');localStorage.removeItem(DRIVE_LS+'hint');
-    sessionStorage.removeItem(DRIVE_LS+'hint');sessionStorage.removeItem(DRIVE_LS+'connected');
+    
+    localStorage.removeItem(DRIVE_LS+'connected');
+    localStorage.removeItem(DRIVE_LS+'hint');
+    sessionStorage.removeItem(DRIVE_LS+'hint');
+    sessionStorage.removeItem(DRIVE_LS+'connected');
+    _deleteCookie(DRIVE_LS+'connected');
+    _deleteCookie(DRIVE_LS+'hint');
+    
     localStorage.removeItem(DRIVE_LS+'file_id');localStorage.removeItem(DRIVE_LS+'last_sync');localStorage.removeItem(DRIVE_LS+'last_sync_iso');
     driveStopPolling();driveShowLogin(true);
     globalState.calDefs=[];globalState.calendars=[];
@@ -1800,22 +1754,18 @@
       const stateEmpty=globalState.calDefs.length===0;
 
       if(stateEmpty){
-        // First load after login — always fetch and apply silently
         const contentResp=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',{headers:{Authorization:'Bearer '+driveAccessToken}});
         const remote=await contentResp.json();
         if(!remote.calendars)return;
-        // Store remote timestamp as reference so polls can detect newer versions
         localStorage.setItem(DRIVE_LS+'last_sync_iso',remoteIso);
         localStorage.setItem(DRIVE_LS+'last_sync',new Date(remoteIso).toLocaleString('fr-FR'));
         applyRemoteData(remote,remoteIso);
         return;
       }
 
-      // Data in memory: only alert if remote is STRICTLY newer than our last push
       if(!remoteSyncedAt)return;
-      if(localSyncedAt&&remoteSyncedAt<=localSyncedAt)return; // We are up to date
+      if(localSyncedAt&&remoteSyncedAt<=localSyncedAt)return; 
 
-      // Fetch content only now that we know it's newer
       if(document.getElementById('driveUpdateOverlay').classList.contains('open'))return;
       const contentResp=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',{headers:{Authorization:'Bearer '+driveAccessToken}});
       const remote=await contentResp.json();
@@ -1825,7 +1775,7 @@
       document.getElementById('driveUpdateMsg').innerHTML=
         'Une version plus récente est disponible sur Google Drive.<br><b>Drive :</b> '+remote.calendars.length+' calendrier(s) — <i>'+dateStr+'</i><br><b>Local :</b> '+globalState.calDefs.length+' calendrier(s)';
       document.getElementById('driveUpdateOverlay').classList.add('open');
-    }catch(e){/*silent*/}
+    }catch(e){}
   }
 
   function applyRemoteData(remote,remoteIso){
@@ -1835,8 +1785,6 @@
       localStorage.setItem(CALS_META_KEY,JSON.stringify(remote.calendars));
       remote.calendars.forEach(def=>{const d=remote.data&&remote.data[def.id];if(d){localStorage.setItem('suiviSante.days.'+def.id,JSON.stringify(d.days||{}));localStorage.setItem('suiviSante.notes.'+def.id,JSON.stringify(d.notes||{}));localStorage.setItem('suiviSante.meds.'+def.id,JSON.stringify(d.meds||[]));}if(def.title)localStorage.setItem('suiviSante.title.'+def.id,def.title);});
     }
-    // NOTE: do NOT update DRIVE_LS+'last_sync_iso' here — that is only set after a push (driveSave).
-    // The caller (driveFetchAndCompare on first load) sets it explicitly before calling us.
     localStorage.setItem(DRIVE_LS+'last_sync',new Date(remoteIso||Date.now()).toLocaleString('fr-FR'));
     document.getElementById('mainContainer').innerHTML='';
     globalState.calDefs=[];globalState.calendars=[];
@@ -1858,7 +1806,6 @@
     const remote=_drivePendingRemote;_drivePendingRemote=null;
     if(!remote)return;
     document.getElementById('driveUpdateOverlay').classList.remove('open');
-    // Store remote timestamp as new reference — poll won't re-prompt unless Drive gets newer again
     const iso=remote._canonicalIso||new Date().toISOString();
     localStorage.setItem(DRIVE_LS+'last_sync_iso',iso);
     localStorage.setItem(DRIVE_LS+'last_sync',new Date(iso).toLocaleString('fr-FR'));
@@ -1881,15 +1828,11 @@
   function driveStopPolling(){if(drivePollInterval){clearInterval(drivePollInterval);drivePollInterval=null;}}
   document.addEventListener('visibilitychange',()=>{if(!document.hidden&&driveAccessToken)driveFetchAndCompare();});
 
-  // Hook markModified to trigger Drive save
   const _origMarkModified=markModified;
-  // Override markModified to also push to Drive
   window._driveMarkModified=()=>{
     localStorage.setItem('suiviSante.lastModified',Date.now());
     driveSave();
   };
-
-  /* ── Migration ── */
 
   /* ════════════════════════════════════════
      v5.1 – Modale édition calendrier
@@ -1924,10 +1867,8 @@
     document.getElementById('ecalMedsTitle').textContent = isSport ? '🏃 Sports suivis' : '💊 Médicaments';
     document.getElementById('ecalMedsNewInp').placeholder = isSport ? 'Nouveau sport...' : 'Nouveau médicament...';
 
-    // Type de calendrier
     document.getElementById(def.type==='sport'?'ecalTypeSport':'ecalTypeSante').checked=true;
 
-    // États éditables
     const _dflEcal=[{label:'Bon',color:'#e9f9ef'},{label:'Moyen',color:'#ffe0b3'},{label:'Mauvais',color:'#ffcccc'}];
     const _curLeg=(def.legend&&def.legend.length>=3)?def.legend:_dflEcal;
     const _statesBox=document.getElementById('ecalStatesRows');
@@ -1953,7 +1894,6 @@
       _statesBox.appendChild(row);
     });
 
-    // Médicaments/Sports
     renderEcalMeds(calId, isSport);
 
     document.getElementById('ecalBd').classList.add('open');
@@ -2034,9 +1974,7 @@
     const t=document.getElementById('ecalTitle').value.trim();
     if(!t){alert('Veuillez saisir un titre.');return;}
     const since=document.getElementById('ecalSince').value.trim();
-    // Lire type
     const newType=document.querySelector('input[name="ecalType"]:checked')?.value||'sante';
-    // Lire les états éditables
     const _stRows=document.getElementById('ecalStatesRows').querySelectorAll('.ecal-state-row');
     const _dflSave=[{label:'Bon',color:'#e9f9ef'},{label:'Moyen',color:'#ffe0b3'},{label:'Mauvais',color:'#ffcccc'}];
     const newLegend=Array.from(_stRows).map((row,i)=>({
@@ -2046,11 +1984,9 @@
     localStorage.setItem('suiviSante.title.'+_ecalId,t);
     def.title=t; if(since){def.sinceLabel=since;def.sinceState=parseInt(document.getElementById('ecalSinceState').value);}else{delete def.sinceLabel;delete def.sinceState;} def.type=newType; def.legend=newLegend;
     saveCalDefs();markModified();
-    // Répercuter immédiatement sur le calendrier affiché
     const _calObj=globalState.calendars.find(x=>x.id===_ecalId);
     if(_calObj){
       _calObj.type=newType;
-      // Mettre à jour les custom props CSS des couleurs d'état
       const _card=document.getElementById('card_'+_ecalId);
       if(_card&&newLegend.length>=3){
         _card.style.setProperty('--s0c',newLegend[0].color);
@@ -2078,15 +2014,11 @@
     closeEcalModal();
   };
 
-  /* ════════════════════════════════════════
-     v5.1 – Modale réordonnement (drag & drop)
-  ════════════════════════════════════════ */
   let _dragSrcEl = null;
 
   function openReordModal(){
     const list=document.getElementById('reordList');
     list.innerHTML='';
-    // Construire la liste depuis l'ordre DOM actuel des cartes
     const container=document.getElementById('mainContainer');
     const cards=[...container.querySelectorAll('.calendar-card')];
     cards.forEach(card=>{
@@ -2129,15 +2061,12 @@
     const list=document.getElementById('reordList');
     const items=[...list.querySelectorAll('.reord-item')];
     const newIds=items.map(el=>el.dataset.calId);
-    // Réordonner calDefs
     globalState.calDefs=newIds.map(id=>globalState.calDefs.find(d=>d.id===id)).filter(Boolean);
     saveCalDefs();markModified();
-    // Réordonner les cartes dans le DOM
     const container=document.getElementById('mainContainer');
     newIds.forEach(id=>{const card=document.getElementById('card_'+id);if(card)container.appendChild(card);});
     closeReordModal();
   };
-
 
 })();
 </script>
