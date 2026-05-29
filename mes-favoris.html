@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<!-- Mes Favoris v1.1.6 -->
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Favoris — v1.1.6</title>
+<title>Mes Favoris — v1.1.7</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -866,9 +865,6 @@
 </head>
 <body>
 
-<!-- ── GOOGLE DRIVE OVERLAYS ── -->
-
-<!-- Login overlay -->
 <div class="drive-login-overlay" id="driveLoginOverlay">
   <div style="width:100%;max-width:400px;background:var(--surface);border:1px solid var(--border-bright);
     border-radius:16px;overflow:hidden;box-shadow:0 24px 80px rgba(0,0,0,.7)">
@@ -893,7 +889,6 @@
   </div>
 </div>
 
-<!-- Loading overlay -->
 <div class="drive-loading-overlay" id="driveLoadingOverlay">
   <div style="width:28px;height:28px;background:var(--accent);border-radius:7px;position:relative;box-shadow:0 0 16px var(--accent-glow)">
     <span style="position:absolute;inset:7px;background:var(--bg);border-radius:2px;display:block"></span>
@@ -903,7 +898,6 @@
   <div style="width:32px;height:32px;border:2.5px solid var(--border-bright);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
 </div>
 
-<!-- Update prompt overlay -->
 <div class="drive-update-overlay" id="driveUpdateOverlay">
   <div class="drive-update-card">
     <div style="font-family:'Instrument Serif',serif;font-style:italic;font-size:1.3rem;color:var(--text)">☁ Mise à jour disponible</div>
@@ -918,19 +912,16 @@
   </div>
 </div>
 
-<!-- ── DRAG & DROP OVERLAY ── -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-icon">🔗</div>
   <div class="drop-label">Déposer le lien</div>
   <div class="drop-sublabel">Le titre sera récupéré automatiquement</div>
 </div>
 
-<!-- ── APP CONTENT ── -->
 <div id="appContent">
 
 <div class="app">
 
-  <!-- TOP BAR -->
   <div class="topbar">
     <div class="brand">
       <div class="brand-logo"></div>
@@ -946,17 +937,13 @@
     </div>
 
     <button class="theme-toggle" id="themeToggle" title="Mode clair / sombre">
-      <!-- icon injected by JS -->
-    </button>
+      </button>
     <input type="file" id="importFileInput" accept=".json" style="display:none">
-    <!-- Sync indicator -->
     <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
       <span id="syncDot" style="width:6px;height:6px;border-radius:50%;background:var(--text-3);transition:background .3s;flex-shrink:0"></span>
       <span id="syncLabel" style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--text-3)"></span>
     </div>
-    <!-- Version menu button -->
     <button id="versionMenuBtn" style="font-family:'Geist Mono',monospace;font-size:10px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;white-space:nowrap;transition:color .2s,border-color .2s;flex-shrink:0"></button>
-    <!-- Version dropdown menu -->
     <div id="versionMenu" style="display:none;position:fixed;background:var(--surface);border-radius:10px;box-shadow:0 4px 24px rgba(0,0,0,.4);border:1px solid var(--border-bright);padding:6px;z-index:500;min-width:170px;flex-direction:column;gap:2px;">
       <div style="font-size:9.5px;font-family:'Geist Mono',monospace;color:var(--text-3);padding:4px 8px 8px;border-bottom:1px solid var(--border);margin-bottom:4px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Menu</div>
       <button class="vmenu-item" onclick="document.getElementById('importFileInput').click();document.getElementById('versionMenu').style.display='none'">⬆ Importer</button>
@@ -967,13 +954,10 @@
     </div>
   </div>
 
-  <!-- MAIN -->
   <div class="main">
     <div class="content">
 
-    <!-- VIEW PILLS — TWO ROWS -->
     <div class="pills-stack" id="pillsStack">
-      <!-- Row 1: system views -->
       <div class="pills-row" id="systemPills">
         <div class="pill active" data-col="all" onclick="filterCollection('all', this)">
           <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
@@ -992,9 +976,7 @@
         </div>
       </div>
 
-      <!-- Row 2: custom collections — smaller, scrollable -->
       <div class="pills-row pills-row-sm" id="customPills">
-        <!-- collections rendered here -->
         <button class="pill pill-add" onclick="openCreateView()" title="Nouvelle vue">
           <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Nouvelle
@@ -1006,7 +988,6 @@
       </div>
     </div>
 
-    <!-- SORT BAR -->
     <div class="sort-bar">
       <div class="sort-left">
         <strong id="resultsCount">12</strong> favoris
@@ -1038,21 +1019,9 @@
             <span>Utilisation <span style="color:var(--text-3);font-size:10px">· + cliqué → -</span></span>
             <svg class="check" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></svg>
           </div>
-        </div><!-- sort-menu -->
-      </div><!-- sort-right -->
-      </div><!-- right group -->
-    </div><!-- sort-bar -->
+        </div></div></div></div><div id="container"></div>
 
-    <div id="container"></div>
-
-    </div><!-- content -->
-  </div><!-- main -->
-</div><!-- app -->
-
-</div><!-- appContent -->
-
-<!-- ADD/EDIT BOOKMARK MODAL -->
-<div class="modal-wrap" id="paletteWrap" onclick="handleModalClick(event, 'paletteWrap')">
+    </div></div></div></div><div class="modal-wrap" id="paletteWrap" onclick="handleModalClick(event, 'paletteWrap')">
   <div class="modal">
     <div class="modal-header">
       <span class="modal-icon">
@@ -1079,8 +1048,7 @@
       <div class="field-group">
         <div class="modal-section">Vue</div>
         <div class="collection-grid" id="modalColGrid">
-          <!-- rendered dynamically -->
-        </div>
+          </div>
       </div>
 
       <div class="field-group" style="margin-bottom:0">
@@ -1102,7 +1070,6 @@
   </div>
 </div>
 
-<!-- EDIT VIEW MODAL -->
 <div class="modal-wrap" id="editViewWrap" onclick="handleModalClick(event, 'editViewWrap')">
   <div class="modal">
     <div class="modal-header">
@@ -1143,7 +1110,6 @@
   </div>
 </div>
 
-<!-- CREATE VIEW MODAL -->
 <div class="modal-wrap" id="createViewWrap" onclick="handleModalClick(event, 'createViewWrap')">
   <div class="modal">
     <div class="modal-header">
@@ -1198,13 +1164,25 @@
 // ── APP VERSION & GOOGLE DRIVE BACKEND
 // ═══════════════════════════════════════════════════
 
-const APP_VERSION = '1.1.6';
+const APP_VERSION = '1.1.7';
 
 const DRIVE_FILE_NAME = 'mes_favoris.json';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE     = 'https://www.googleapis.com/auth/drive.appdata';
 const DRIVE_LS        = 'mf.drive.'; // app-specific prefix — no collision with other apps
 const DRIVE_CACHE_KEY = 'mf.drive.cache'; // local data cache for instant display on reload
+
+function _setCookie(name, value) {
+    document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=31536000; SameSite=None; Secure";
+}
+function _getCookie(name) {
+    const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
+    if (match) return decodeURIComponent(match[2]);
+    return null;
+}
+function _deleteCookie(name) {
+    document.cookie = name + "=; path=/; max-age=-1; SameSite=None; Secure";
+}
 
 let driveTokenClient  = null;
 let driveAccessToken  = null;
@@ -1250,8 +1228,20 @@ function driveLoadLibs() {
 
 async function driveInit() {
   await driveLoadLibs();
-  const hint        = sessionStorage.getItem(DRIVE_LS+'hint') || localStorage.getItem(DRIVE_LS+'hint') || '';
-  const wasConnected = localStorage.getItem(DRIVE_LS+'connected') === '1';
+  const hint        = _getCookie(DRIVE_LS+'hint') || sessionStorage.getItem(DRIVE_LS+'hint') || localStorage.getItem(DRIVE_LS+'hint') || '';
+  const wasConnected = (_getCookie(DRIVE_LS+'connected') === '1') || (localStorage.getItem(DRIVE_LS+'connected') === '1');
+
+  const cachedToken = _getCookie(DRIVE_LS+'token') || localStorage.getItem(DRIVE_LS+'token');
+  const cachedExp = _getCookie(DRIVE_LS+'token_exp') || localStorage.getItem(DRIVE_LS+'token_exp');
+
+  if (wasConnected && cachedToken && cachedExp && Date.now() < parseInt(cachedExp, 10)) {
+      driveAccessToken = cachedToken;
+      gapi.client.setToken({access_token: driveAccessToken});
+      _driveInitResolve();
+      await driveCheckOnConnect();
+      return; 
+  }
+
   driveTokenClient = google.accounts.oauth2.initTokenClient({
     client_id:  DRIVE_CLIENT_ID,
     scope:      DRIVE_SCOPE,
@@ -1260,21 +1250,49 @@ async function driveInit() {
       if (resp.error) { driveHideLoading(); driveShowLogin(true); return; }
       driveAccessToken = resp.access_token;
       gapi.client.setToken({ access_token: driveAccessToken });
+      
+      const exp = Date.now() + ((resp.expires_in || 3599) * 1000) - 60000;
+      localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
+      localStorage.setItem(DRIVE_LS+'token_exp', exp.toString());
+      _setCookie(DRIVE_LS+'token', driveAccessToken);
+      _setCookie(DRIVE_LS+'token_exp', exp.toString());
+
       try {
         const ui = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + driveAccessToken } });
         const ud = await ui.json();
-        if (ud.email) { localStorage.setItem(DRIVE_LS+'hint', ud.email); sessionStorage.setItem(DRIVE_LS+'hint', ud.email); }
+        if (ud.email) { 
+            localStorage.setItem(DRIVE_LS+'hint', ud.email); 
+            sessionStorage.setItem(DRIVE_LS+'hint', ud.email);
+            _setCookie(DRIVE_LS+'hint', ud.email);
+        }
         // Show initials in avatar
         const initials = (ud.name || ud.email || 'G').split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase();
         const av = document.querySelector('.avatar');
         if (av) { av.textContent = initials; av.title = ud.email || ''; }
       } catch(e) {}
-      localStorage.setItem(DRIVE_LS+'connected', '1'); sessionStorage.setItem(DRIVE_LS+'connected', '1');
+      localStorage.setItem(DRIVE_LS+'connected', '1'); 
+      sessionStorage.setItem(DRIVE_LS+'connected', '1');
+      _setCookie(DRIVE_LS+'connected', '1');
+      
       await driveCheckOnConnect();
     }
   });
   _driveInitResolve();
-  if (wasConnected && hint) { driveShowLoading(); driveTokenClient.requestAccessToken({ prompt: 'none' }); }
+  if (wasConnected) { 
+      driveShowLoading(); 
+      setTimeout(()=>{
+        if(!driveAccessToken){
+          driveHideLoading();
+          driveShowLogin(true);
+        }
+      }, 5000);
+      try {
+          driveTokenClient.requestAccessToken({ prompt: 'none' }); 
+      } catch(e) {
+          driveHideLoading();
+          driveShowLogin(true);
+      }
+  }
   else { driveShowLogin(true); }
 }
 
@@ -1289,7 +1307,11 @@ function handleDisconnect() {
   if (driveAccessToken) google.accounts.oauth2.revoke(driveAccessToken);
   driveAccessToken = null; driveFileId = null;
   localStorage.removeItem(DRIVE_LS+'connected'); localStorage.removeItem(DRIVE_LS+'hint');
+  localStorage.removeItem(DRIVE_LS+'token'); localStorage.removeItem(DRIVE_LS+'token_exp');
   sessionStorage.removeItem(DRIVE_LS+'hint'); sessionStorage.removeItem(DRIVE_LS+'connected');
+  _deleteCookie(DRIVE_LS+'connected'); _deleteCookie(DRIVE_LS+'hint');
+  _deleteCookie(DRIVE_LS+'token'); _deleteCookie(DRIVE_LS+'token_exp');
+  
   localStorage.removeItem(DRIVE_LS+'file_id'); localStorage.removeItem(DRIVE_LS+'last_sync'); localStorage.removeItem(DRIVE_LS+'last_sync_iso');
   localStorage.removeItem(DRIVE_CACHE_KEY);
   driveStopPolling();
