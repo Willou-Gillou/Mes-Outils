@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Multi-Pages Modulable - v0.4.3</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --header-bg: #1e293b;
+            --header-text: #f8fafc;
+            --panel-bg: #ffffff;
+            --text-color: #334155;
+            --accent-color: #2563eb;
+            --accent-hover: #1d4ed8;
+            --danger-color: #ef4444;
+            --border-color: #cbd5e1;
+            --border-radius: 8px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --grid-cols: 12;
+            --grid-rows: 8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-color); display: flex; flex-direction: column; height: 100vh; width: 100vw; overflow: hidden; }
+
+        header { background-color: var(--header-bg); color: var(--header-text); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative; z-index: 100; }
+        header h1 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .version-badge { background-color: #38bdf8; color: #0f172a; font-size: 11px; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+        .header-actions { display: flex; align-items: center; gap: 12px; }
+        .btn-header { background-color: #2b394f; color: var(--header-text); border: 1px solid #475569; width: 36px; height: 36px; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 18px; transition: all 0.2s; }
+        .btn-header:hover { background-color: var(--accent-color); border-color: var(--accent-color); }
+        .btn-header.btn-danger-head:hover { background-color: var(--danger-color); border-color: var(--danger-color); }
+        .btn-header.btn-success-head:hover { background-color: #10b981; border-color: #10b981; }
+
+        main { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #dashboard-container { flex-grow: 1; padding: 15px; position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        #dashboard-grid { flex-grow: 1; display: grid; grid-template-columns: repeat(var(--grid-cols), 1fr); grid-template-rows: repeat(var(--grid-rows), 1fr); gap: 15px; background-color: #f8fafc; position: relative; border: 1px dashed #cbd5e1; border-radius: var(--border-radius); transition: border-color 0.2s; }
+        #dashboard-grid.hide-grid { border-color: transparent; background-color: transparent; }
+        .bg-cell { border: 2px dashed #cbd5e1; background-color: rgba(203, 213, 225, 0.15); border-radius: var(--border-radius); pointer-events: none; z-index: 1; transition: opacity 0.2s, visibility 0.2s; }
+        #dashboard-grid.hide-grid .bg-cell { opacity: 0; visibility: hidden; }
+
+        .widget { background: var(--panel-bg); border-radius: var(--border-radius); box-shadow: var(--shadow); border: 1px solid #e2e8f0; display: flex; flex-direction: column; overflow: hidden; position: relative; z-index: 5; }
+        body.is-dragging .widget { transition: none !important; }
+        body.is-dragging iframe { pointer-events: none !important; }
+        .widget-header { background-color: #f8fafc; padding: 6px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0; flex-wrap: wrap; gap: 8px; cursor: move; position: relative; z-index: 10; user-select: none; }
+        .widget-title-container { flex-grow: 1; max-width: 50%; display: flex; align-items: center; gap: 6px; }
+        .widget-drag-icon { color: #94a3b8; font-weight: bold; }
+        .widget-url-input { width: 100%; border: 1px solid transparent; background: transparent; font-size: 11px; font-weight: 600; color: #1e293b; padding: 4px 8px; border-radius: 4px; text-overflow: ellipsis; cursor: text; transition: border-color 0.2s, background-color 0.2s; }
+        .widget-url-input:focus { outline: none; background-color: #ffffff; border-color: var(--accent-color); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1); }
+        .widget-url-input.saved { background-color: #d1fae5; border-color: #10b981; }
+        .widget-url-input[readonly] { cursor: default; }
+        .widget-controls { display: flex; gap: 6px; align-items: center; }
+        
+        .btn-mini { padding: 4px 8px; font-size: 11px; font-weight: bold; background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; border-radius: 3px; cursor: pointer; line-height: 1; transition: all 0.2s; }
+        .btn-mini:hover { background: var(--accent-color); color: white; border-color: var(--accent-color); }
+        .btn-delete { background-color: #fee2e2; color: var(--danger-color); border: none; }
+        .btn-delete:hover { background-color: var(--danger-color); color: white; }
+        
+        .btn-proxy { font-size: 12px; }
+        .btn-proxy.active-proxy { background-color: #fef08a !important; border-color: #facc15 !important; }
+        .btn-proxy.active-proxy:hover { background-color: #fde047 !important; }
+
+        .widget-body { flex-grow: 1; position: relative; background-color: #ffffff; }
+        iframe { width: 100%; height: 100%; border: none; position: absolute; top: 0; left: 0; z-index: 2; background: transparent; }
+
+        .iframe-error-msg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; background-color: #f8fafc; color: #475569; z-index: 1; font-size: 12px; }
+
+        .resize-handle { position: absolute; z-index: 20; }
+        .resize-handle-t { top: 0; left: 14px; right: 14px; height: 6px; cursor: n-resize; }
+        .resize-handle-b { bottom: 0; left: 14px; right: 14px; height: 6px; cursor: s-resize; }
+        .resize-handle-l { top: 14px; bottom: 14px; left: 0; width: 6px; cursor: w-resize; }
+        .resize-handle-r { top: 14px; bottom: 14px; right: 0; width: 6px; cursor: e-resize; }
+        .resize-handle-tl { top: 0; left: 0; width: 14px; height: 14px; cursor: nw-resize; background: linear-gradient(135deg, #94a3b8 40%, transparent 40%); border-radius: var(--border-radius) 0 0 0; }
+        .resize-handle-tr { top: 0; right: 0; width: 14px; height: 14px; cursor: ne-resize; background: linear-gradient(225deg, #94a3b8 40%, transparent 40%); border-radius: 0 var(--border-radius) 0 0; }
+        .resize-handle-bl { bottom: 0; left: 0; width: 14px; height: 14px; cursor: sw-resize; background: linear-gradient(45deg, #94a3b8 40%, transparent 40%); border-radius: 0 0 0 var(--border-radius); }
+        .resize-handle-br { bottom: 0; right: 0; width: 14px; height: 14px; cursor: se-resize; background: linear-gradient(315deg, #94a3b8 40%, transparent 40%); border-radius: 0 0 var(--border-radius) 0; }
+        .resize-handle:hover { filter: brightness(0.6); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-box { background-color: #ffffff; padding: 24px; border-radius: var(--border-radius); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); width: 100%; max-width: 500px; transform: scale(0.95); transition: transform 0.2s ease; }
+        .modal-overlay.active .modal-box { transform: scale(1); }
+        .modal-title { font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 20px; }
+        .modal-form-group { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .modal-form-row { display: flex; gap: 12px; margin-bottom: 20px; }
+        
+        .btn-primary { background-color: var(--accent-color); color: white; padding: 8px 14px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-primary:hover { background-color: var(--accent-hover); }
+        .btn-secondary { background-color: #64748b; color: white; padding: 8px 14px; font-size: 13px; border-radius: 6px; border: none; cursor: pointer; }
+        .btn-secondary:hover { background-color: #475569; }
+        input[type="text"], input[type="number"], textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 14px; font-family: inherit; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Tableau de Bord Modulable Web <span class="version-badge">v0.4.3</span></h1>
+        <div class="header-actions">
+            <button id="headerImportBtn" class="btn-header" title="Importer une configuration">📂</button>
+            <button id="headerExportBtn" class="btn-header btn-success-head" title="Exporter en JSON">💾</button>
+            <div style="width: 1px; height: 24px; background-color: #475569; margin: 0 4px;"></div>
+            
+            <button id="headerAddUrlBtn" class="btn-header" title="Ajouter un lien Web (URL)">🌐</button>
+            <button id="headerAddWidgetBtn" class="btn-header" title="Ajouter un widget HTML">🧩</button>
+            
+            <button id="headerConfigBtn" class="btn-header" title="Options de la grille">⚙️</button>
+            <button id="headerClearBtn" class="btn-header btn-danger-head" title="Réinitialiser">🗑️</button>
+        </div>
+        <input type="file" id="importFileInput" accept=".json" style="display: none;">
+    </header>
+
+    <main id="main">
+        <div id="dashboard-container">
+            <div id="dashboard-grid"></div>
+        </div>
+    </main>
+
+    <div id="addModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title" id="addModalTitle">Ajouter un bloc</div>
+
+            <div id="urlSection">
+                <div class="modal-form-group">
+                    <label for="modalUrlInput" style="font-size: 12px; font-weight: 600; color: #64748b;">Adresse URL</label>
+                    <input type="text" id="modalUrlInput" placeholder="Ex: https://fr.wikipedia.org ou http://localhost:8080">
+                </div>
+            </div>
+
+            <div id="embedSection" style="display: none;">
+                <div class="modal-form-group">
+                    <label for="modalEmbedInput" style="font-size: 12px; font-weight: 600; color: #64748b;">Code d'intégration (HTML / Script)</label>
+                    <textarea id="modalEmbedInput" placeholder="<a href='...'>...</a><script src='...'></script>" style="height: 100px; resize: vertical;"></textarea>
+                </div>
+                <div class="modal-form-group">
+                    <label for="modalEmbedTitle" style="font-size: 12px; font-weight: 600; color: #64748b;">Titre (optionnel)</label>
+                    <input type="text" id="modalEmbedTitle" placeholder="Ex: Météo METAR">
+                </div>
+            </div>
+
+            <div class="modal-form-row">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label for="colSpan" style="font-size: 12px; font-weight: 600; color: #64748b;">Largeur (crans)</label>
+                    <input type="number" id="colSpan" value="6" min="1" max="12">
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label for="rowSpan" style="font-size: 12px; font-weight: 600; color: #64748b;">Hauteur (crans)</label>
+                    <input type="number" id="rowSpan" value="3" min="1" max="8">
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" id="modalCancelBtn" class="btn-secondary">Annuler</button>
+                <button type="button" id="modalSubmitBtn" class="btn-primary">Ajouter</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="configModal" class="modal-overlay">
+        <div class="modal-box">
+            <div class="modal-title">Options du Quadrillage</div>
+            <div class="modal-form-row">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label for="gridColsInput" style="font-size: 12px; font-weight: 600; color: #64748b;">Colonnes</label>
+                    <input type="number" id="gridColsInput" value="12" min="2" max="36">
+                </div>
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 6px;">
+                    <label for="gridRowsInput" style="font-size: 12px; font-weight: 600; color: #64748b;">Lignes</label>
+                    <input type="number" id="gridRowsInput" value="8" min="2" max="36">
+                </div>
+            </div>
+            <div class="modal-form-group" style="flex-direction: row; align-items: center; gap: 8px; margin-top: 10px; margin-bottom: 20px;">
+                <input type="checkbox" id="showGridInput">
+                <label for="showGridInput" style="font-size: 13px; font-weight: 600; color: #64748b; cursor: pointer;">Afficher le quadrillage en arrière-plan</label>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" id="configCancelBtn" class="btn-secondary">Annuler</button>
+                <button type="button" id="configSubmitBtn" class="btn-primary">Appliquer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const STORAGE_KEY = 'dashboard_data_master'; 
+            
+            function _setDashCookie(n,v){ document.cookie = `${n}=${encodeURIComponent(v)}; path=/; max-age=31536000; SameSite=Lax`; }
+            function _getDashCookie(n){ const m = document.cookie.match(new RegExp('(^| )'+n+'=([^;]+)')); return m ? decodeURIComponent(m[2]) : null; }
+            
+            let state = {
+                gridCols: 12,
+                gridRows: 8,
+                showGrid: true,
+                widgets: []
+            };
+
+            let currentAddType = 'url'; // Garde en mémoire le type de bloc en cours d'ajout
+
+            function loadConfig() {
+                let savedData = localStorage.getItem(STORAGE_KEY) || _getDashCookie(STORAGE_KEY);
+                
+                if (!savedData) {
+                    const oldKeys = ['dashboard_config_master_v1', 'dashboard_config_master', 'dashboard_config_v0_3_5', 'dashboard_config_v0_3_4'];
+                    for (let oldKey of oldKeys) {
+                        savedData = localStorage.getItem(oldKey);
+                        if (savedData) break;
+                    }
+                }
+
+                if (savedData) {
+                    try {
+                        const parsed = JSON.parse(savedData);
+                        if (parsed && typeof parsed === 'object' && Array.isArray(parsed.widgets)) {
+                            state = parsed;
+                            if (typeof state.showGrid === 'undefined') state.showGrid = true;
+                            state.widgets.forEach(w => {
+                                if (typeof w.useProxy === 'undefined') w.useProxy = false;
+                                if (typeof w.type === 'undefined') w.type = 'url'; // Migration des vieux widgets
+                            });
+                            return true;
+                        }
+                    } catch (e) { console.error("Erreur de chargement:", e); }
+                }
+                return false;
+            }
+
+            if (!loadConfig() || state.widgets.length === 0) {
+                state.gridCols = 12;
+                state.gridRows = 8;
+                state.showGrid = true;
+                state.widgets = [
+                    { id: 1, type: 'url', url: 'https://example.com', colStart: 1, colSpan: 6, rowStart: 1, rowSpan: 4, useProxy: false },
+                    { id: 2, type: 'url', url: 'https://fr.wikipedia.org/wiki/Sp%C3%A9cial:Page_au_hasard', colStart: 7, colSpan: 6, rowStart: 1, rowSpan: 4, useProxy: false }
+                ];
+            }
+
+            const gridEl = document.getElementById('dashboard-grid');
+
+            function saveConfig() {
+                const dataStr = JSON.stringify(state);
+                try { localStorage.setItem(STORAGE_KEY, dataStr); } catch (e) { }
+                try { _setDashCookie(STORAGE_KEY, dataStr); } catch (e) {}
+            }
+
+            function updateGridCSSProperties() {
+                document.documentElement.style.setProperty('--grid-cols', state.gridCols);
+                document.documentElement.style.setProperty('--grid-rows', state.gridRows);
+            }
+
+            function applyWidgetPosition(widget) {
+                const el = document.getElementById(`widget-node-${widget.id}`);
+                if (el) {
+                    el.style.gridColumn = `${widget.colStart} / span ${widget.colSpan}`;
+                    el.style.gridRow = `${widget.rowStart} / span ${widget.rowSpan}`;
+                }
+            }
+
+            function createWidgetNode(widget) {
+                const widgetEl = document.createElement('div');
+                widgetEl.className = 'widget';
+                widgetEl.id = `widget-node-${widget.id}`;
+                
+                widgetEl.style.gridColumn = `${widget.colStart} / span ${widget.colSpan}`;
+                widgetEl.style.gridRow = `${widget.rowStart} / span ${widget.rowSpan}`;
+
+                const iframeAllowStr = "camera; microphone; display-capture; geolocation; fullscreen; clipboard-read; clipboard-write; identity-credentials-get; storage-access";
+                const proxyPrefix = "https://corsproxy.io/?";
+                
+                const isEmbed = widget.type === 'embed';
+                const activeProxyClass = (!isEmbed && widget.useProxy) ? 'active-proxy' : '';
+                const actualSrc = (!isEmbed && widget.useProxy) ? proxyPrefix + encodeURIComponent(widget.url) : (widget.url || '');
+                
+                const displayValue = isEmbed ? (widget.title || '<Widget HTML>') : widget.url;
+                const inputReadonlyAttr = isEmbed ? 'readonly' : '';
+                const inputTitleAttr = isEmbed ? 'Widget HTML (non modifiable ici)' : 'Modifiez l\'adresse et appuyez sur Entrée pour valider';
+
+                widgetEl.innerHTML = `
+                    <div class="widget-header">
+                        <div class="widget-title-container">
+                            <span class="widget-drag-icon">⠿</span>
+                            <input type="text" class="widget-url-input" value="${displayValue}" ${inputReadonlyAttr} title="${inputTitleAttr}">
+                        </div>
+                        <div class="widget-controls">
+                            ${isEmbed ? '' : `<button class="btn-mini btn-proxy ${activeProxyClass}" title="Forcer l'affichage (Proxy CORS)">🪄</button>`}
+                            <button class="btn-mini btn-reload" title="Rafraîchir cette page">↻</button>
+                            <button class="btn-mini btn-delete" title="Supprimer">X</button>
+                        </div>
+                    </div>
+                    <div class="widget-body">
+                        ${isEmbed ? '' : `
+                        <div class="iframe-error-msg">
+                            <p>🔒 Affichage bloqué par le site distant</p>
+                            <span style="color:#64748b; font-size:10px; margin-bottom:8px;">Cliquez sur la baguette magique (🪄) pour forcer.</span>
+                            <a href="${widget.url}" target="_blank" style="color:var(--accent-color); font-weight:bold;">Ouvrir dans un nouvel onglet ↗</a>
+                        </div>`}
+                    </div>
+                `;
+
+                const bodyEl = widgetEl.querySelector('.widget-body');
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('allow', iframeAllowStr);
+                iframe.setAttribute('referrerpolicy', 'no-referrer-when-downgrade');
+                
+                if (isEmbed) {
+                    const htmlDoc = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{margin:0;display:flex;justify-content:center;align-items:center;height:100vh;overflow:hidden;background:transparent;}</style></head><body>${widget.content}</body></html>`;
+                    iframe.srcdoc = htmlDoc;
+                } else {
+                    setTimeout(() => { iframe.src = actualSrc; }, 10);
+                }
+                
+                bodyEl.appendChild(iframe);
+
+                const header = widgetEl.querySelector('.widget-header');
+                header.addEventListener('mousedown', (e) => startMouseDrag(e, widget));
+
+                const urlInput = widgetEl.querySelector('.widget-url-input');
+                urlInput.addEventListener('mousedown', (e) => e.stopPropagation());
+                
+                if (!isEmbed) {
+                    function commitUrlChange() {
+                        let newUrl = urlInput.value.trim();
+                        if (!newUrl) return;
+                        if (!/^https?:\/\//i.test(newUrl)) { newUrl = 'https://' + newUrl; }
+                        if (widget.url !== newUrl) {
+                            widget.url = newUrl;
+                            widget.useProxy = false; 
+                            widgetEl.querySelector('.btn-proxy').classList.remove('active-proxy');
+                            
+                            urlInput.value = newUrl;
+                            saveConfig();
+                            urlInput.classList.add('saved');
+                            setTimeout(() => urlInput.classList.remove('saved'), 500);
+                            
+                            iframe.src = newUrl;
+                            widgetEl.querySelector('.iframe-error-msg a').href = newUrl;
+                        }
+                    }
+
+                    urlInput.addEventListener('blur', commitUrlChange);
+                    urlInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') { commitUrlChange(); urlInput.blur(); }
+                    });
+
+                    widgetEl.querySelector('.btn-proxy').addEventListener('click', (e) => {
+                        widget.useProxy = !widget.useProxy;
+                        saveConfig();
+                        e.target.classList.toggle('active-proxy', widget.useProxy);
+                        iframe.src = widget.useProxy ? proxyPrefix + encodeURIComponent(widget.url) : widget.url;
+                    });
+                }
+
+                widgetEl.querySelector('.btn-reload').addEventListener('click', () => {
+                    if (isEmbed) {
+                        const temp = iframe.srcdoc;
+                        iframe.srcdoc = '';
+                        setTimeout(() => { iframe.srcdoc = temp; }, 10);
+                    } else {
+                        try { iframe.contentWindow.location.reload(); }
+                        catch(err) { iframe.src = iframe.src; }
+                    }
+                });
+
+                widgetEl.querySelector('.btn-delete').addEventListener('click', () => {
+                    state.widgets = state.widgets.filter(w => w.id !== widget.id);
+                    saveConfig();
+                    widgetEl.remove();
+                });
+
+                const directions = ['t', 'r', 'b', 'l', 'tl', 'tr', 'bl', 'br'];
+                directions.forEach(dir => {
+                    const handle = document.createElement('div');
+                    handle.className = `resize-handle resize-handle-${dir}`;
+                    handle.addEventListener('mousedown', (e) => startMouseResize(e, widget, dir));
+                    widgetEl.appendChild(handle);
+                });
+
+                return widgetEl;
+            }
+
+            function initDashboard() {
+                updateGridCSSProperties();
+                gridEl.innerHTML = '';
+                
+                if (state.showGrid === false) { gridEl.classList.add('hide-grid'); } 
+                else { gridEl.classList.remove('hide-grid'); }
+
+                for(let r = 1; r <= state.gridRows; r++) {
+                    for(let c = 1; c <= state.gridCols; c++) {
+                        const cell = document.createElement('div');
+                        cell.className = 'bg-cell';
+                        cell.style.gridColumn = c;
+                        cell.style.gridRow = r;
+                        gridEl.appendChild(cell);
+                    }
+                }
+
+                state.widgets.forEach(widget => gridEl.appendChild(createWidgetNode(widget)));
+            }
+
+            const addModal = document.getElementById('addModal');
+            const addModalTitle = document.getElementById('addModalTitle');
+            const urlSection = document.getElementById('urlSection');
+            const embedSection = document.getElementById('embedSection');
+            const configModal = document.getElementById('configModal');
+
+            // Clic sur "Ajouter un lien Web"
+            document.getElementById('headerAddUrlBtn').addEventListener('click', () => {
+                currentAddType = 'url';
+                addModalTitle.textContent = 'Ajouter un lien Web';
+                urlSection.style.display = 'block';
+                embedSection.style.display = 'none';
+                addModal.classList.add('active'); 
+                document.getElementById('modalUrlInput').focus();
+            });
+
+            // Clic sur "Ajouter un Widget HTML"
+            document.getElementById('headerAddWidgetBtn').addEventListener('click', () => {
+                currentAddType = 'embed';
+                addModalTitle.textContent = 'Ajouter un Widget HTML';
+                urlSection.style.display = 'none';
+                embedSection.style.display = 'block';
+                addModal.classList.add('active'); 
+                document.getElementById('modalEmbedInput').focus();
+            });
+
+            document.getElementById('modalCancelBtn').addEventListener('click', () => addModal.classList.remove('active'));
+            
+            document.getElementById('modalSubmitBtn').addEventListener('click', () => {
+                const type = currentAddType;
+                let finalUrl = '', content = '', title = '';
+
+                if (type === 'url') {
+                    const url = document.getElementById('modalUrlInput').value.trim();
+                    if (!url) { alert('Veuillez entrer une adresse URL.'); return; }
+                    finalUrl = /^https?:\/\//i.test(url) ? url : 'https://' + url;
+                } else {
+                    content = document.getElementById('modalEmbedInput').value.trim();
+                    if (!content) { alert('Veuillez entrer un code HTML.'); return; }
+                    title = document.getElementById('modalEmbedTitle').value.trim();
+                }
+
+                const colSpan = Math.min(state.gridCols, parseInt(document.getElementById('colSpan').value, 10) || 6);
+                const rowSpan = Math.min(state.gridRows, parseInt(document.getElementById('rowSpan').value, 10) || 3);
+
+                const newWidget = {
+                    id: Date.now(), type: type, url: finalUrl, content: content, title: title,
+                    colStart: 1, colSpan: colSpan, rowStart: 1, rowSpan: rowSpan, useProxy: false
+                };
+
+                state.widgets.push(newWidget); saveConfig();
+                gridEl.appendChild(createWidgetNode(newWidget));
+                
+                addModal.classList.remove('active'); 
+                document.getElementById('modalUrlInput').value = '';
+                document.getElementById('modalEmbedInput').value = '';
+                document.getElementById('modalEmbedTitle').value = '';
+            });
+
+            // DRAG & RESIZE Logic
+            function startMouseDrag(e, widget) {
+                if (e.target.closest('.widget-controls') || e.target.closest('.widget-url-input')) return;
+                e.preventDefault();
+                
+                document.body.classList.add('is-dragging');
+                const node = document.getElementById(`widget-node-${widget.id}`);
+                if (node) node.style.zIndex = 100;
+
+                const initialX = e.clientX;
+                const initialY = e.clientY;
+                const initialColStart = widget.colStart;
+                const initialRowStart = widget.rowStart;
+
+                const gridRect = gridEl.getBoundingClientRect();
+                const stepX = (gridRect.width + 15) / state.gridCols;
+                const stepY = (gridRect.height + 15) / state.gridRows;
+
+                function onMouseMove(moveEvent) {
+                    const deltaX = moveEvent.clientX - initialX;
+                    const deltaY = moveEvent.clientY - initialY;
+
+                    const colsDiff = Math.round(deltaX / stepX);
+                    const rowsDiff = Math.round(deltaY / stepY);
+
+                    widget.colStart = Math.max(1, Math.min((state.gridCols + 1) - widget.colSpan, initialColStart + colsDiff));
+                    widget.rowStart = Math.max(1, Math.min((state.gridRows + 1) - widget.rowSpan, initialRowStart + rowsDiff));
+
+                    applyWidgetPosition(widget);
+                }
+
+                function onMouseUp() {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                    document.body.classList.remove('is-dragging');
+                    if (node) node.style.zIndex = 5;
+                    saveConfig(); 
+                }
+
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+            }
+
+            function startMouseResize(e, widget, type) {
+                e.preventDefault(); e.stopPropagation();
+                document.body.classList.add('is-dragging');
+
+                const initialX = e.clientX;
+                const initialY = e.clientY;
+                const initialColSpan = widget.colSpan;
+                const initialRowSpan = widget.rowSpan;
+                const initialColStart = widget.colStart;
+                const initialRowStart = widget.rowStart;
+
+                const gridRect = gridEl.getBoundingClientRect();
+                const stepX = (gridRect.width + 15) / state.gridCols;
+                const stepY = (gridRect.height + 15) / state.gridRows;
+
+                function onMouseMove(moveEvent) {
+                    const deltaX = moveEvent.clientX - initialX;
+                    const deltaY = moveEvent.clientY - initialY;
+
+                    const colsDiff = Math.round(deltaX / stepX);
+                    const rowsDiff = Math.round(deltaY / stepY);
+
+                    let newColStart = initialColStart;
+                    let newColSpan = initialColSpan;
+                    let newRowStart = initialRowStart;
+                    let newRowSpan = initialRowSpan;
+
+                    if (type.includes('r')) newColSpan = Math.max(2, Math.min((state.gridCols + 1) - initialColStart, initialColSpan + colsDiff));
+                    if (type.includes('l')) {
+                        let allowedDiff = Math.max(1 - initialColStart, Math.min(initialColSpan - 2, colsDiff));
+                        newColStart = initialColStart + allowedDiff;
+                        newColSpan = initialColSpan - allowedDiff;
+                    }
+                    if (type.includes('b')) newRowSpan = Math.max(1, Math.min((state.gridRows + 1) - initialRowStart, initialRowSpan + rowsDiff));
+                    if (type.includes('t')) {
+                        let allowedDiff = Math.max(1 - initialRowStart, Math.min(initialRowSpan - 1, rowsDiff));
+                        newRowStart = initialRowStart + allowedDiff;
+                        newRowSpan = initialRowSpan - allowedDiff;
+                    }
+
+                    widget.colStart = newColStart; widget.colSpan = newColSpan;
+                    widget.rowStart = newRowStart; widget.rowSpan = newRowSpan;
+                    applyWidgetPosition(widget);
+                }
+
+                function onMouseUp() {
+                    window.removeEventListener('mousemove', onMouseMove);
+                    window.removeEventListener('mouseup', onMouseUp);
+                    document.body.classList.remove('is-dragging');
+                    saveConfig(); 
+                }
+
+                window.addEventListener('mousemove', onMouseMove);
+                window.addEventListener('mouseup', onMouseUp);
+            }
+
+            document.getElementById('headerExportBtn').addEventListener('click', () => {
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", "dashboard_config.json");
+                document.body.appendChild(downloadAnchorNode);
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            });
+
+            const importFileInput = document.getElementById('importFileInput');
+            document.getElementById('headerImportBtn').addEventListener('click', () => {
+                importFileInput.click();
+            });
+
+            importFileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    try {
+                        const parsed = JSON.parse(event.target.result);
+                        if (parsed && Array.isArray(parsed.widgets)) {
+                            state = parsed;
+                            saveConfig();
+                            initDashboard();
+                            importFileInput.value = '';
+                        } else { alert("Fichier JSON invalide."); }
+                    } catch(err) { alert("Erreur lors de la lecture."); }
+                };
+                reader.readAsText(file);
+            });
+
+            document.getElementById('headerConfigBtn').addEventListener('click', () => {
+                document.getElementById('gridColsInput').value = state.gridCols;
+                document.getElementById('gridRowsInput').value = state.gridRows;
+                document.getElementById('showGridInput').checked = state.showGrid !== false;
+                configModal.classList.add('active');
+            });
+            
+            document.getElementById('configCancelBtn').addEventListener('click', () => configModal.classList.remove('active'));
+            
+            document.getElementById('configSubmitBtn').addEventListener('click', () => {
+                const newCols = parseInt(document.getElementById('gridColsInput').value, 10);
+                const newRows = parseInt(document.getElementById('gridRowsInput').value, 10);
+                const showGrid = document.getElementById('showGridInput').checked;
+
+                if (newCols >= 2 && newCols <= 36 && newRows >= 2 && newRows <= 36) {
+                    state.gridCols = newCols;
+                    state.gridRows = newRows;
+                    state.showGrid = showGrid;
+                    
+                    state.widgets.forEach(w => {
+                        if (w.colStart + w.colSpan - 1 > state.gridCols) {
+                            w.colSpan = Math.min(w.colSpan, state.gridCols);
+                            w.colStart = Math.max(1, (state.gridCols + 1) - w.colSpan);
+                        }
+                        if (w.rowStart + w.rowSpan - 1 > state.gridRows) {
+                            w.rowSpan = Math.min(w.rowSpan, state.gridRows);
+                            w.rowStart = Math.max(1, (state.gridRows + 1) - w.rowSpan);
+                        }
+                    });
+
+                    saveConfig();
+                    
+                    if (state.showGrid === false) { gridEl.classList.add('hide-grid'); } 
+                    else { gridEl.classList.remove('hide-grid'); }
+                    
+                    initDashboard(); 
+                    configModal.classList.remove('active');
+                } else {
+                    alert('Valeurs invalides (Entre 2 et 36).');
+                }
+            });
+
+            document.getElementById('headerClearBtn').addEventListener('click', () => {
+                if (confirm('Voulez-vous vider le dashboard ?')) {
+                    state.widgets = []; saveConfig(); initDashboard();
+                }
+            });
+
+            addModal.addEventListener('click', (e) => { if (e.target === addModal) addModal.classList.remove('active'); });
+            configModal.addEventListener('click', (e) => { if (e.target === configModal) configModal.classList.remove('active'); });
+
+            document.getElementById('colSpan').max = state.gridCols;
+            document.getElementById('rowSpan').max = state.gridRows;
+
+            initDashboard();
+        });
+    </script>
+</body>
+</html>
