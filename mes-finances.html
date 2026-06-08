@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mes finances - v1.9.6</title>
-    <!-- v1.9.6 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
+    <title>Mes finances - v2.0.6</title>
+    <!-- v2.0.6 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -216,10 +216,13 @@
 .sugg-pill:hover { filter: brightness(1.12); transform: translateY(-1px); }
 /* cat-search-hit hover */
 .cat-search-hit:hover { background: var(--bg) !important; border-color: var(--accent, #e07b54) !important; }
+/* drill-down cursor on stacked charts */
+#chartsList canvas { cursor: default; }
 </style>
     <!-- Tabulator -->
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
     <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -249,6 +252,7 @@
     <button class="tab-btn" data-target="view-data">Base de données</button>
     <button class="tab-btn" data-target="view-categories">Catégories</button>
     <button class="tab-btn" data-target="view-rules">Règles</button>
+    <button class="tab-btn" data-target="view-charts">📈 Graphiques</button>
     <button class="tab-btn" data-target="view-settings">Paramètres</button>
 </div>
 
@@ -479,6 +483,151 @@
         </div>
     </div>
 
+
+    <!-- ══════════════════════════════════════════════
+         GRAPHIQUES VIEW  — v2.0.6
+    ══════════════════════════════════════════════ -->
+    <div id="view-charts" class="view">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+            <h2 style="margin:0;">📈 Graphiques</h2>
+            <button class="btn btn-primary" onclick="window.openChartBuilder()">+ Nouveau graphique</button>
+        </div>
+
+        <!-- Conteneur des graphiques sauvegardés -->
+        <div id="chartsList" style="display:flex;flex-direction:column;gap:32px;"></div>
+
+        <div id="chartsEmpty" style="display:none;text-align:center;padding:60px 20px;color:var(--ink-soft);">
+            <div style="font-size:3em;margin-bottom:12px;">📊</div>
+            <div style="font-size:1.1em;font-weight:600;margin-bottom:6px;">Aucun graphique créé</div>
+            <div style="font-size:0.9em;">Cliquez sur "+ Nouveau graphique" pour commencer.</div>
+        </div>
+    </div>
+
+    <!-- ══════════ CHART BUILDER MODAL ══════════ -->
+    <div class="overlay" id="chartBuilderOverlay">
+        <div class="modal" style="max-width:700px;width:96vw;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;" id="chartBuilderTitle">Nouveau graphique</h2>
+                <button class="btn btn-outline" onclick="window.closeChartBuilder()" style="padding:4px 10px;border-radius:20px;">✕</button>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+                <!-- Titre -->
+                <div style="grid-column:1/-1;">
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Titre du graphique</label>
+                    <input type="text" id="cbTitle" class="input-text" placeholder="Ex : Dépenses par catégorie" style="width:100%;">
+                </div>
+
+                <!-- Type de graphique -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Type</label>
+                    <select id="cbType" class="input-text" style="width:100%;" onchange="window.onCbTypeChange()">
+                        <option value="bar">Histogramme</option>
+                        <option value="bar-stacked">Histogramme empilé (valeur)</option>
+                        <option value="bar-stacked100">Histogramme empilé (100%)</option>
+                        <option value="line">Courbe</option>
+                    </select>
+                </div>
+
+                <!-- Axe X -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Axe X (abscisse)</label>
+                    <select id="cbAxisX" class="input-text" style="width:100%;" onchange="window.onCbAxisChange()">
+                        <option value="month">Mois</option>
+                        <option value="year">Année</option>
+                        <option value="cat1">Catégorie 1</option>
+                        <option value="cat2">Catégorie 2</option>
+                    </select>
+                </div>
+
+                <!-- Axe Y -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Axe Y (ordonnée)</label>
+                    <select id="cbAxisY" class="input-text" style="width:100%;">
+                        <option value="sum">Somme (€)</option>
+                        <option value="count">Nombre de transactions</option>
+                        <option value="avg">Moyenne (€)</option>
+                    </select>
+                </div>
+
+                <!-- Série (pour empilé) -->
+                <div id="cbSeriesGroup" style="display:none;">
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Couleur par (série)</label>
+                    <select id="cbSeries" class="input-text" style="width:100%;">
+                        <option value="cat1">Catégorie 1</option>
+                        <option value="cat2">Catégorie 2</option>
+                    </select>
+                </div>
+
+                <!-- Filtre Année -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Année(s)</label>
+                    <select id="cbFilterYear" class="input-text" style="width:100%;" multiple size="3"></select>
+                    <div style="font-size:0.75em;color:var(--ink-muted);margin-top:2px;">Ctrl+clic pour sélection multiple</div>
+                </div>
+
+                <!-- Filtre Cat1 -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Catégorie 1</label>
+                    <select id="cbFilterCat1" class="input-text" style="width:100%;" multiple size="3" onchange="window.onCbCat1Change()"></select>
+                    <div style="font-size:0.75em;color:var(--ink-muted);margin-top:2px;">Ctrl+clic pour sélection multiple</div>
+                </div>
+
+                <!-- Filtre Cat2 -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Catégorie 2</label>
+                    <select id="cbFilterCat2" class="input-text" style="width:100%;" multiple size="3"></select>
+                    <div style="font-size:0.75em;color:var(--ink-muted);margin-top:2px;">Ctrl+clic pour sélection multiple</div>
+                </div>
+
+                <!-- Source de date -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Source de date</label>
+                    <select id="cbDateSource" class="input-text" style="width:100%;">
+                        <option value="dateOp">Date écriture</option>
+                        <option value="dateExpense">Date réelle</option>
+                    </select>
+                </div>
+
+                <!-- Largeur -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Largeur</label>
+                    <select id="cbWidth" class="input-text" style="width:100%;">
+                        <option value="full">Pleine largeur</option>
+                        <option value="half">Moitié</option>
+                    </select>
+                </div>
+
+                <!-- Signe montant -->
+                <div>
+                    <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);display:block;margin-bottom:4px;">Afficher</label>
+                    <select id="cbFilterSign" class="input-text" style="width:100%;">
+                        <option value="all">Toutes les transactions</option>
+                        <option value="debit">Débits uniquement (−)</option>
+                        <option value="credit">Crédits uniquement (+)</option>
+                    </select>
+                </div>
+
+                <!-- Inverser axe Y -->
+                <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:8px 0;">
+                    <input type="checkbox" id="cbInvertY" style="width:16px;height:16px;accent-color:var(--pro);">
+                    <label for="cbInvertY" style="font-size:0.9em;cursor:pointer;">Inverser l'axe Y (valeurs négatives en haut)</label>
+                </div>
+            </div>
+
+            <!-- Aperçu -->
+            <div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:16px;">
+                <div style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Aperçu</div>
+                <canvas id="cbPreviewCanvas" height="180"></canvas>
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:8px;">
+                <button class="btn btn-outline" onclick="window.closeChartBuilder()">Annuler</button>
+                <button class="btn btn-primary" onclick="window.saveChart()">Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
     <div id="view-settings" class="view">
         <h2 style="margin-bottom:24px;">Paramètres</h2>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
@@ -506,6 +655,18 @@
             <div id="driveFilesList" style="margin-top:14px;"></div>
         </div>
     </div>
+
+    <!-- ══════════ DRILL-DOWN MODAL ══════════ -->
+    <div class="overlay" id="drillDownOverlay">
+        <div class="modal" style="max-width:760px;width:96vw;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h2 style="margin:0;font-size:1.1em;" id="drillDownTitle">Détail</h2>
+                <button class="btn btn-outline" onclick="window.closeDrillDown()" style="padding:4px 10px;border-radius:20px;">✕</button>
+            </div>
+            <canvas id="drillDownCanvas" style="width:100%;max-height:380px;"></canvas>
+        </div>
+    </div>
+
 </main>
 
 <input type="file" id="bankFileInput" accept=".csv" style="display:none">
@@ -642,7 +803,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '1.9.6';
+const APP_VERSION = '2.0.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -704,7 +865,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v1.9.6 : séquence Google d'abord, MDP ensuite
+    // v2.0.6 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -851,7 +1012,7 @@ const buildEncryptedPayload = () => {
         tcdFilter: { cat1:[...tcdFilter.cat1], cat2:[...tcdFilter.cat2], years:[...tcdFilter.years], months:[...tcdFilter.months] },
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId}),appSecretKey).toString()});
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -887,6 +1048,7 @@ function decryptPayload(remoteData) {
         }
         transactions=p.transactions||[]; rules=p.rules||[];
         if(p.categories) categories = p.categories;
+        if(p.savedCharts) savedCharts = p.savedCharts;
         // Restaurer la liste complète des comptes depuis Drive (source de vérité)
         if(p.accounts && Array.isArray(p.accounts) && p.accounts.length > 0) {
             // Remplacer la liste locale par celle de Drive
@@ -1055,7 +1217,7 @@ function triggerSave(reRenderDbView = false) {
 
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
-    try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
+    try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
 };
 
 window.toggleGroup = function(r1) { tcdSaveScroll(); if(collapsedGroups.has(r1)) collapsedGroups.delete(r1); else collapsedGroups.add(r1); tcdSaveCollapsed(); window.renderSummary(); };
@@ -1459,7 +1621,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v1.9.6
+// QUICK CAT SEARCH — v2.0.6
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -1659,7 +1821,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v1.9.6
+// CAT MODAL SEARCH — v2.0.6
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -1708,6 +1870,575 @@ window.catModalSearchApply = function(c1, c2) {
     $('catModalStep3').style.display = 'block';
     // Scroll step3 into view
     var s3 = $('catModalStep3'); if(s3) s3.scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+
+
+// ════════════════════════════════════════════════════
+// GRAPHIQUES ENGINE  — v2.0.6
+// ════════════════════════════════════════════════════
+var savedCharts = [];            // [{id, config, comment}]
+var _cbEditId   = null;          // id du graphique en cours d'édition
+var _cbPreviewChart = null;      // instance Chart.js de l'aperçu
+var _chartInstances = {};        // {id: Chart instance}
+
+// ── Palette de couleurs pour les séries
+var CHART_COLORS = [
+    '#01696f','#da7101','#006494','#7a39bb','#437a22',
+    '#a12c7b','#d19900','#a13544','#4f98a3','#bb653b'
+];
+
+// ── Utility: construire les données du graphique à partir de la config
+function buildChartData(cfg) {
+    var dateField = cfg.dateSource || 'dateOp';
+    var isStacked    = cfg.type === 'bar-stacked' || cfg.type === 'bar-stacked100';
+    var seriesField  = cfg.series || 'cat1';
+
+    var txs = transactions.filter(function(t) {
+        if (!t.cat1 || t.cat1 === '_SANS_CATEGORIE') return false;
+        if (cfg.filterSign === 'debit'  && t.amount >= 0) return false;
+        if (cfg.filterSign === 'credit' && t.amount <  0) return false;
+        if (cfg.filterYears && cfg.filterYears.length > 0) {
+            var txDate = t[dateField] || t.dateOp || '';
+            var yr = txDate.length >= 4 ? txDate.substring(0,4) : '';
+            if (cfg.filterYears.indexOf(yr) === -1) return false;
+        }
+        if (cfg.filterCat1 && cfg.filterCat1.length > 0)
+            if (cfg.filterCat1.indexOf(t.cat1) === -1) return false;
+        if (cfg.filterCat2 && cfg.filterCat2.length > 0)
+            if (cfg.filterCat2.indexOf(t.cat2) === -1) return false;
+        return true;
+    });
+
+    // ── Non-stacked: simple grouping
+    if (!isStacked) {
+        var groups = {};
+        txs.forEach(function(t) {
+            var txDateStr = t[dateField] || t.dateOp || '';
+            var key;
+            if (cfg.axisX === 'month')      key = txDateStr.length >= 7 ? txDateStr.substring(0,7) : txDateStr.substring(0,4)||'?';
+            else if (cfg.axisX === 'year')  key = txDateStr.length >= 4 ? txDateStr.substring(0,4) : '?';
+            else if (cfg.axisX === 'cat1')  key = t.cat1 || '?';
+            else if (cfg.axisX === 'cat2')  key = t.cat2 || '?';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(t.amount);
+        });
+        var labels = Object.keys(groups).sort();
+        var values = labels.map(function(k) {
+            var vals = groups[k];
+            if (cfg.axisY === 'count') return vals.length;
+            if (cfg.axisY === 'avg')   return Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length)*100)/100;
+            return vals.reduce(function(a,b){return a+b;},0);
+        });
+        return { labels: labels, datasets: [{ label: cfg.title||'', data: values }] };
+    }
+
+    // ── Stacked: group by axisX (labels) × series
+    var labelSet = {}, seriesSet = {};
+    txs.forEach(function(t) {
+        var txDateStr = t[dateField] || t.dateOp || '';
+        var xKey;
+        if (cfg.axisX === 'month')      xKey = txDateStr.length >= 7 ? txDateStr.substring(0,7) : txDateStr.substring(0,4)||'?';
+        else if (cfg.axisX === 'year')  xKey = txDateStr.length >= 4 ? txDateStr.substring(0,4) : '?';
+        else if (cfg.axisX === 'cat1')  xKey = t.cat1 || '?';
+        else if (cfg.axisX === 'cat2')  xKey = t.cat2 || '?';
+        var sKey = t[seriesField] || '?';
+        labelSet[xKey]  = true;
+        seriesSet[sKey] = true;
+    });
+    var labels  = Object.keys(labelSet).sort();
+    var seriesKeys = Object.keys(seriesSet).sort();
+
+    // Build matrix
+    var matrix = {}; // matrix[sKey][xKey] = sum/count/avg
+    seriesKeys.forEach(function(s) { matrix[s] = {}; labels.forEach(function(l) { matrix[s][l] = []; }); });
+    txs.forEach(function(t) {
+        var txDateStr = t[dateField] || t.dateOp || '';
+        var xKey;
+        if (cfg.axisX === 'month')      xKey = txDateStr.length >= 7 ? txDateStr.substring(0,7) : txDateStr.substring(0,4)||'?';
+        else if (cfg.axisX === 'year')  xKey = txDateStr.length >= 4 ? txDateStr.substring(0,4) : '?';
+        else if (cfg.axisX === 'cat1')  xKey = t.cat1 || '?';
+        else if (cfg.axisX === 'cat2')  xKey = t.cat2 || '?';
+        var sKey = t[seriesField] || '?';
+        if (matrix[sKey] && matrix[sKey][xKey] !== undefined) matrix[sKey][xKey].push(t.amount);
+    });
+
+    // First pass: compute raw values per series per label
+    var rawMatrix = {};
+    seriesKeys.forEach(function(s) {
+        rawMatrix[s] = labels.map(function(l) {
+            var vals = matrix[s][l] || [];
+            if (!vals.length) return 0;
+            if (cfg.axisY === 'count') return vals.length;
+            if (cfg.axisY === 'avg')   return Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length)*100)/100;
+            return Math.abs(vals.reduce(function(a,b){return a+b;},0));
+        });
+    });
+
+    // Compute column totals for 100% normalization
+    var colTotals = labels.map(function(_, li) {
+        return seriesKeys.reduce(function(sum, s) { return sum + (rawMatrix[s][li] || 0); }, 0);
+    });
+
+    var datasets = seriesKeys.map(function(s, si) {
+        var color = CHART_COLORS[si % CHART_COLORS.length];
+        var data  = labels.map(function(_, li) {
+            var raw = rawMatrix[s][li] || 0;
+            if (cfg.type === 'bar-stacked100') {
+                var total = colTotals[li];
+                return total > 0 ? Math.round((raw / total) * 10000) / 100 : 0;
+            }
+            return raw;
+        });
+        return { label: s, data: data, backgroundColor: color + 'cc', borderColor: color, borderWidth: 1 };
+    });
+
+    return { labels: labels, datasets: datasets };
+}
+
+// ── Rendre un graphique dans un canvas existant
+function renderChartOnCanvas(canvas, cfg) {
+    var data     = buildChartData(cfg);
+    var ctx      = canvas.getContext('2d');
+    var isDark   = document.documentElement.getAttribute('data-theme') === 'dark';
+    var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    var tickColor = isDark ? '#797876' : '#7a7974';
+    var isStacked    = cfg.type === 'bar-stacked' || cfg.type === 'bar-stacked100';
+    var is100        = cfg.type === 'bar-stacked100';
+    var isLine       = cfg.type === 'line';
+
+    // For non-stacked single dataset: apply per-bar colors
+    var datasets = data.datasets;
+    if (!isStacked && datasets.length === 1) {
+        datasets[0].backgroundColor = isLine
+            ? CHART_COLORS[0] + '33'
+            : data.labels.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length] + 'cc'; });
+        datasets[0].borderColor = isLine
+            ? CHART_COLORS[0]
+            : data.labels.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length]; });
+        datasets[0].borderWidth = isLine ? 2 : 1;
+        datasets[0].tension     = 0.35;
+        datasets[0].fill        = isLine;
+        datasets[0].pointRadius = isLine ? 3 : 0;
+    }
+
+    var fmtVal = function(v) {
+        if (cfg.axisY === 'count') return v + ' transactions';
+        return v.toLocaleString('fr-FR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' €';
+    };
+
+    return new Chart(ctx, {
+        type: isLine ? 'line' : 'bar',
+        data: { labels: data.labels, datasets: datasets },
+        options: {
+            responsive: true,
+            onClick: isStacked ? function(evt, elements) {
+                if (!elements || !elements.length) return;
+                var el       = elements[0];
+                var label    = this.data.labels[el.index];
+                var series   = this.data.datasets[el.datasetIndex].label;
+                window.openDrillDown(cfg, label, series);
+            } : undefined,
+            plugins: {
+                legend: { display: isStacked, position: 'bottom',
+                    labels: { color: tickColor, font: { size: 11 }, boxWidth: 14 } },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (is100) {
+                                var total = ctx.chart.data.datasets.reduce(function(s,ds){ return s+(ds.data[ctx.dataIndex]||0); },0);
+                                var pct   = total ? ((ctx.parsed.y / total)*100).toFixed(1) : '0.0';
+                                return ' ' + ctx.dataset.label + ': ' + fmtVal(ctx.parsed.y) + ' (' + pct + '%)';
+                            }
+                            return ' ' + ctx.dataset.label + ': ' + fmtVal(ctx.parsed.y);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: isStacked,
+                    ticks: { color: tickColor, font: { size: 11 }, maxRotation: 45 },
+                    grid:  { color: gridColor }
+                },
+                y: {
+                    stacked: isStacked,
+                    reverse: cfg.invertY === true,
+                    max:     is100 ? 100 : undefined,
+                    min:     is100 ? 0   : undefined,
+                    ticks: {
+                        color: tickColor, font: { size: 11 },
+                        callback: function(v) {
+                            if (is100) return v + '%';
+                            if (cfg.axisY === 'count') return v;
+                            return v.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:0}) + '€';
+                        }
+                    },
+                    grid: { color: gridColor }
+                }
+            }
+        }
+    });
+}
+
+// ── Afficher tous les graphiques sauvegardés
+window.renderCharts = function() {
+    var container = $('chartsList');
+    var empty     = $('chartsEmpty');
+    if (!container) return;
+
+    Object.keys(_chartInstances).forEach(function(id) {
+        try { _chartInstances[id].destroy(); } catch(e) {}
+    });
+    _chartInstances = {};
+    container.innerHTML = '';
+
+    if (!savedCharts.length) {
+        empty.style.display = 'block'; container.style.display = 'none'; return;
+    }
+    empty.style.display = 'none';
+    container.style.cssText = 'display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;';
+
+    savedCharts.forEach(function(sc, idx) {
+        var isHalf = sc.config.width === 'half';
+        var wrap = document.createElement('div');
+        wrap.setAttribute('data-chart-id', sc.id);
+        wrap.setAttribute('draggable', 'true');
+        wrap.style.cssText = 'background:var(--surface);border:1px solid var(--ink-faint);border-radius:10px;padding:20px;box-sizing:border-box;'
+            + (isHalf ? 'width:calc(50% - 12px);min-width:280px;flex-shrink:0;' : 'width:100%;');
+
+        wrap.innerHTML =
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">'
+          + '<span class="chart-drag-handle" title="Glisser pour réordonner" style="cursor:grab;font-size:1.2em;color:var(--ink-muted);user-select:none;">⠿</span>'
+          + '<span class="chart-title-inline" data-chart-id="' + sc.id + '"'
+          +   ' contenteditable="true" spellcheck="false"'
+          +   ' style="font-weight:700;font-size:1.05em;flex:1;outline:none;border-bottom:1px dashed transparent;cursor:text;padding:2px 4px;border-radius:4px;"'
+          +   ' title="Cliquer pour renommer">' + escapeHtml(sc.config.title || 'Graphique') + '</span>'
+          + '<div style="display:flex;gap:6px;">'
+          + '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.82em;" data-edit-id="' + sc.id + '">✏️</button>'
+          + '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.82em;color:var(--urgent);" data-del-id="' + sc.id + '">🗑</button>'
+          + '</div></div>'
+          + '<canvas id="chart-' + sc.id + '" style="width:100%;max-height:300px;"></canvas>'
+          + '<div style="margin-top:12px;">'
+          + '<textarea class="input-text chart-comment-area" data-chart-id="' + sc.id + '" rows="2"'
+          +   ' style="width:100%;margin-top:2px;font-size:0.88em;resize:vertical;"'
+          +   ' placeholder="Commentaire…">' + escapeHtml(sc.comment || '') + '</textarea>'
+          + '</div>';
+
+        container.appendChild(wrap);
+
+        setTimeout(function() {
+            var canvas = document.getElementById('chart-' + sc.id);
+            if (canvas) _chartInstances[sc.id] = renderChartOnCanvas(canvas, sc.config);
+        }, 30);
+    });
+
+    // ── Délégation : commentaire
+    container.querySelectorAll('.chart-comment-area').forEach(function(ta) {
+        ta.addEventListener('input', function() {
+            var sc = savedCharts.find(function(c){ return c.id === ta.getAttribute('data-chart-id'); });
+            if (sc) { sc.comment = ta.value; triggerSave(false); }
+        });
+    });
+
+    // ── Délégation : modifier / supprimer
+    container.addEventListener('click', function(e) {
+        var editBtn = e.target.closest('[data-edit-id]');
+        var delBtn  = e.target.closest('[data-del-id]');
+        if (editBtn) window.editChart(editBtn.getAttribute('data-edit-id'));
+        if (delBtn)  window.deleteChart(delBtn.getAttribute('data-del-id'));
+    });
+
+    // ── Titre inline éditable
+    container.querySelectorAll('.chart-title-inline').forEach(function(el) {
+        el.addEventListener('focus', function() { el.style.borderBottomColor = 'var(--pro)'; el.style.background = 'var(--bg)'; });
+        el.addEventListener('blur', function() {
+            el.style.borderBottomColor = 'transparent'; el.style.background = '';
+            var sc = savedCharts.find(function(c){ return c.id === el.getAttribute('data-chart-id'); });
+            if (sc) { sc.config.title = el.textContent.trim() || 'Graphique'; triggerSave(false); }
+        });
+        el.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); el.blur(); } });
+    });
+
+    // ── Drag & drop pour réordonner
+    var dragSrc = null;
+    container.querySelectorAll('[draggable]').forEach(function(item) {
+        item.addEventListener('dragstart', function(e) {
+            dragSrc = item;
+            e.dataTransfer.effectAllowed = 'move';
+            item.style.opacity = '0.5';
+        });
+        item.addEventListener('dragend', function() { item.style.opacity = ''; });
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+            item.style.outline = '2px dashed var(--pro)';
+        });
+        item.addEventListener('dragleave', function() { item.style.outline = ''; });
+        item.addEventListener('drop', function(e) {
+            e.preventDefault(); item.style.outline = '';
+            if (dragSrc && dragSrc !== item) {
+                var srcId  = dragSrc.getAttribute('data-chart-id');
+                var dstId  = item.getAttribute('data-chart-id');
+                var srcIdx = savedCharts.findIndex(function(c){ return c.id === srcId; });
+                var dstIdx = savedCharts.findIndex(function(c){ return c.id === dstId; });
+                var moved  = savedCharts.splice(srcIdx, 1)[0];
+                savedCharts.splice(dstIdx, 0, moved);
+                triggerSave(false);
+                window.renderCharts();
+            }
+        });
+    });
+};;
+
+// ── Ouvrir le builder (nouveau ou édition)
+window.openChartBuilder = function(editId) {
+    _cbEditId = editId || null;
+    var existing = editId ? savedCharts.find(function(c){ return c.id === editId; }) : null;
+    var cfg = existing ? existing.config : {};
+
+    $('chartBuilderTitle').textContent = editId ? 'Modifier le graphique' : 'Nouveau graphique';
+    $('cbTitle').value          = cfg.title      || '';
+    $('cbType').value           = cfg.type       || 'bar';
+    $('cbAxisX').value          = cfg.axisX      || 'month';
+    $('cbAxisY').value          = cfg.axisY      || 'sum';
+    $('cbDateSource').value     = cfg.dateSource || 'dateOp';
+    $('cbWidth').value           = cfg.width      || 'full';
+    if($('cbInvertY')) $('cbInvertY').checked = cfg.invertY || false;
+    if($('cbSeries'))  $('cbSeries').value  = cfg.series  || 'cat1';
+    window.onCbTypeChange();
+    $('cbFilterSign').value     = cfg.filterSign || 'all';
+
+    // Peupler les listes d'années et catégories
+    window.populateCbFilters(cfg);
+
+    $('chartBuilderOverlay').classList.add('open');
+    window.updateCbPreview();
+};
+
+window.closeChartBuilder = function() {
+    $('chartBuilderOverlay').classList.remove('open');
+    if (_cbPreviewChart) { try { _cbPreviewChart.destroy(); } catch(e) {} _cbPreviewChart = null; }
+};
+
+// Live preview on any builder field change
+document.addEventListener('change', function(e) {
+    var ids = ['cbType','cbAxisX','cbAxisY','cbFilterYear','cbFilterSign','cbFilterCat1','cbFilterCat2','cbDateSource','cbWidth','cbInvertY','cbSeries'];
+    if (e.target.id === 'cbDateSource') { window.populateCbFilters(readCbConfig()); }
+    if (ids.indexOf(e.target.id) !== -1) window.updateCbPreview();
+});
+document.addEventListener('input', function(e) {
+    if (e.target.id === 'cbTitle') window.updateCbPreview();
+});
+
+
+// ── Peupler les filtres du builder
+window.populateCbFilters = function(cfg) {
+    // Années disponibles
+    var years = [];
+    var _ds = ($('cbDateSource') && $('cbDateSource').value) || 'dateOp';
+    transactions.forEach(function(t) {
+        var raw = t[_ds] || t.dateOp || '';
+        var y = raw.length >= 4 ? raw.substring(0,4) : '';
+        if (y && years.indexOf(y) === -1) years.push(y);
+    });
+    years.sort().reverse();
+    var yearSel = $('cbFilterYear');
+    yearSel.innerHTML = years.map(function(y) {
+        var sel = cfg.filterYears && cfg.filterYears.indexOf(y) !== -1;
+        return '<option value="' + y + '"' + (sel?' selected':'') + '>' + y + '</option>';
+    }).join('');
+
+    // Cat1
+    var cat1s = Object.keys(categories).sort(customSortCmp);
+    var c1Sel = $('cbFilterCat1');
+    c1Sel.innerHTML = '<option value="">Toutes</option>' + cat1s.map(function(c) {
+        var sel = cfg.filterCat1 && cfg.filterCat1.indexOf(c) !== -1;
+        return '<option value="' + escapeHtml(c) + '"' + (sel?' selected':'') + '>' + escapeHtml(c) + '</option>';
+    }).join('');
+
+    window.updateCbCat2Filter(cfg);
+};
+
+window.onCbCat1Change = function() { window.updateCbCat2Filter({}); window.updateCbPreview(); };
+window.onCbAxisChange = function() { window.updateCbPreview(); };
+window.onCbTypeChange = function() {
+    var t = $('cbType').value;
+    var isStacked = t === 'bar-stacked' || t === 'bar-stacked100';
+    if($('cbSeriesGroup')) $('cbSeriesGroup').style.display = isStacked ? 'block' : 'none';
+    window.updateCbPreview();
+};
+
+
+window.updateCbCat2Filter = function(cfg) {
+    var sel1 = Array.from($('cbFilterCat1').selectedOptions).map(function(o){ return o.value; }).filter(Boolean);
+    var cat2s = [];
+    (sel1.length ? sel1 : Object.keys(categories)).forEach(function(c1) {
+        var subs = categories[c1] || [];
+        subs.forEach(function(c2) { if (cat2s.indexOf(c2) === -1) cat2s.push(c2); });
+    });
+    cat2s.sort();
+    var c2Sel = $('cbFilterCat2');
+    c2Sel.innerHTML = '<option value="">Toutes</option>' + cat2s.map(function(c) {
+        var sel = cfg.filterCat2 && cfg.filterCat2.indexOf(c) !== -1;
+        return '<option value="' + escapeHtml(c) + '"' + (sel?' selected':'') + '>' + escapeHtml(c) + '</option>';
+    }).join('');
+};
+
+// ── Lire la config du builder
+function readCbConfig() {
+    return {
+        title:      $('cbTitle').value.trim() || 'Graphique',
+        type:       $('cbType').value,
+        axisX:      $('cbAxisX').value,
+        axisY:      $('cbAxisY').value,
+        dateSource: $('cbDateSource').value,
+        width:      $('cbWidth').value || 'full',
+        filterSign: $('cbFilterSign').value,
+        invertY:    $('cbInvertY') ? $('cbInvertY').checked : false,
+        series:     $('cbSeries') ? $('cbSeries').value : 'cat1',
+        filterYears: Array.from($('cbFilterYear').selectedOptions).map(function(o){ return o.value; }),
+        filterCat1:  Array.from($('cbFilterCat1').selectedOptions).map(function(o){ return o.value; }).filter(Boolean),
+        filterCat2:  Array.from($('cbFilterCat2').selectedOptions).map(function(o){ return o.value; }).filter(Boolean),
+    };
+}
+
+// ── Mettre à jour l'aperçu
+window.updateCbPreview = function() {
+    var canvas = $('cbPreviewCanvas');
+    if (!canvas) return;
+    if (_cbPreviewChart) { try { _cbPreviewChart.destroy(); } catch(e) {} _cbPreviewChart = null; }
+    var cfg = readCbConfig();
+    _cbPreviewChart = renderChartOnCanvas(canvas, cfg);
+};
+
+// Déclencher l'aperçu sur changement de n'importe quel champ du builder
+['cbTitle','cbType','cbAxisX','cbAxisY','cbFilterYear','cbFilterSign','cbFilterCat1','cbFilterCat2'].forEach(function(id) {
+    // On attache après chargement du DOM
+    document.addEventListener('DOMContentLoaded', function() {
+        var el = $(id); if(el) el.addEventListener('change', window.updateCbPreview);
+    });
+});
+
+// ── Sauvegarder le graphique
+window.saveChart = function() {
+    var cfg = readCbConfig();
+    if (_cbEditId) {
+        var sc = savedCharts.find(function(c){ return c.id === _cbEditId; });
+        if (sc) sc.config = cfg;
+    } else {
+        savedCharts.push({ id: 'chart_' + Date.now(), config: cfg, comment: '' });
+    }
+    triggerSave(false);
+    window.closeChartBuilder();
+    window.renderCharts();
+};
+
+// ── Modifier un graphique
+window.editChart = function(id) { window.openChartBuilder(id); };
+
+// ── Supprimer un graphique
+window.deleteChart = function(id) {
+    if (!confirm('Supprimer ce graphique ?')) return;
+    savedCharts = savedCharts.filter(function(c){ return c.id !== id; });
+    if (_chartInstances[id]) { try { _chartInstances[id].destroy(); } catch(e) {} delete _chartInstances[id]; }
+    triggerSave(false);
+    window.renderCharts();
+};
+
+
+// ════════════════════════════════════════════════════
+// DRILL-DOWN — clic sur portion d'histogramme empilé
+// ════════════════════════════════════════════════════
+var _drillChart = null;
+
+window.closeDrillDown = function() {
+    $('drillDownOverlay').classList.remove('open');
+    if (_drillChart) { try { _drillChart.destroy(); } catch(e) {} _drillChart = null; }
+};
+
+window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
+    // Build a 100% stacked chart of cat2 breakdown for the clicked (label × series)
+    var dateField   = parentCfg.dateSource || 'dateOp';
+    var seriesField = parentCfg.series || 'cat1';
+
+    // Filter transactions matching the clicked bar segment
+    var txs = transactions.filter(function(t) {
+        if (!t.cat1 || t.cat1 === '_SANS_CATEGORIE') return false;
+        if (parentCfg.filterSign === 'debit'  && t.amount >= 0) return false;
+        if (parentCfg.filterSign === 'credit' && t.amount <  0) return false;
+        // Match axisX label
+        var txDateStr = t[dateField] || t.dateOp || '';
+        var xKey;
+        if (parentCfg.axisX === 'month')     xKey = txDateStr.length >= 7 ? txDateStr.substring(0,7) : txDateStr.substring(0,4)||'?';
+        else if (parentCfg.axisX === 'year') xKey = txDateStr.length >= 4 ? txDateStr.substring(0,4) : '?';
+        else if (parentCfg.axisX === 'cat1') xKey = t.cat1 || '?';
+        else if (parentCfg.axisX === 'cat2') xKey = t.cat2 || '?';
+        if (xKey !== clickedLabel) return false;
+        // Match series
+        if ((t[seriesField] || '?') !== clickedSeries) return false;
+        return true;
+    });
+
+    if (!txs.length) { showToast('Aucune transaction pour cette sélection.'); return; }
+
+    // Group by cat2 (or cat1 if series is already cat2)
+    var subField = seriesField === 'cat2' ? 'cat1' : 'cat2';
+    var subGroups = {};
+    txs.forEach(function(t) {
+        var k = t[subField] || '?';
+        subGroups[k] = (subGroups[k] || 0) + Math.abs(t.amount);
+    });
+    var total = Object.values(subGroups).reduce(function(a,b){return a+b;},0);
+    var subKeys = Object.keys(subGroups).sort(function(a,b){ return subGroups[b]-subGroups[a]; });
+    var pctData = subKeys.map(function(k){ return total > 0 ? Math.round(subGroups[k]/total*10000)/100 : 0; });
+
+    // Build title
+    $('drillDownTitle').textContent = '📊 ' + clickedSeries + '  ›  ' + clickedLabel + ' — répartition ' + subField.replace('cat','Cat ');
+
+    // Render
+    $('drillDownOverlay').classList.add('open');
+    if (_drillChart) { try { _drillChart.destroy(); } catch(e) {} _drillChart = null; }
+
+    var isDark    = document.documentElement.getAttribute('data-theme') === 'dark';
+    var tickColor = isDark ? '#797876' : '#7a7974';
+    var gridColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+    var canvas    = $('drillDownCanvas');
+    var ctx       = canvas.getContext('2d');
+
+    _drillChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: subKeys,
+            datasets: [{
+                label: 'Part (%)',
+                data:  pctData,
+                backgroundColor: subKeys.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length] + 'cc'; }),
+                borderColor:     subKeys.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length]; }),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            var k   = subKeys[ctx.dataIndex];
+                            var raw = subGroups[k];
+                            return ' ' + ctx.parsed.x.toFixed(1) + '%  —  ' + raw.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { min:0, max:100,
+                     ticks: { color: tickColor, font:{size:11}, callback: function(v){ return v+'%'; } },
+                     grid:  { color: gridColor } },
+                y: { ticks: { color: tickColor, font:{size:11} }, grid: { color: gridColor } }
+            }
+        }
+    });
 };
 
 
@@ -2281,7 +3012,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v1.9.6
+// EXPORT / IMPORT BASE DE DONNÉES v2.0.6
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -2414,7 +3145,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v1.9.6+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.0.6+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
