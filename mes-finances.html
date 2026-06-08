@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mes finances - v2.0.6</title>
-    <!-- v2.0.6 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
+    <title>Mes finances - v2.1.4</title>
+    <!-- v2.1.4 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -218,6 +218,10 @@
 .cat-search-hit:hover { background: var(--bg) !important; border-color: var(--accent, #e07b54) !important; }
 /* drill-down cursor on stacked charts */
 #chartsList canvas { cursor: default; }
+/* chart blur */
+.chart-blur-wrapper { position:relative; }
+.chart-blur-overlay { position:absolute;inset:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:6px;transition:opacity 0.3s;pointer-events:none;z-index:2; }
+.chart-blur-overlay.hidden { opacity:0;pointer-events:none; }
 </style>
     <!-- Tabulator -->
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
@@ -240,6 +244,7 @@
           <select id="accountSelector" style="border:none;background:transparent;font-size:0.9em;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit;" onchange="window.switchAccount(this.value)"></select>
           <button class="btn btn-outline" style="padding:2px 7px;font-size:0.85em;" onclick="window.openAccountManager()" title="Gérer les comptes">⚙️</button>
         </div>
+        <button class="btn btn-outline" style="font-size:0.9em;" onclick="window.openIdeasPopup()" title="Idées d'amélioration">💡 Idées</button>
         <span class="badge badge-sync" id="syncBadge">Déconnecté</span>
         <button class="btn btn-outline" id="importBtnUI" style="font-size:0.9em;">📥 Importer extrait compte</button>
         <button class="btn btn-outline" id="logoutBtn" style="display:none; font-size:0.9em;">Déconnexion</button>
@@ -485,7 +490,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.0.6
+         GRAPHIQUES VIEW  — v2.1.4
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -613,6 +618,11 @@
                     <input type="checkbox" id="cbInvertY" style="width:16px;height:16px;accent-color:var(--pro);">
                     <label for="cbInvertY" style="font-size:0.9em;cursor:pointer;">Inverser l'axe Y (valeurs négatives en haut)</label>
                 </div>
+                <!-- Floutage -->
+                <div style="grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:4px 0 8px 0;">
+                    <input type="checkbox" id="cbBlur" style="width:16px;height:16px;accent-color:var(--pro);">
+                    <label for="cbBlur" style="font-size:0.9em;cursor:pointer;">Activer le floutage (masquer les valeurs par défaut)</label>
+                </div>
             </div>
 
             <!-- Aperçu -->
@@ -664,6 +674,28 @@
                 <button class="btn btn-outline" onclick="window.closeDrillDown()" style="padding:4px 10px;border-radius:20px;">✕</button>
             </div>
             <canvas id="drillDownCanvas" style="width:100%;max-height:380px;"></canvas>
+        </div>
+    </div>
+
+
+    <!-- ══════════ IDÉES AMÉLIORATION MODAL ══════════ -->
+    <div class="overlay" id="ideasOverlay">
+        <div class="modal" style="max-width:560px;width:96vw;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h2 style="margin:0;">💡 Idées d'amélioration</h2>
+                <button class="btn btn-outline" onclick="window.closeIdeasPopup()" style="padding:4px 10px;border-radius:20px;">✕</button>
+            </div>
+            <p style="font-size:0.88em;color:var(--ink-soft);margin-bottom:12px;">
+                Notez ici vos idées, suggestions ou améliorations souhaitées. Le texte est sauvegardé automatiquement sur Google Drive.
+            </p>
+            <textarea id="ideasTextarea" class="input-text" rows="10"
+                style="width:100%;resize:vertical;font-size:0.92em;line-height:1.5;"
+                placeholder="Ex : Ajouter un export PDF, améliorer le tri des catégories..."
+                onblur="window.saveIdeasText()"></textarea>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+                <span id="ideasSaveStatus" style="font-size:0.8em;color:var(--ink-muted);"></span>
+                <button class="btn btn-outline" onclick="window.closeIdeasPopup()">Fermer</button>
+            </div>
         </div>
     </div>
 
@@ -768,11 +800,10 @@
             <select id="bankSelectImport" class="input-text">
                 <option value="FORTUNEO">Fortuneo</option>
                 <option value="SOGE">SOGE</option>
-                <option value="AUTRE BANQUE">Autre (Format Générique)</option>
             </select>
         </div>
         <div style="margin-bottom:24px;">
-            <button class="btn btn-primary" id="triggerFileBtn" style="width:100%;">Parcourir (.csv, .xlsx)...</button>
+            <button class="btn btn-primary" id="triggerFileBtn" style="width:100%;">Parcourir (.csv)</button>
         </div>
         <button class="btn btn-outline" onclick="document.getElementById('importOverlay').classList.remove('open')" style="width:100%;">Annuler</button>
     </div>
@@ -803,7 +834,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.0.6';
+const APP_VERSION = '2.1.4';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -865,7 +896,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.0.6 : séquence Google d'abord, MDP ensuite
+    // v2.1.4 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1621,7 +1652,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.0.6
+// QUICK CAT SEARCH — v2.1.4
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -1821,7 +1852,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.0.6
+// CAT MODAL SEARCH — v2.1.4
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -1874,7 +1905,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.0.6
+// GRAPHIQUES ENGINE  — v2.1.4
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -2111,13 +2142,17 @@ window.renderCharts = function() {
           + '<span class="chart-drag-handle" title="Glisser pour réordonner" style="cursor:grab;font-size:1.2em;color:var(--ink-muted);user-select:none;">⠿</span>'
           + '<span class="chart-title-inline" data-chart-id="' + sc.id + '"'
           +   ' contenteditable="true" spellcheck="false"'
-          +   ' style="font-weight:700;font-size:1.05em;flex:1;outline:none;border-bottom:1px dashed transparent;cursor:text;padding:2px 4px;border-radius:4px;"'
+          +   ' style="font-weight:700;font-size:1.05em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;outline:none;border-bottom:1px dashed transparent;cursor:text;padding:2px 4px;border-radius:4px;"'
           +   ' title="Cliquer pour renommer">' + escapeHtml(sc.config.title || 'Graphique') + '</span>'
-          + '<div style="display:flex;gap:6px;">'
+          + '<div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">'
+          + (sc.config.blur ? '<button class="btn btn-outline chart-eye-btn" id="eye-' + sc.id + '" style="padding:3px 8px;font-size:0.82em;" title="Afficher/masquer">🙈</button>' : '')
           + '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.82em;" data-edit-id="' + sc.id + '">✏️</button>'
           + '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.82em;color:var(--urgent);" data-del-id="' + sc.id + '">🗑</button>'
           + '</div></div>'
+          + '<div class="chart-blur-wrapper" style="position:relative;">'
           + '<canvas id="chart-' + sc.id + '" style="width:100%;max-height:300px;"></canvas>'
+          + (sc.config.blur ? '<div class="chart-blur-overlay" id="blur-' + sc.id + '"></div>' : '')
+          + '</div>'
           + '<div style="margin-top:12px;">'
           + '<textarea class="input-text chart-comment-area" data-chart-id="' + sc.id + '" rows="2"'
           +   ' style="width:100%;margin-top:2px;font-size:0.88em;resize:vertical;"'
@@ -2130,6 +2165,33 @@ window.renderCharts = function() {
             var canvas = document.getElementById('chart-' + sc.id);
             if (canvas) _chartInstances[sc.id] = renderChartOnCanvas(canvas, sc.config);
         }, 30);
+    });
+
+    // ── Eye buttons (blur toggle)
+    savedCharts.forEach(function(sc) {
+        if (!sc.config.blur) return;
+        var eyeBtn   = document.getElementById('eye-' + sc.id);
+        var blurDiv  = document.getElementById('blur-' + sc.id);
+        var _blurTimer = null;
+        if (!eyeBtn || !blurDiv) return;
+        eyeBtn.addEventListener('click', function() {
+            var isHidden = blurDiv.classList.contains('hidden');
+            if (isHidden) {
+                // already unblurred — re-blur now
+                blurDiv.classList.remove('hidden');
+                eyeBtn.textContent = '🙈';
+                clearTimeout(_blurTimer);
+            } else {
+                // unblur for 60s
+                blurDiv.classList.add('hidden');
+                eyeBtn.textContent = '👁️';
+                clearTimeout(_blurTimer);
+                _blurTimer = setTimeout(function() {
+                    blurDiv.classList.remove('hidden');
+                    eyeBtn.textContent = '🙈';
+                }, 60000);
+            }
+        });
     });
 
     // ── Délégation : commentaire
@@ -2203,6 +2265,7 @@ window.openChartBuilder = function(editId) {
     $('cbDateSource').value     = cfg.dateSource || 'dateOp';
     $('cbWidth').value           = cfg.width      || 'full';
     if($('cbInvertY')) $('cbInvertY').checked = cfg.invertY || false;
+    if($('cbBlur'))    $('cbBlur').checked    = cfg.blur    || false;
     if($('cbSeries'))  $('cbSeries').value  = cfg.series  || 'cat1';
     window.onCbTypeChange();
     $('cbFilterSign').value     = cfg.filterSign || 'all';
@@ -2294,6 +2357,7 @@ function readCbConfig() {
         width:      $('cbWidth').value || 'full',
         filterSign: $('cbFilterSign').value,
         invertY:    $('cbInvertY') ? $('cbInvertY').checked : false,
+        blur:       $('cbBlur')    ? $('cbBlur').checked    : false,
         series:     $('cbSeries') ? $('cbSeries').value : 'cat1',
         filterYears: Array.from($('cbFilterYear').selectedOptions).map(function(o){ return o.value; }),
         filterCat1:  Array.from($('cbFilterCat1').selectedOptions).map(function(o){ return o.value; }).filter(Boolean),
@@ -2441,6 +2505,89 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
     });
 };
 
+
+// ════════════════════════════════════════════════════
+// IDÉES AMÉLIORATION — v2.1.4
+// ════════════════════════════════════════════════════
+var _ideasFileId = null;
+var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
+
+window.openIdeasPopup = function() {
+    $('ideasOverlay').classList.add('open');
+    $('ideasSaveStatus').textContent = '';
+    window.loadIdeasText();
+};
+
+window.closeIdeasPopup = function() {
+    $('ideasOverlay').classList.remove('open');
+};
+
+window.loadIdeasText = async function() {
+    if (!driveAccessToken) {
+        $('ideasTextarea').value = '';
+        $('ideasTextarea').placeholder = 'Connectez-vous à Drive pour sauvegarder vos idées.';
+        return;
+    }
+    $('ideasSaveStatus').textContent = '⏳ Chargement...';
+    try {
+        var fname = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
+        var r = await fetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name%3D'" + encodeURIComponent(fname) + "'&fields=files(id,name)&pageSize=1", {
+            headers: { Authorization: 'Bearer ' + driveAccessToken }
+        });
+        var d = await r.json();
+        if (d.files && d.files.length > 0) {
+            _ideasFileId = d.files[0].id;
+            var rc = await fetch('https://www.googleapis.com/drive/v3/files/' + _ideasFileId + '?alt=media', {
+                headers: { Authorization: 'Bearer ' + driveAccessToken }
+            });
+            $('ideasTextarea').value = await rc.text();
+            $('ideasSaveStatus').textContent = '✅ Chargé';
+        } else {
+            _ideasFileId = null;
+            $('ideasTextarea').value = '';
+            $('ideasSaveStatus').textContent = 'Nouveau fichier';
+        }
+    } catch(e) {
+        $('ideasSaveStatus').textContent = '❌ Erreur chargement';
+    }
+};
+
+window.saveIdeasText = async function() {
+    if (!driveAccessToken) return;
+    var text = $('ideasTextarea').value;
+    $('ideasSaveStatus').textContent = '💾 Sauvegarde...';
+    try {
+        var fname = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
+        var blob = new Blob([text], { type: 'text/plain' });
+        var url, method;
+        if (_ideasFileId) {
+            url    = 'https://www.googleapis.com/upload/drive/v3/files/' + _ideasFileId + '?uploadType=media';
+            method = 'PATCH';
+        } else {
+            var meta = JSON.stringify({ name: fname, parents: ['appDataFolder'] });
+            var form = new FormData();
+            form.append('metadata', new Blob([meta], { type: 'application/json' }));
+            form.append('file', blob);
+            var r2 = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+                method: 'POST',
+                headers: { Authorization: 'Bearer ' + driveAccessToken },
+                body: form
+            });
+            var res = await r2.json();
+            _ideasFileId = res.id;
+            $('ideasSaveStatus').textContent = '✅ Sauvegardé';
+            return;
+        }
+        await fetch(url, {
+            method: method,
+            headers: { Authorization: 'Bearer ' + driveAccessToken, 'Content-Type': 'text/plain' },
+            body: text
+        });
+        $('ideasSaveStatus').textContent = '✅ Sauvegardé — ' + new Date().toLocaleTimeString('fr-FR');
+    } catch(e) {
+        $('ideasSaveStatus').textContent = '❌ Erreur sauvegarde';
+    }
+};
 
 window.sortUncat = function(col) {
     if (uncatSortCol === col) uncatSortDir *= -1; else { uncatSortCol = col; uncatSortDir = -1; }
@@ -3012,7 +3159,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.0.6
+// EXPORT / IMPORT BASE DE DONNÉES v2.1.4
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3145,7 +3292,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.0.6+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.1.4+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -3410,6 +3557,7 @@ window.loadDriveFilesList = async function() {
             html += '<td>' + date + '</td>';
             html += '<td style="display:flex;gap:6px;">'
                 + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;" onclick="window.downloadAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">⬇️ Télécharger</button>'
+                + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;color:var(--done);" onclick="window.backupAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">☁️ Backup Cloud</button>'
                 + '<button class="btn btn-danger" style="padding:3px 8px;font-size:0.82em;" onclick="window.deleteAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">🗑️ Supprimer</button>'
                 + '</td>';
             html += '</tr>';
@@ -3439,7 +3587,53 @@ window.deleteAdminDriveFile = async function(fileId, fileName) {
             alert('Erreur suppression : ' + r.status);
         }
     } catch(e) { alert('Erreur : ' + e.message); }
+}
+
+window.backupAdminDriveFile = async function(fileId, fileName) {
+    if (!driveAccessToken) { showToast('⚠️ Non connecté à Drive'); return; }
+    try {
+        // ── 1. Télécharger le contenu du fichier source
+        showToast('☁️ Backup Cloud en cours...');
+        let r = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', {
+            headers: { Authorization: 'Bearer ' + driveAccessToken }
+        });
+        if (!r.ok) throw new Error('Téléchargement échoué (' + r.status + ')');
+        let content = await r.text();
+
+        // ── 2. Construire le nom de sauvegarde : nom-SauvAAAAMMJJ
+        var now   = new Date();
+        var yyyy  = now.getFullYear();
+        var mm    = String(now.getMonth()+1).padStart(2,'0');
+        var dd    = String(now.getDate()).padStart(2,'0');
+        var suffix = '-Backup' + yyyy + mm + dd;
+        // Insérer avant l'extension si présente, sinon en fin
+        var dotIdx   = fileName.lastIndexOf('.');
+        var backupName = dotIdx > 0
+            ? fileName.substring(0, dotIdx) + suffix + fileName.substring(dotIdx)
+            : fileName + suffix;
+
+        // ── 3. Uploader sous le nouveau nom dans appDataFolder
+        var meta = JSON.stringify({ name: backupName, parents: ['appDataFolder'] });
+        var blob = new Blob([content], { type: 'application/octet-stream' });
+        var form = new FormData();
+        form.append('metadata', new Blob([meta], { type: 'application/json' }));
+        form.append('file', blob);
+
+        let up = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + driveAccessToken },
+            body: form
+        });
+        if (!up.ok) throw new Error('Upload échoué (' + up.status + ')');
+        let res = await up.json();
+        showToast('✅ Backup Cloud créé : ' + backupName);
+        // Recharger la liste
+        window.loadDriveFilesList();
+    } catch(e) {
+        showToast('❌ Erreur sauvegarde : ' + e.message);
+    }
 };
+;
 
 window.downloadAdminDriveFile = async function(fileId, fileName) {
     if (!driveAccessToken) { alert('Non connecté à Drive.'); return; }
