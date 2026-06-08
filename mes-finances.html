@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mes finances - v1.7.3</title>
-    <!-- v1.7.3 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
+    <title>Mes finances - v1.9.6</title>
+    <!-- v1.9.6 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -205,7 +205,18 @@
         /* TCD toggle btn sur fond bleu */
         .tcd-table thead .tcd-toggle-btn { color: #FFFFFF; opacity: 0.85; }
         .tcd-table thead .tcd-toggle-btn:hover { opacity: 1; background: rgba(255,255,255,0.15); }
-        </style>
+        
+/* ── Quick Cat Search ── */
+#quickCatInput:focus { border-color: var(--accent, #e07b54) !important; box-shadow: 0 0 0 2px rgba(224,123,84,0.15); }
+.qc-item { transition: background 0.1s; }
+.qc-active, .qc-item:hover { background: var(--bg, #f5f5f5) !important; }
+
+/* ── Suggestion Pills ── */
+.sugg-pill { transition: filter 0.12s, transform 0.1s; line-height:1.3; }
+.sugg-pill:hover { filter: brightness(1.12); transform: translateY(-1px); }
+/* cat-search-hit hover */
+.cat-search-hit:hover { background: var(--bg) !important; border-color: var(--accent, #e07b54) !important; }
+</style>
     <!-- Tabulator -->
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
     <script src="https://unpkg.com/tabulator-tables@5.5.2/dist/js/tabulator.min.js"></script>
@@ -318,22 +329,27 @@
     </div>
 
     <div id="view-categorize" class="view">
-        <div style="background:var(--surface); border:1px solid var(--ink-faint); padding:16px; border-radius:var(--radius); margin-bottom:20px; box-shadow:var(--shadow);">
-            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-              <span style="font-weight:700;font-size:0.95em;color:var(--ink-soft);">Saisie Éclair — catégories des</span>
-              <input type="number" id="eclairMonths" min="1" max="60" value="6" style="width:52px;padding:2px 6px;border:1px solid var(--ink-faint);border-radius:4px;font-size:0.9em;" oninput="window.onEclairMonthsChange()" title="Nombre de mois à analyser">
-              <span style="font-size:0.9em;color:var(--ink-soft);">derniers mois :</span>
-            </div>
-            <div id="topCategoriesShortcuts" class="top-cat-box"></div>
+        
+        <div id="quickCatSearchWrap" style="padding:6px 0 8px 0; display:flex; align-items:center; gap:8px; position:relative;">
+            <span style="font-size:1.1em; line-height:1;">🔍</span>
+            <input type="text" id="quickCatInput"
+                placeholder="Recherche rapide cat1 > cat2…  ( / pour focus)"
+                autocomplete="off"
+                oninput="window.onQuickCatInput()"
+                onkeydown="window.onQuickCatKey(event)"
+                onblur="setTimeout(function(){var d=$('quickCatDropdown');if(d)d.style.display='none';},150)"
+                style="flex:1;padding:6px 12px;border:1.5px solid var(--ink-faint);border-radius:8px;font-size:0.95em;background:var(--surface);color:var(--ink);outline:none;transition:border-color 0.15s;">
+            <div id="quickCatDropdown"
+                style="display:none;position:absolute;top:100%;left:28px;right:0;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;box-shadow:var(--shadow);z-index:200;max-height:220px;overflow-y:auto;"></div>
         </div>
-        <div class="table-wrap" style="height:calc(100vh - 290px); overflow-y:auto;">
+        <div class="table-wrap" style="height:calc(100vh - 325px); overflow-y:auto;">
             <table id="uncatTable" class="std-table">
                 <thead style="position:sticky; top:0; z-index:2; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <tr>
                         <th style="width:120px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateOp')"><span id="uncatSortDateOp">Date Écriture</span></div><input type="text" class="col-filter uf-filter" id="ufDateOp" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:140px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateExpense')"><span id="uncatSortDateExp">Date réelle</span></div><input type="text" class="col-filter uf-filter" id="ufDateExpense" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:250px;"><div class="col-header-wrap">Détails</div><input type="text" class="col-filter uf-filter" id="ufDetails" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
-                        <th style="width:220px;"><div class="col-header-wrap">Catégorie Prévue</div><button id="ufCatNotEmptyBtn" onclick="window.toggleUfCatNotEmpty()" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:4px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted);font-size:0.85em;text-align:left;">≠ vide</button> <div class="resizer"></div></th>
+                        <th style="width:220px;"><div class="col-header-wrap">Catégories possibles</div><button id="ufCatNotEmptyBtn" onclick="window.toggleUfCatNotEmpty()" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:4px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted);font-size:0.85em;text-align:left;">≠ vide</button> <div class="resizer"></div></th>
                         <th style="width:180px;"><div class="col-header-wrap">Notes</div><input type="text" class="col-filter uf-filter" id="ufNote" placeholder="Espace pour vide..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:110px; text-align:right;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('amount')"><span id="uncatSortAmount">Montant</span></div><input type="text" class="col-filter uf-filter" id="ufAmount" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:120px; text-align:center;"><div class="col-header-wrap">Actions</div></th>
@@ -520,46 +536,68 @@
 </div>
 
 <div class="overlay" id="catSelectionOverlay">
-    <div class="modal" style="max-width:500px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+    <div class="modal" style="max-width:880px; width:96vw;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
             <h2 style="margin:0;">Affectation manuelle</h2>
             <button class="btn btn-outline" onclick="window.closeCatModal()" style="padding:4px 10px; border-radius:20px;">✕</button>
         </div>
-        <div style="margin-bottom:16px; padding:12px; background:var(--bg); border-radius:8px;">
+        <div style="margin-bottom:12px; padding:10px 12px; background:var(--bg); border-radius:8px; display:flex; gap:16px; align-items:baseline; flex-wrap:wrap;">
             <div style="font-weight:600;" id="catModalTxLabel"></div>
-            <div style="font-size:0.9em; color:var(--ink-soft); margin-top:4px;" id="catModalTxDetails"></div>
-            <div style="font-size:1.1em; font-weight:600; margin-top:8px;" id="catModalTxAmount"></div>
+            <div style="font-size:0.9em; color:var(--ink-soft);" id="catModalTxDetails"></div>
+            <div style="font-size:1.05em; font-weight:600; margin-left:auto;" id="catModalTxAmount"></div>
         </div>
-        <div id="catModalStep1">
-            <p style="font-size:0.85em; color:var(--ink-soft); margin-bottom:8px; font-weight:600; text-transform:uppercase;">1. Catégorie principale</p>
-            <div id="catModalCat1List" style="display:grid; grid-template-columns:1fr; gap:4px; max-height:40vh; overflow-y:auto;"></div>
-        </div>
-        <div id="catModalStep2" style="display:none;">
-            <button class="btn btn-outline" id="catModalBackBtn" style="margin-bottom:16px; width:100%;">← Revenir</button>
-            <p style="font-size:0.85em; color:var(--pro); margin-bottom:8px; font-weight:600; text-transform:uppercase;" id="catModalStep2Label"></p>
-            <div id="catModalCat2List" style="display:grid; grid-template-columns:1fr; gap:4px; max-height:35vh; overflow-y:auto;"></div>
-            <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--ink-faint);">
-                <input type="text" id="newCat2Input" class="input-text" placeholder="Nouvelle catégorie 2..." style="flex:1;font-size:0.9em;">
-                <button class="btn btn-primary" style="padding:6px 14px;font-size:0.9em;" onclick="window.createNewCat2()">+ Créer</button>
+
+        <div style="display:flex; gap:16px; align-items:flex-start;">
+
+            <!-- GAUCHE : sélection catégorie -->
+            <div style="flex:1; min-width:0;">
+                <div id="catModalStep1">
+                    <p style="font-size:0.82em; color:var(--ink-soft); margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;">1. Catégorie principale</p>
+                    <div id="catModalCat1List" style="display:grid; grid-template-columns:1fr; gap:3px; max-height:38vh; overflow-y:auto;"></div>
+                </div>
+                <div id="catModalStep2" style="display:none;">
+                    <button class="btn btn-outline" id="catModalBackBtn" style="margin-bottom:10px; width:100%;">← Revenir</button>
+                    <p style="font-size:0.82em; color:var(--pro); margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;" id="catModalStep2Label"></p>
+                    <div id="catModalCat2List" style="display:grid; grid-template-columns:1fr; gap:3px; max-height:32vh; overflow-y:auto;"></div>
+                    <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--ink-faint);">
+                        <input type="text" id="newCat2Input" class="input-text" placeholder="Nouvelle catégorie 2..." style="flex:1;font-size:0.9em;">
+                        <button class="btn btn-primary" style="padding:6px 14px;font-size:0.9em;" onclick="window.createNewCat2()">+ Créer</button>
+                    </div>
+                </div>
+                <div id="catModalStep3" style="display:none;">
+                    <p style="font-size:0.82em; color:var(--pro); margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;">3. Confirmer</p>
+                    <div style="padding:10px 12px; background:var(--bg); border-radius:8px; margin-bottom:12px;">
+                        Chemin : <strong id="catModalFinalCat"></strong>
+                        <button class="btn btn-outline" id="catModalEditCatBtn" style="margin-top:8px; width:100%; font-size:0.9em;">← Corriger</button>
+                    </div>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:8px;">
+                        <input type="checkbox" id="catModalCreateRule" style="width:18px; height:18px; accent-color:var(--pro);" onchange="document.getElementById('catModalRuleGroup').style.display = this.checked ? 'block' : 'none'">
+                        Enregistrer comme règle auto
+                    </label>
+                    <div id="catModalRuleGroup" style="display:none; margin-bottom:14px; margin-left:26px;">
+                        <input type="text" id="catModalRulePattern" class="input-text" placeholder="Expression déclencheuse">
+                    </div>
+                    <button class="btn btn-primary" onclick="window.validateCategorization()" style="width:100%;">Confirmer l'affectation</button>
+                </div>
             </div>
-        </div>
-        <div id="catModalStep3" style="display:none;">
-            <p style="font-size:0.85em; color:var(--pro); margin-bottom:8px; font-weight:600; text-transform:uppercase;">3. Confirmer la règle</p>
-            <div style="padding:12px; background:var(--bg); border-radius:8px; margin-bottom:16px;">
-                Chemin : <strong id="catModalFinalCat"></strong>
-                <button class="btn btn-outline" id="catModalEditCatBtn" style="margin-top:8px; width:100%; font-size:0.9em;">← Corriger</button>
+
+            <!-- SEPARATEUR -->
+            <div style="width:1px; background:var(--ink-faint); align-self:stretch; flex-shrink:0;"></div>
+
+            <!-- DROITE : recherche dans la base -->
+            <div style="width:280px; flex-shrink:0;">
+                <p style="font-size:0.82em; color:var(--ink-soft); margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;">🔍 Recherche dans la base</p>
+                <input type="text" id="catModalSearchInput" class="input-text"
+                    placeholder="Mot-clé, libellé, montant..."
+                    style="width:100%; font-size:0.9em; margin-bottom:8px;"
+                    oninput="window.onCatModalSearch()" autocomplete="off">
+                <div id="catModalSearchResults" style="max-height:44vh; overflow-y:auto; font-size:0.85em;"></div>
             </div>
-            <label style="display:flex; align-items:center; gap:8px; cursor:pointer; margin-bottom:8px;">
-                <input type="checkbox" id="catModalCreateRule" style="width:18px; height:18px; accent-color:var(--pro);" onchange="document.getElementById('catModalRuleGroup').style.display = this.checked ? 'block' : 'none'">
-                Enregistrer comme règle auto
-            </label>
-            <div id="catModalRuleGroup" style="display:none; margin-bottom:16px; margin-left:26px;">
-                <input type="text" id="catModalRulePattern" class="input-text" placeholder="Expression déclencheuse">
-            </div>
-            <button class="btn btn-primary" onclick="window.validateCategorization()" style="width:100%;">Confirmer l'affectation</button>
+
         </div>
     </div>
 </div>
+
 
 <div class="overlay" id="importOverlay">
     <div class="modal">
@@ -604,7 +642,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '1.7.3';
+const APP_VERSION = '1.9.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -666,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v1.7.3 : séquence Google d'abord, MDP ensuite
+    // v1.9.6 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -807,7 +845,6 @@ const buildEncryptedPayload = () => {
         tcdHeaderColor: localStorage.getItem('f_tcd_header_color') || '',
         fontSize: localStorage.getItem('f_fontSize') || '14',
         tcdFontSize: localStorage.getItem('f_tcd_fontsize') || '13',
-        eclairMonths: localStorage.getItem('f_eclair_months') || '6',
         pivot: localStorage.getItem('f_pivot_v2') || '',
         collapsedGroups: [...collapsedGroups],
         collapsedYears:  [...collapsedYears],
@@ -877,9 +914,7 @@ function decryptPayload(remoteData) {
             if(driveFresher) localStorage.setItem('f_settings_ts', driveTs);
             if(s.tcdHeaderColor) { localStorage.setItem('f_tcd_header_color', s.tcdHeaderColor); document.documentElement.style.setProperty('--tcd-header-color', s.tcdHeaderColor); let pk=$('tcdColorPicker'); if(pk) pk.value=s.tcdHeaderColor; }
             if(s.tcdFontSize) { localStorage.setItem('f_tcd_fontsize', s.tcdFontSize); let px=s.tcdFontSize+'px'; document.querySelectorAll('#summaryGrid .tcd-native th, #summaryGrid .tcd-native td').forEach(el=>{el.style.fontSize=px;el.style.height=px;}); }
-            if(s.fontSize) { localStorage.setItem('f_fontSize', s.fontSize); currentFontSize=parseInt(s.fontSize)||14; document.documentElement.style.setProperty('--font-size', currentFontSize+'px'); }
-            if(s.eclairMonths) { localStorage.setItem('f_eclair_months', s.eclairMonths); let em=$('eclairMonths'); if(em) em.value=s.eclairMonths; }
-            // Paramètres vue TCD : appliquer seulement si Drive est plus récent
+            if(s.fontSize) { localStorage.setItem('f_fontSize', s.fontSize); currentFontSize=parseInt(s.fontSize)||14; document.documentElement.style.setProperty('--font-size', currentFontSize+'px'); }            // Paramètres vue TCD : appliquer seulement si Drive est plus récent
             if(driveFresher) {
                 if(s.pivot) { localStorage.setItem('f_pivot_v2', s.pivot); try { let c=JSON.parse(s.pivot); if(c.r1){let el=$('pivotRows');if(el)el.value=c.r1;} if(c.r2!==undefined){let el=$('pivotRows2');if(el)el.value=c.r2;} if(c.axe){let el=$('timeAxe');if(el)el.value=c.axe;} } catch(e){} }
                 if(s.collapsedGroups) { collapsedGroups = new Set(s.collapsedGroups); localStorage.setItem('tcd_cg', JSON.stringify(s.collapsedGroups)); }
@@ -1422,27 +1457,259 @@ window.openTcdDetails = function(txs) {
 };
 
 
-function computeEclairCategories() {
-    let n = parseInt(localStorage.getItem('f_eclair_months')||'6')||6;
-    let cutoff = new Date();
-    cutoff.setMonth(cutoff.getMonth() - n);
-    let cutoffStr = cutoff.toISOString().slice(0,10);
-    let cats = new Set();
-    transactions.forEach(t => {
-        if(t.cat1 && t.cat1!=='_SANS_CATEGORIE' && t.cat2 && t.cat2!=='_SANS_CATEGORIE') {
-            let d = t.dateOp || t.dateExpense || '';
-            if(d >= cutoffStr) cats.add(`${t.cat1}|||${t.cat2}`);
-        }
+function computeEclairCategories() { return []; }
+// ════════════════════════════════════════════════════
+// QUICK CAT SEARCH — v1.9.6
+// ════════════════════════════════════════════════════
+var _qcResults = [], _qcIdx = -1;
+var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
+
+window.onQuickCatInput = function() {
+    var q = ($('quickCatInput').value || '').trim().toLowerCase();
+    var dd = $('quickCatDropdown');
+    if (!q) { dd.style.display = 'none'; _qcResults = []; return; }
+    var pairs = [];
+    Object.keys(categories).sort().forEach(function(c1) {
+        (categories[c1] || []).sort().forEach(function(c2) {
+            pairs.push({ c1: c1, c2: c2, label: (c1 + ' > ' + c2).toLowerCase() });
+        });
     });
-    return Array.from(cats).sort();
-}
-window.onEclairMonthsChange = function() {
-    let inp = $('eclairMonths'); if(!inp) return;
-    let v = Math.max(1, parseInt(inp.value)||6);
-    inp.value = v;
-    localStorage.setItem('f_eclair_months', v); triggerSave(false);
-    window.renderUncategorized();
+    _qcResults = pairs.filter(function(p) {
+        return p.label.includes(q) || p.c1.toLowerCase().includes(q) || p.c2.toLowerCase().includes(q);
+    }).slice(0, 12);
+    _qcIdx = _qcResults.length ? 0 : -1;
+    if (!_qcResults.length) { dd.style.display = 'none'; return; }
+    dd.style.display = 'block';
+    dd.innerHTML = _qcResults.map(function(p, i) {
+        var active = i === 0 ? ' qc-active' : '';
+        return '<div class="qc-item' + active + '" data-idx="' + i + '"'
+             + ' onmousedown="event.preventDefault();window.qcApply(' + i + ')"'
+             + ' onmouseenter="window.qcHover(' + i + ')"'
+             + ' style="padding:8px 14px;cursor:pointer;font-size:0.92em;border-bottom:1px solid var(--ink-faint);color:var(--ink);">'
+             + '<span style="font-weight:600;color:var(--accent,#e07b54);">' + escapeHtml(p.c1) + '</span>'
+             + '<span style="color:var(--ink-muted);"> › </span>'
+             + '<span>' + escapeHtml(p.c2) + '</span>'
+             + '</div>';
+    }).join('');
 };
+
+window.qcHover = function(i) {
+    _qcIdx = i;
+    var items = $$('.qc-item');
+    items.forEach(function(el, j) { el.classList.toggle('qc-active', j === i); });
+};
+
+window.onQuickCatKey = function(e) {
+    var dd = $('quickCatDropdown');
+    if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        _qcIdx = Math.min(_qcIdx + 1, _qcResults.length - 1);
+        $$('.qc-item').forEach(function(el, j) { el.classList.toggle('qc-active', j === _qcIdx); });
+    } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        _qcIdx = Math.max(_qcIdx - 1, 0);
+        $$('.qc-item').forEach(function(el, j) { el.classList.toggle('qc-active', j === _qcIdx); });
+    } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (_qcIdx >= 0) window.qcApply(_qcIdx);
+    } else if (e.key === 'Escape') {
+        dd.style.display = 'none';
+        $('quickCatInput').value = '';
+        _qcResults = [];
+    }
+};
+
+window.qcApply = function(i) {
+    var p = _qcResults[i]; if (!p) return;
+    var ids = selectedUncatIds.size > 0
+        ? Array.from(selectedUncatIds)
+        : (selectedUncatTxId ? [selectedUncatTxId] : []);
+    if (!ids.length) { showToast('⚠️ Sélectionnez d\'abord une ou plusieurs lignes'); return; }
+    ids.forEach(function(id) {
+        var tx = transactions.find(function(t) { return String(t.id) === String(id); });
+        if (tx) { tx.cat1 = p.c1; tx.cat2 = p.c2; }
+    });
+    _lastChosenCat = { c1: p.c1, c2: p.c2 };
+    selectedUncatIds.clear();
+    $('quickCatDropdown').style.display = 'none';
+    $('quickCatInput').value = '';
+    _qcResults = [];
+    triggerSave(false); window.renderSummary(); window.renderUncategorized();
+    showToast('✅ ' + p.c1 + ' › ' + p.c2 + ' appliqué à ' + ids.length + ' ligne(s)');
+};
+
+// Raccourci clavier "/" pour focus depuis la vue À catégoriser
+document.addEventListener('keydown', function(e) {
+    if (e.key === '/' && !e.ctrlKey && !e.metaKey
+        && document.activeElement.tagName !== 'INPUT'
+        && document.activeElement.tagName !== 'TEXTAREA') {
+        var v = $('view-categorize');
+        if (v && v.classList.contains('active')) {
+            e.preventDefault();
+            var inp = $('quickCatInput');
+            if (inp) { inp.focus(); inp.select(); }
+        }
+    }
+});
+
+
+// ════════════════════════════════════════════════════
+// SUGGESTION PILLS v1.7.8
+
+function stripCardPrefix(s) {
+    var v = (s || '').trim();
+    v = v.replace(/^CARTE\s+\d{2}\/\d{2}(?:\/\d{2,4})?\s+/i, '');
+    v = v.replace(/^VIR\s+INST\s+/i, '');
+    v = v.replace(/^VIR\s+/i, '');
+    return v.trim();
+}
+
+function getSuggestions(tx) {
+    var rawDetail = tx.details || tx.label || '';
+    var words = stripCardPrefix(rawDetail).split(/\s+/).filter(function(w){ return w.length >= 4; });
+
+    // Cherche règle correspondante
+    var matchedRule = rules.find(function(r) {
+        return r.pattern.split(';').map(function(p){ return p.trim(); }).filter(Boolean).some(function(p) {
+            return rawDetail.toUpperCase().includes(p.toUpperCase()) || (tx.label && tx.label.toUpperCase().includes(p.toUpperCase()));
+        });
+    });
+
+    // Cherche meilleure catégorie historique
+    var histCat = null;
+    if (words.length > 0) {
+        var cleanUp = stripCardPrefix(rawDetail).toUpperCase();
+        var freq = {};
+        transactions.forEach(function(t) {
+            if (!t.cat1 || !t.cat2 || t.cat1 === '_SANS_CATEGORIE' || t.cat2 === '_SANS_CATEGORIE') return;
+            var tClean = stripCardPrefix(t.details || t.label || '').toUpperCase();
+            var score = 0;
+            if (cleanUp.length >= 4 && tClean.includes(cleanUp)) score += words.length + 2;
+            else words.forEach(function(w) { if (tClean.includes(w.toUpperCase())) score++; });
+            if (score > 0) { var k = t.cat1+'|||'+t.cat2; freq[k]=(freq[k]||0)+score; }
+        });
+        var best = Object.keys(freq).sort(function(a,b){ return freq[b]-freq[a]; })[0];
+        if (best) { var bp = best.split('|||'); histCat = { c1: bp[0], c2: bp[1] }; }
+    }
+
+    var sugg = [];
+
+    if (matchedRule && matchedRule.cat1 && matchedRule.cat2) {
+        // Règle dispo : afficher règle + dernier clic
+        sugg.push({ c1: matchedRule.cat1, c2: matchedRule.cat2, type: 'rule' });
+    } else if (histCat) {
+        // Pas de règle : afficher historique + dernier clic
+        sugg.push({ c1: histCat.c1, c2: histCat.c2, type: 'history' });
+    }
+
+    // Dernier clic (si différent du premier slot)
+    if (_lastChosenCat.c1 && _lastChosenCat.c2) {
+        if (!sugg.find(function(s){ return s.c1===_lastChosenCat.c1&&s.c2===_lastChosenCat.c2; }))
+            sugg.push({ c1: _lastChosenCat.c1, c2: _lastChosenCat.c2, type: 'global' });
+    }
+
+    return sugg.slice(0, 2);
+}
+
+function renderPills(tx) {
+    var suggs = getSuggestions(tx);
+    if (!suggs.length) return '';
+    var html = '';
+    suggs.forEach(function(s) {
+        var icon  = s.type==='rule' ? '🎯' : s.type==='history' ? '📊' : '⟲';
+        var color = s.type==='rule' ? '#2e7d32' : s.type==='history' ? '#1565c0' : '#757575';
+        var bg    = s.type==='rule' ? 'rgba(46,125,50,.10)' : s.type==='history' ? 'rgba(21,101,192,.10)' : 'rgba(0,0,0,.05)';
+        var c2e   = escapeHtml(s.c2);
+        var c1e   = escapeHtml(s.c1);
+        html += '<button class="sugg-pill"'
+              + ' data-txid="' + escapeHtml(String(tx.id)) + '"'
+              + ' data-c1="'  + c1e + '"'
+              + ' data-c2="'  + c2e + '"'
+              + ' title="'    + c1e + ' > ' + c2e + '"'
+              + ' style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;margin:1px;border-radius:12px;'
+              + 'border:1px solid ' + color + ';background:' + bg + ';color:' + color + ';'
+              + 'font-size:0.70em;cursor:pointer;white-space:nowrap;max-width:150px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;">'
+              + icon + ' ' + c2e
+              + '</button>';
+    });
+    return html;
+}
+
+// Delegated click handler for suggestion pills
+document.addEventListener('click', function(e) {
+    var hit = e.target.closest('.cat-search-hit');
+    if (hit) { window.catModalSearchApply(hit.getAttribute('data-c1'), hit.getAttribute('data-c2')); return; }
+    var btn = e.target.closest('.sugg-pill');
+    if (!btn) return;
+    e.stopPropagation();
+    var id = btn.getAttribute('data-txid');
+    var c1 = btn.getAttribute('data-c1');
+    var c2 = btn.getAttribute('data-c2');
+    window.applySuggPill(id, c1, c2);
+});
+
+window.applySuggPill = function(id, c1, c2) {
+    var tx = transactions.find(function(t){ return String(t.id)===String(id); });
+    if (!tx) return;
+    tx.cat1 = c1; tx.cat2 = c2;
+    _lastChosenCat = { c1: c1, c2: c2 };
+    triggerSave(false); window.renderSummary(); window.renderUncategorized();
+    showToast('OK ' + c1 + ' > ' + c2);
+};
+
+
+// ════════════════════════════════════════════════════
+// CAT MODAL SEARCH — v1.9.6
+// ════════════════════════════════════════════════════
+window.onCatModalSearch = function() {
+    var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
+    var out = $('catModalSearchResults');
+    if (!out) return;
+    if (!q) { out.innerHTML = '<div style="color:var(--ink-muted);padding:8px 0;">Saisissez un mot-clé…</div>'; return; }
+    var hits = transactions.filter(function(t) {
+        if (!t.cat1 || t.cat1 === '_SANS_CATEGORIE') return false;
+        var label = (t.label || '').toLowerCase();
+        var details = (t.details || '').toLowerCase();
+        var amount = String(t.amount || '');
+        return label.includes(q) || details.includes(q) || amount.includes(q);
+    }).slice(0, 40);
+    if (!hits.length) {
+        out.innerHTML = '<div style="color:var(--ink-muted);padding:8px 0;">Aucun résultat.</div>';
+        return;
+    }
+    // Group by cat1>cat2 and show count
+    var freq = {};
+    hits.forEach(function(t) {
+        var k = t.cat1 + '|||' + t.cat2;
+        if (!freq[k]) freq[k] = { c1: t.cat1, c2: t.cat2, count: 0, examples: [] };
+        freq[k].count++;
+        if (freq[k].examples.length < 2) freq[k].examples.push(t.details || t.label || '');
+    });
+    var sorted = Object.values(freq).sort(function(a,b){ return b.count - a.count; });
+    out.innerHTML = '<div style="margin-bottom:6px;color:var(--ink-muted);">' + hits.length + ' transaction(s) trouvée(s)</div>'
+        + sorted.map(function(g) {
+            var c1e = escapeHtml(g.c1), c2e = escapeHtml(g.c2);
+            return '<div style="border:1px solid var(--ink-faint);border-radius:6px;padding:7px 10px;margin-bottom:5px;cursor:pointer;background:var(--surface);"'
+                 + ' data-c1="' + c1e + '" data-c2="' + c2e + '" class="cat-search-hit"'
+                 + ' title="Appliquer ' + c1e + ' > ' + c2e + '">'
+                 + '<div style="font-weight:600;font-size:0.9em;">' + c1e + ' <span style="color:var(--ink-muted);">›</span> ' + c2e + '</div>'
+                 + '<div style="font-size:0.78em;color:var(--ink-muted);margin-top:2px;">' + escapeHtml(g.examples[0] || '') + ' <span style="color:#c0392b;font-weight:600;">(' + g.count + ')</span>' + '</div>'
+                 + '</div>';
+        }).join('');
+};
+
+window.catModalSearchApply = function(c1, c2) {
+    catModalSelectedCat1 = c1;
+    catModalSelectedCat2 = c2;
+    $('catModalFinalCat').textContent = c1 + ' > ' + c2;
+    // Affiche step3 pour confirmation + option règle
+    $('catModalStep1').style.display = 'none';
+    $('catModalStep2').style.display = 'none';
+    $('catModalStep3').style.display = 'block';
+    // Scroll step3 into view
+    var s3 = $('catModalStep3'); if(s3) s3.scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+
 
 window.sortUncat = function(col) {
     if (uncatSortCol === col) uncatSortDir *= -1; else { uncatSortCol = col; uncatSortDir = -1; }
@@ -1487,13 +1754,6 @@ window.renderUncategorized = function() {
         let el=$(s.id); if(el) el.textContent = s.lbl + (uncatSortCol===s.col ? (uncatSortDir===-1?' ▼':' ▲') : ' ⇅');
     });
     
-    let eclairInp = $('eclairMonths');
-    if(eclairInp) { let sv=localStorage.getItem('f_eclair_months'); if(sv) eclairInp.value=sv; }
-    let shortcuts = computeEclairCategories();
-    $('topCategoriesShortcuts').innerHTML = shortcuts.map(s => {
-        let p = s.split('|||');
-        return `<button class="top-cat-btn" onclick="window.applyQuickPredictiveCat('${escapeHtml(p[0])}','${escapeHtml(p[1])}')">${escapeHtml(p[0])} &gt; ${escapeHtml(p[1])}</button>`;
-    }).join('');
 
     let tb = $('uncatTable').querySelector('tbody');
     if(!uncat.length) return tb.innerHTML='<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--ink-soft);">Toutes les écritures sont affectées ! 🎉</td></tr>';
@@ -1503,14 +1763,13 @@ window.renderUncategorized = function() {
         let sc1=m?m.cat1:'', sc2=m?m.cat2:'', isM=!!m, isPrefilled = (t.cat1 && t.cat1 !== "_SANS_CATEGORIE" && t.cat2 && t.cat2 !== "_SANS_CATEGORIE");
         let displayCat = isPrefilled ? `${t.cat1} > ${t.cat2}` : (isM ? `${sc1} > ${sc2}` : "-");
         
-        let act = (isM || isPrefilled) ? `<button class="action-cell-btn action-btn-prefilled btn-quick-val" data-id="${t.id}" data-c1="${escapeHtml(sc1||t.cat1)}" data-c2="${escapeHtml(sc2||t.cat2)}" title="Valider directement">✔️</button>` : '';
-        act += `<button class="action-cell-btn ${isM||isPrefilled?'action-btn-prefilled':'action-btn-empty'} btn-cat-action" data-id="${t.id}" data-c1="${escapeHtml(sc1||t.cat1)}" data-c2="${escapeHtml(sc2||t.cat2)}" data-match="${isM||isPrefilled}">${isM||isPrefilled?'✏️':'🔍'}</button>`;
+        let act = `<button class="action-cell-btn ${isM||isPrefilled?'action-btn-prefilled':'action-btn-empty'} btn-cat-action" data-id="${t.id}" data-c1="${escapeHtml(sc1||t.cat1)}" data-c2="${escapeHtml(sc2||t.cat2)}" data-match="${isM||isPrefilled}">${isM||isPrefilled?'✏️':'🔍'}</button>`;
 
         return `<tr data-id="${t.id}" class="${selectedUncatIds.has(String(t.id))?'selected-row':''}" onclick="window.selectUncatLine('${t.id}', event)" style="cursor:pointer;">
             <td>${String(t.dateOp||'').split('-').reverse().join('/')}</td>
             <td><input type="date" class="inline-edit" data-id="${t.id}" data-field="dateExpense" value="${t.dateExpense || t.dateOp}" onclick="event.stopPropagation()"></td>
             <td class="wrap-text" style="font-size:0.9em; color:var(--ink-soft);">${escapeHtml(t.details)}</td>
-            <td style="font-weight:500; color:${(isM||isPrefilled)?'var(--pro)':'var(--ink)'}">${escapeHtml(displayCat)}</td>
+            <td style="vertical-align:middle;padding:2px 4px;"><div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center;">${renderPills(t)}</div></td>
             <td><input type="text" class="inline-edit" data-id="${t.id}" data-field="note" value="${escapeHtml(t.note||'')}" placeholder="Notes..." onclick="event.stopPropagation()"></td>
             <td style="font-weight:600; text-align:right; color:${t.amount>0?'var(--done)':'var(--ink)'}">${t.amount} €</td>
             <td style="text-align:right; white-space:nowrap;">${act}</td>
@@ -1518,7 +1777,7 @@ window.renderUncategorized = function() {
     }).join('');
     
     tb.querySelectorAll('.btn-cat-action').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); let el=e.currentTarget; window.openCatModal(el.dataset.id, el.dataset.c1, el.dataset.c2, el.dataset.match==='true'); }));
-    tb.querySelectorAll('.btn-quick-val').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); let el=e.currentTarget; let tx=transactions.find(x=>String(x.id)===String(el.dataset.id)); if(tx){ tx.cat1=el.dataset.c1; tx.cat2=el.dataset.c2; triggerSave(false); window.renderUncategorized(); showToast("Attribution mémorisée ✓"); } }));
+    tb.querySelectorAll('.btn-quick-val').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); let el=e.currentTarget; let tx=transactions.find(x=>String(x.id)===String(el.dataset.id)); if(tx){ tx.cat1=el.dataset.c1; tx.cat2=el.dataset.c2; _lastChosenCat={c1:el.dataset.c1,c2:el.dataset.c2}; triggerSave(false); window.renderUncategorized(); showToast("Attribution mémorisée ✓"); } }));
     tb.querySelectorAll('.inline-edit').forEach(inp => inp.addEventListener('change', window.handleInlineChange));
 };
 
@@ -1534,26 +1793,7 @@ window.selectUncatLine = function(id, event) {
     selectedUncatTxId = sid;
     window.renderUncategorized();
 };
-window.applyQuickPredictiveCat = function(c1, c2) {
-    // Appliquer à toutes les lignes sélectionnées
-    let ids = selectedUncatIds.size > 0 ? Array.from(selectedUncatIds) : (selectedUncatTxId ? [selectedUncatTxId] : []);
-    if (ids.length === 0) {
-        let first = transactions.find(t => !t.cat1 || !t.cat2 || t.cat1==="_SANS_CATEGORIE" || t.cat2==="_SANS_CATEGORIE");
-        if (first) ids = [String(first.id)]; else return;
-    }
-    ids.forEach(function(sid) {
-        let tx = transactions.find(x => String(x.id) === sid);
-        if (tx) { tx.cat1 = c1; tx.cat2 = c2; }
-    });
-    selectedUncatIds.clear();
-    let nextUncat = transactions.find(t => (!t.cat1 || !t.cat2 || t.cat1==="_SANS_CATEGORIE" || t.cat2==="_SANS_CATEGORIE") && !ids.includes(String(t.id)));
-    selectedUncatTxId = nextUncat ? String(nextUncat.id) : null;
-    if (selectedUncatTxId) selectedUncatIds.add(selectedUncatTxId);
-    triggerSave(false); window.renderSummary(); window.renderUncategorized(); window.renderDataTable();
-    showToast(ids.length > 1 ? ids.length + ' lignes catégorisées ✓' : 'Catégorisé ✓');
-    // Ici on coupe le reste de l'ancienne fonction - return sentinel
-    return '__HANDLED__';
-};
+window.applyQuickPredictiveCat = function(c1, c2) {};;
 // Stub pour compatibilité (le reste de l'ancienne applyQuickPredictiveCat est remplacé)
 
 // ==== BASE DE DONNEES ET EDITION LIGNE ====
@@ -2012,6 +2252,15 @@ window.openCatModal = function(tid, p1, p2, isRule) {
     $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1)));
     if(isRule && catModalSelectedCat1 && catModalSelectedCat2) window.showStep3(catModalSelectedCat1,catModalSelectedCat2,true); else { $('catModalStep1').style.display='block';$('catModalStep2').style.display='none';$('catModalStep3').style.display='none'; }
     $('catSelectionOverlay').classList.add('open');
+    if($('catModalSearchInput')) {
+        var _rawD = t && (t.details || t.label || '') || '';
+        var _cleanD = _rawD.replace(/^CARTE\s+\d{2}\/\d{2}(?:\/\d{2,4})?\s+/i,'').replace(/^VIR\s+INST\s+/i,'').replace(/^VIR\s+/i,'').trim();
+        $('catModalSearchInput').value = _cleanD;
+    }
+    if($('catModalSearchResults')) {
+        $('catModalSearchResults').innerHTML='<div style="color:var(--ink-muted);padding:8px 0;">Saisissez un mot-clé…</div>';
+    }
+    if($('catModalSearchInput') && $('catModalSearchInput').value) window.onCatModalSearch();
 };
 window.selectCat1 = function(c1) { 
     catModalSelectedCat1=c1; $('catModalStep1').style.display='none'; $('catModalStep2').style.display='block'; $('catModalStep3').style.display='none'; $('catModalStep2Label').textContent=c1; 
@@ -2024,7 +2273,7 @@ window.showStep3 = function(c1,c2,isRule) {
     if(!isRule){let t=transactions.find(x=>String(x.id)===catModalTxId), dp=t?t.details.split(' ')[0].replace(/[^a-zA-Z0-9]/g,''):''; if(dp.length<3&&t)dp=t.details.substring(0,8).trim(); inp.value=dp;}
 };
 window.validateCategorization = function() {
-    let t=transactions.find(x=>String(x.id)===catModalTxId); if(!t)return; t.cat1=catModalSelectedCat1; t.cat2=catModalSelectedCat2;
+    let t=transactions.find(x=>String(x.id)===catModalTxId); if(!t)return; t.cat1=catModalSelectedCat1; t.cat2=catModalSelectedCat2; _lastChosenCat={c1:catModalSelectedCat1,c2:catModalSelectedCat2};
     if($('catModalCreateRule').checked){let p=$('catModalRulePattern').value.trim();if(p)window.addOrMergeRule(p,t.cat1,t.cat2);} triggerSave(true); window.closeCatModal(); window.renderViewsSafe(); showToast("Enregistré ✓");
 };
 window.closeCatModal = function() { $('catSelectionOverlay').classList.remove('open'); };
@@ -2032,7 +2281,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v1.7.3
+// EXPORT / IMPORT BASE DE DONNÉES v1.9.6
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -2165,7 +2414,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v1.7.3+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v1.9.6+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -2356,7 +2605,6 @@ window.renderAccountManagerList = function() {
         if (accounts.length > 1 && !isCurrent) {
             html += '<button class="btn btn-danger" style="padding:4px 8px;font-size:0.85em;" onclick="window.deleteAccount(\'' + safeId + '\')">🗑️</button>';
         }
-        html += '</div>';
     });
     list.innerHTML = html;
 };
