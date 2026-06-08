@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mes finances - v1.5.6</title>
-    <!-- v1.5.6 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
+    <title>Mes finances - v1.6.2</title>
+    <!-- v1.6.2 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -246,7 +246,7 @@
         <div class="pivot-config" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;justify-content:center;">
             <div class="pivot-select-group">
                 <label style="font-weight:700;font-size:0.85em;">L1</label>
-                <select id="pivotRows" class="input-text" style="width:auto;" onchange="window.renderSummary()">
+                <select id="pivotRows" class="input-text" style="width:auto;" onchange="window.renderSummary(); triggerSave(false);">
                     <option value="cat1" selected>Catégorie 1</option>
                     <option value="cat2">Catégorie 2</option>
                     <option value="label">Libellé</option>
@@ -254,7 +254,7 @@
             </div>
             <div class="pivot-select-group">
                 <label style="font-weight:700;font-size:0.85em;">L2</label>
-                <select id="pivotRows2" class="input-text" style="width:auto;" onchange="window.renderSummary()">
+                <select id="pivotRows2" class="input-text" style="width:auto;" onchange="window.renderSummary(); triggerSave(false);">
                     <option value="">(Aucune)</option>
                     <option value="cat1">Catégorie 1</option>
                     <option value="cat2" selected>Catégorie 2</option>
@@ -263,9 +263,9 @@
             </div>
             <div class="pivot-select-group">
                 <label style="font-weight:700;font-size:0.85em;">Axe</label>
-                <select id="timeAxe" class="input-text" style="width:auto;" onchange="window.renderSummary()">
+                <select id="timeAxe" class="input-text" style="width:auto;" onchange="window.renderSummary(); triggerSave(false);">
                     <option value="dateOp">Date écriture</option>
-                    <option value="dateExpense" selected>Date dépense</option>
+                    <option value="dateExpense" selected>Date réelle</option>
                 </select>
             </div>
             <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
@@ -331,7 +331,7 @@
                 <thead style="position:sticky; top:0; z-index:2; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <tr>
                         <th style="width:120px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateOp')"><span id="uncatSortDateOp">Date Écriture</span></div><input type="text" class="col-filter uf-filter" id="ufDateOp" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
-                        <th style="width:140px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateExpense')"><span id="uncatSortDateExp">Date Dépense</span></div><input type="text" class="col-filter uf-filter" id="ufDateExpense" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
+                        <th style="width:140px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateExpense')"><span id="uncatSortDateExp">Date réelle</span></div><input type="text" class="col-filter uf-filter" id="ufDateExpense" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:250px;"><div class="col-header-wrap">Détails</div><input type="text" class="col-filter uf-filter" id="ufDetails" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:220px;"><div class="col-header-wrap">Catégorie Prévue</div><button id="ufCatNotEmptyBtn" onclick="window.toggleUfCatNotEmpty()" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:4px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted);font-size:0.85em;text-align:left;">≠ vide</button> <div class="resizer"></div></th>
                         <th style="width:180px;"><div class="col-header-wrap">Notes</div><input type="text" class="col-filter uf-filter" id="ufNote" placeholder="Espace pour vide..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
@@ -376,7 +376,7 @@
                     <tr>
                         <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAllCb" onclick="window.toggleSelectAll()" style="cursor:pointer; width:16px; height:16px;"></th>
                         <th style="width:130px;"><div class="col-header-wrap">Date Écr. <button class="sort-btn" data-col="dateOp">↕</button></div><input type="text" class="col-filter" id="fltDate" placeholder="Filtre..."> <div class="resizer"></div></th>
-                        <th style="width:130px;"><div class="col-header-wrap">Date Dép. <button class="sort-btn" data-col="dateExpense">↕</button></div><input type="text" class="col-filter" id="fltDateExpense" placeholder="Filtre..."> <div class="resizer"></div></th>
+                        <th style="width:130px;"><div class="col-header-wrap">Date réelle <button class="sort-btn" data-col="dateExpense">↕</button></div><input type="text" class="col-filter" id="fltDateExpense" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:200px;"><div class="col-header-wrap">Libellé <button class="sort-btn" data-col="label">↕</button></div><input type="text" class="col-filter" id="fltLabel" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:250px;"><div class="col-header-wrap">Détails</div><input type="text" class="col-filter" id="fltDetails" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:180px;"><div class="col-header-wrap" style="display:flex;align-items:center;gap:4px;">Notes <button id="fltNoteNotEmptyBtn" onclick="window.toggleFltNoteNotEmpty()" style="font-size:0.68em;padding:1px 6px;border-radius:10px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted);white-space:nowrap;flex-shrink:0;">≠ vide</button></div><input type="text" class="col-filter" id="fltNote" placeholder="Espace pour vide..."> <div class="resizer"></div></th>
@@ -507,7 +507,7 @@
             <table class="std-table">
                 <thead style="position:sticky;top:0;z-index:2;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,0.05);"><tr>
                     <th style="width:120px;cursor:pointer;" onclick="window.sortTcdDetail('dateOp')"><span id="tcdSortDateOp">Date Écr.</span></th>
-                    <th style="width:120px;cursor:pointer;" onclick="window.sortTcdDetail('dateExpense')"><span id="tcdSortDateExp">Date Dép.</span></th>
+                    <th style="width:120px;cursor:pointer;" onclick="window.sortTcdDetail('dateExpense')"><span id="tcdSortDateExp">Date réelle</span></th>
                     <th style="width:280px;min-width:180px;">Détails</th>
                     <th style="width:110px;text-align:right;cursor:pointer;" onclick="window.sortTcdDetail('amount')"><span id="tcdSortAmount">Montant</span></th>
                     <th style="width:190px;">Notes</th>
@@ -604,7 +604,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '1.5.6';
+const APP_VERSION = '1.6.2';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -649,7 +649,7 @@ window.adjustFont = function(dir) {
     if(currentFontSize < 10) currentFontSize = 10;
     if(currentFontSize > 24) currentFontSize = 24;
     document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-    localStorage.setItem('f_fontSize', currentFontSize);
+    localStorage.setItem('f_fontSize', currentFontSize); triggerSave(false);
 };
 
 // Appliquer couleur TCD sauvegardée immédiatement (avant rendu)
@@ -791,7 +791,17 @@ $('unlockBtn').addEventListener('click', () => {
 });
 
 const buildEncryptedPayload = () => {
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,currentAccountId}),appSecretKey).toString()});
+    let settings = {
+        tcdHeaderColor: localStorage.getItem('f_tcd_header_color') || '',
+        fontSize: localStorage.getItem('f_fontSize') || '14',
+        tcdFontSize: localStorage.getItem('f_tcd_fontsize') || '13',
+        eclairMonths: localStorage.getItem('f_eclair_months') || '6',
+        pivot: localStorage.getItem('f_pivot_v2') || '',
+        collapsedGroups: [...collapsedGroups],
+        collapsedYears:  [...collapsedYears],
+        tcdFilter: { cat1:[...tcdFilter.cat1], cat2:[...tcdFilter.cat2], years:[...tcdFilter.years], months:[...tcdFilter.months] },
+    };
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -816,6 +826,25 @@ function decryptPayload(remoteData) {
             if (changed) saveAccountsList();
         }
         // Ne JAMAIS changer currentAccountId depuis Drive — c'est une préférence locale
+        // Restaurer les paramètres depuis Drive
+        if(p.settings) {
+            let s = p.settings;
+            if(s.tcdHeaderColor) { localStorage.setItem('f_tcd_header_color', s.tcdHeaderColor); document.documentElement.style.setProperty('--tcd-header-color', s.tcdHeaderColor); let pk=$('tcdColorPicker'); if(pk) pk.value=s.tcdHeaderColor; }
+            if(s.tcdFontSize) { localStorage.setItem('f_tcd_fontsize', s.tcdFontSize); let px=s.tcdFontSize+'px'; document.querySelectorAll('#summaryGrid .tcd-native th, #summaryGrid .tcd-native td').forEach(el=>{el.style.fontSize=px;el.style.height=px;}); }
+            if(s.fontSize) { localStorage.setItem('f_fontSize', s.fontSize); currentFontSize=parseInt(s.fontSize)||14; document.documentElement.style.setProperty('--font-size', currentFontSize+'px'); }
+            if(s.eclairMonths) { localStorage.setItem('f_eclair_months', s.eclairMonths); let em=$('eclairMonths'); if(em) em.value=s.eclairMonths; }
+            if(s.pivot) { localStorage.setItem('f_pivot_v2', s.pivot); try { let c=JSON.parse(s.pivot); if(c.r1){let el=$('pivotRows');if(el)el.value=c.r1;} if(c.r2!==undefined){let el=$('pivotRows2');if(el)el.value=c.r2;} if(c.axe){let el=$('timeAxe');if(el)el.value=c.axe;} } catch(e){} }
+            if(s.collapsedGroups) { collapsedGroups = new Set(s.collapsedGroups); localStorage.setItem('tcd_cg', JSON.stringify(s.collapsedGroups)); }
+            if(s.collapsedYears)  { collapsedYears  = new Set(s.collapsedYears);  localStorage.setItem('tcd_cy', JSON.stringify(s.collapsedYears)); }
+            if(s.tcdFilter) {
+                let tf = s.tcdFilter;
+                tcdFilter.cat1   = new Set(tf.cat1   || []);
+                tcdFilter.cat2   = new Set(tf.cat2   || []);
+                tcdFilter.years  = new Set(tf.years  || []);
+                tcdFilter.months = new Set(tf.months || []);
+                localStorage.setItem('tcd_filter', JSON.stringify(tf));
+            }
+        }
         mergeRules(); return true;
     } catch(e) { return false; }
 }
@@ -904,7 +933,7 @@ function triggerSave(reRenderDbView = false) {
                 }
             }
             if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
-            updateSyncBadge('ok', '✓ Stocké'); if(reRenderDbView) window.renderDataTable();
+            updateSyncBadge('ok', '✓ Sauvegardé'); if(reRenderDbView) window.renderDataTable();
         } catch (e) {
             updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez');
             showSaveError(e);
@@ -1267,7 +1296,7 @@ window.openTcdDetails = function(txs) {
     });
     ['dateOp','dateExpense','amount'].forEach(c => {
         let el = $('tcdSort'+{dateOp:'DateOp',dateExpense:'DateExp',amount:'Amount'}[c]);
-        if(el) el.textContent = {dateOp:'Date Écr.',dateExpense:'Date Dép.',amount:'Montant'}[c]
+        if(el) el.textContent = {dateOp:'Date Écr.',dateExpense:'Date réelle',amount:'Montant'}[c]
             + (tcdDetailSortCol===c ? (tcdDetailSortDir===-1?' ▼':' ▲') : ' ⇅');
     });
     $('tcdDetailsOverlay').classList.add('open');
@@ -1334,7 +1363,7 @@ window.onEclairMonthsChange = function() {
     let inp = $('eclairMonths'); if(!inp) return;
     let v = Math.max(1, parseInt(inp.value)||6);
     inp.value = v;
-    localStorage.setItem('f_eclair_months', v);
+    localStorage.setItem('f_eclair_months', v); triggerSave(false);
     window.renderUncategorized();
 };
 
@@ -1377,7 +1406,7 @@ window.renderUncategorized = function() {
     });
     $('uncatCount').textContent = uncat.length;
     // Update sort arrows
-    [{col:'dateOp',id:'uncatSortDateOp',lbl:'Date Écriture'},{col:'dateExpense',id:'uncatSortDateExp',lbl:'Date Dépense'},{col:'amount',id:'uncatSortAmount',lbl:'Montant'}].forEach(s => {
+    [{col:'dateOp',id:'uncatSortDateOp',lbl:'Date Écriture'},{col:'dateExpense',id:'uncatSortDateExp',lbl:'Date réelle'},{col:'amount',id:'uncatSortAmount',lbl:'Montant'}].forEach(s => {
         let el=$(s.id); if(el) el.textContent = s.lbl + (uncatSortCol===s.col ? (uncatSortDir===-1?' ▼':' ▲') : ' ⇅');
     });
     
@@ -1926,7 +1955,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v1.5.6
+// EXPORT / IMPORT BASE DE DONNÉES v1.6.2
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -2059,7 +2088,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v1.5.6+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v1.6.2+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -2163,7 +2192,7 @@ window.setTcdHeaderColor = function(color) {
     if (!color) return;
     // Appliquer via variable CSS root — fonctionne même après re-render du tableau
     document.documentElement.style.setProperty('--tcd-header-color', color);
-    localStorage.setItem('f_tcd_header_color', color);
+    localStorage.setItem('f_tcd_header_color', color); triggerSave(false);
     const picker = document.getElementById('tcdHeaderColorPicker');
     if (picker) picker.value = color;
 };
@@ -2173,7 +2202,7 @@ window.setTcdHeaderColor = function(color) {
     if (!color) return;
     // Appliquer via variable CSS root — fonctionne même après re-render du tableau
     document.documentElement.style.setProperty('--tcd-header-color', color);
-    localStorage.setItem('f_tcd_header_color', color);
+    localStorage.setItem('f_tcd_header_color', color); triggerSave(false);
     const picker = document.getElementById('tcdHeaderColorPicker');
     if (picker) picker.value = color;
 };
@@ -2183,7 +2212,7 @@ window.adjustTcdFont = function(dir) {
     let cur = parseInt(localStorage.getItem('f_tcd_fontsize') || '13', 10);
     cur = Math.min(24, Math.max(8, cur + dir));
     let px = cur + 'px';
-    localStorage.setItem('f_tcd_fontsize', String(cur));
+    localStorage.setItem('f_tcd_fontsize', String(cur)); triggerSave(false);
     // Appliquer sur la table native
     document.querySelectorAll('#summaryGrid .tcd-native th, #summaryGrid .tcd-native td').forEach(el => {
         el.style.fontSize = px;
@@ -2271,7 +2300,7 @@ window.addAccount = function() {
 window.renameAccount = function(id, name) {
     if (!name.trim()) return;
     let acc = accounts.find(a => a.id === id);
-    if (acc) { acc.name = name.trim(); saveAccountsList(); window.renderAccountUI(); }
+    if (acc) { acc.name = name.trim(); saveAccountsList(); window.renderAccountUI(); triggerSave(false); }
 };
 
 window.deleteAccount = async function(id) {
@@ -2506,6 +2535,7 @@ function tcdRestoreScroll() {
 function tcdSaveCollapsed() {
     localStorage.setItem('tcd_cg', JSON.stringify([...collapsedGroups]));
     localStorage.setItem('tcd_cy', JSON.stringify([...collapsedYears]));
+    triggerSave(false);
 }
 
 function tcdLoadCollapsed() {
@@ -2542,6 +2572,7 @@ function saveTcdFilter() {
         years: [...tcdFilter.years],
         months:[...tcdFilter.months]
     }));
+    triggerSave(false);
 }
 
 function loadTcdFilter() {
