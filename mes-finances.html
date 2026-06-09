@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mes finances - v2.1.4</title>
-    <!-- v2.1.4 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
+    <title>Mes finances - v2.2.7</title>
+    <!-- v2.2.7 — Fix XLSX/CryptoJS non chargés (suppression hashes SRI invalides), TCD fond blanc sauf cat1 (var(--bg)), version badge corrigé -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -218,6 +218,10 @@
 .cat-search-hit:hover { background: var(--bg) !important; border-color: var(--accent, #e07b54) !important; }
 /* drill-down cursor on stacked charts */
 #chartsList canvas { cursor: default; }
+/* TCD cross-highlight */
+.tcd-native td.tcd-col-hover, .tcd-native th.tcd-col-hover { background: rgba(100,140,210,0.13) !important; }
+.tcd-native tr.tcd-row-hover > td, .tcd-native tr.tcd-row-hover > th { background: rgba(100,140,210,0.13) !important; }
+.tcd-native tr.tcd-row-hover > td.tcd-col-hover, .tcd-native tr.tcd-row-hover > th.tcd-col-hover { background: rgba(100,140,210,0.28) !important; }
 /* chart blur */
 .chart-blur-wrapper { position:relative; }
 .chart-blur-overlay { position:absolute;inset:0;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:6px;transition:opacity 0.3s;pointer-events:none;z-index:2; }
@@ -320,13 +324,13 @@
             <h4>Catégorie 1</h4>
             <div class="filter-tags" id="tcdFilterCat1Tags"></div>
         </div>
-        <div class="filter-section" id="tcdFilterSectionCat2">
-            <h4>Catégorie 2</h4>
-            <div class="filter-tags" id="tcdFilterCat2Tags"></div>
-        </div>
         <div class="filter-section" id="tcdFilterSectionYears">
             <h4>Années</h4>
             <div class="filter-tags" id="tcdFilterYearTags"></div>
+        </div>
+        <div class="filter-section" id="tcdFilterSectionCat2">
+            <h4>Catégorie 2</h4>
+            <div class="filter-tags" id="tcdFilterCat2Tags"></div>
         </div>
         <div class="filter-section" id="tcdFilterSectionMonths">
             <h4>Mois</h4>
@@ -490,7 +494,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.1.4
+         GRAPHIQUES VIEW  — v2.2.7
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -624,6 +628,15 @@
                     <label for="cbBlur" style="font-size:0.9em;cursor:pointer;">Activer le floutage (masquer les valeurs par défaut)</label>
                 </div>
             </div>
+
+                <!-- Jeux de données (multi-séries) -->
+                <div style="grid-column:1/-1;margin-bottom:4px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                        <label style="font-size:0.82em;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);">Jeux de données</label>
+                        <button class="btn btn-outline" style="padding:2px 10px;font-size:0.8em;" onclick="window.addCbDataset()">+ Ajouter</button>
+                    </div>
+                    <div id="cbDatasetsContainer"></div>
+                </div>
 
             <!-- Aperçu -->
             <div style="background:var(--bg);border-radius:8px;padding:12px;margin-bottom:16px;">
@@ -834,7 +847,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.1.4';
+const APP_VERSION = '2.2.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -848,7 +861,12 @@ var driveDataLoaded = false; // true uniquement après chargement confirmé depu
 var accounts = JSON.parse(localStorage.getItem('f_accounts')||'[{"id":"default","name":"Mon Compte"}]');
 var currentAccountId = localStorage.getItem('f_current_account')||'default';
 let driveFileIdMap = {};
-function getAccountDriveFilename(){ return 'appsysdata-'+currentAccountId+'.dat'; }
+function getAccountDriveFilename(){
+    if (currentAccountId === 'default') return 'appsysdata-default.dat';
+    var idx = accounts.findIndex(function(a){ return a.id === currentAccountId; });
+    if (idx <= 0) return 'appsysdata-default.dat';
+    return 'appsysdata-' + (idx + 1) + '.dat';
+}
 function saveAccountsList(){ localStorage.setItem('f_accounts', JSON.stringify(accounts)); }
 
 var collapsedGroups = new Set(), collapsedYears = new Set();
@@ -896,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.1.4 : séquence Google d'abord, MDP ensuite
+    // v2.2.7 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1652,7 +1670,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.1.4
+// QUICK CAT SEARCH — v2.2.7
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -1852,7 +1870,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.1.4
+// CAT MODAL SEARCH — v2.2.7
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -1905,7 +1923,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.1.4
+// GRAPHIQUES ENGINE  — v2.2.7
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -1940,27 +1958,62 @@ function buildChartData(cfg) {
         return true;
     });
 
-    // ── Non-stacked: simple grouping
+    // ── Non-stacked: simple grouping (single or multi-dataset)
     if (!isStacked) {
-        var groups = {};
-        txs.forEach(function(t) {
-            var txDateStr = t[dateField] || t.dateOp || '';
-            var key;
-            if (cfg.axisX === 'month')      key = txDateStr.length >= 7 ? txDateStr.substring(0,7) : txDateStr.substring(0,4)||'?';
-            else if (cfg.axisX === 'year')  key = txDateStr.length >= 4 ? txDateStr.substring(0,4) : '?';
-            else if (cfg.axisX === 'cat1')  key = t.cat1 || '?';
-            else if (cfg.axisX === 'cat2')  key = t.cat2 || '?';
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(t.amount);
+        var dsDefs = (cfg.datasets && cfg.datasets.length > 0) ? cfg.datasets : [{ label: cfg.title||'', filterCat1:[], filterCat2:[], color: CHART_COLORS[0] }];
+        // Collect all labels across all datasets
+        var allLabelSet = {};
+        dsDefs.forEach(function(dsDef) {
+            txs.filter(function(t){
+                if (dsDef.filterCat1 && dsDef.filterCat1.length > 0 && dsDef.filterCat1.indexOf(t.cat1) === -1) return false;
+                if (dsDef.filterCat2 && dsDef.filterCat2.length > 0 && dsDef.filterCat2.indexOf(t.cat2) === -1) return false;
+                return true;
+            }).forEach(function(t) {
+                var txDateStr = t[dateField] || t.dateOp || '';
+                var key;
+                if (cfg.axisX === 'month')      key = txDateStr.length >= 7 ? txDateStr.substring(0,7) : txDateStr.substring(0,4)||'?';
+                else if (cfg.axisX === 'year')  key = txDateStr.length >= 4 ? txDateStr.substring(0,4) : '?';
+                else if (cfg.axisX === 'cat1')  key = t.cat1 || '?';
+                else if (cfg.axisX === 'cat2')  key = t.cat2 || '?';
+                allLabelSet[key] = true;
+            });
         });
-        var labels = Object.keys(groups).sort();
-        var values = labels.map(function(k) {
-            var vals = groups[k];
-            if (cfg.axisY === 'count') return vals.length;
-            if (cfg.axisY === 'avg')   return Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length)*100)/100;
-            return vals.reduce(function(a,b){return a+b;},0);
+        var labels = Object.keys(allLabelSet).sort();
+        var multiDatasets = dsDefs.map(function(dsDef, di) {
+            var color = dsDef.color || CHART_COLORS[di % CHART_COLORS.length];
+            var filtered = txs.filter(function(t){
+                if (dsDef.filterCat1 && dsDef.filterCat1.length > 0 && dsDef.filterCat1.indexOf(t.cat1) === -1) return false;
+                if (dsDef.filterCat2 && dsDef.filterCat2.length > 0 && dsDef.filterCat2.indexOf(t.cat2) === -1) return false;
+                return true;
+            });
+            var groups = {}; labels.forEach(function(l){ groups[l]=[]; });
+            filtered.forEach(function(t) {
+                var txDateStr = t[dateField] || t.dateOp || '';
+                var key;
+                if (cfg.axisX === 'month')      key = txDateStr.length >= 7 ? txDateStr.substring(0,7) : txDateStr.substring(0,4)||'?';
+                else if (cfg.axisX === 'year')  key = txDateStr.length >= 4 ? txDateStr.substring(0,4) : '?';
+                else if (cfg.axisX === 'cat1')  key = t.cat1 || '?';
+                else if (cfg.axisX === 'cat2')  key = t.cat2 || '?';
+                if (groups[key] !== undefined) groups[key].push(t.amount);
+            });
+            var data = labels.map(function(k) {
+                var vals = groups[k];
+                if (!vals.length) return 0;
+                if (cfg.axisY === 'count') return vals.length;
+                if (cfg.axisY === 'avg')   return Math.round((vals.reduce(function(a,b){return a+b;},0)/vals.length)*100)/100;
+                return vals.reduce(function(a,b){return a+b;},0);
+            });
+            var isLine = cfg.type === 'line';
+            return {
+                label: dsDef.label || ('Série '+(di+1)),
+                data: data,
+                backgroundColor: isLine ? color+'33' : color+'cc',
+                borderColor: color,
+                borderWidth: isLine ? 2 : 1,
+                tension: 0.35, fill: false, pointRadius: isLine ? 3 : 0
+            };
         });
-        return { labels: labels, datasets: [{ label: cfg.title||'', data: values }] };
+        return { labels: labels, datasets: multiDatasets };
     }
 
     // ── Stacked: group by axisX (labels) × series
@@ -2037,19 +2090,15 @@ function renderChartOnCanvas(canvas, cfg) {
     var is100        = cfg.type === 'bar-stacked100';
     var isLine       = cfg.type === 'line';
 
-    // For non-stacked single dataset: apply per-bar colors
+    // For non-stacked: colors already set by buildChartData (multi-dataset aware)
+    // For single-dataset bar only: apply per-bar multi-color if no custom color defined
     var datasets = data.datasets;
-    if (!isStacked && datasets.length === 1) {
-        datasets[0].backgroundColor = isLine
-            ? CHART_COLORS[0] + '33'
-            : data.labels.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length] + 'cc'; });
-        datasets[0].borderColor = isLine
-            ? CHART_COLORS[0]
-            : data.labels.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length]; });
-        datasets[0].borderWidth = isLine ? 2 : 1;
-        datasets[0].tension     = 0.35;
-        datasets[0].fill        = isLine;
-        datasets[0].pointRadius = isLine ? 3 : 0;
+    if (!isStacked && datasets.length === 1 && !isLine) {
+        // Only override if backgroundColor is not already an array
+        if (!Array.isArray(datasets[0].backgroundColor)) {
+            datasets[0].backgroundColor = data.labels.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length] + 'cc'; });
+            datasets[0].borderColor      = data.labels.map(function(_,i){ return CHART_COLORS[i % CHART_COLORS.length]; });
+        }
     }
 
     var fmtVal = function(v) {
@@ -2070,7 +2119,7 @@ function renderChartOnCanvas(canvas, cfg) {
                 window.openDrillDown(cfg, label, series);
             } : undefined,
             plugins: {
-                legend: { display: isStacked, position: 'bottom',
+                legend: { display: isStacked || data.datasets.length > 1, position: 'bottom',
                     labels: { color: tickColor, font: { size: 11 }, boxWidth: 14 } },
                 tooltip: {
                     callbacks: {
@@ -2268,6 +2317,7 @@ window.openChartBuilder = function(editId) {
     if($('cbBlur'))    $('cbBlur').checked    = cfg.blur    || false;
     if($('cbSeries'))  $('cbSeries').value  = cfg.series  || 'cat1';
     window.onCbTypeChange();
+    setCbDatasets(cfg.datasets || []);
     $('cbFilterSign').value     = cfg.filterSign || 'all';
 
     // Peupler les listes d'années et catégories
@@ -2359,6 +2409,7 @@ function readCbConfig() {
         invertY:    $('cbInvertY') ? $('cbInvertY').checked : false,
         blur:       $('cbBlur')    ? $('cbBlur').checked    : false,
         series:     $('cbSeries') ? $('cbSeries').value : 'cat1',
+        datasets:   getCbDatasets(),
         filterYears: Array.from($('cbFilterYear').selectedOptions).map(function(o){ return o.value; }),
         filterCat1:  Array.from($('cbFilterCat1').selectedOptions).map(function(o){ return o.value; }).filter(Boolean),
         filterCat2:  Array.from($('cbFilterCat2').selectedOptions).map(function(o){ return o.value; }).filter(Boolean),
@@ -2507,7 +2558,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.1.4
+// IDÉES AMÉLIORATION — v2.2.7
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -2588,6 +2639,143 @@ window.saveIdeasText = async function() {
         $('ideasSaveStatus').textContent = '❌ Erreur sauvegarde';
     }
 };
+
+// ════════════════════════
+// TCD cross-highlight
+// ════════════════════════
+(function() {
+    function getTcdTable() {
+        return document.querySelector('#summaryGrid .tcd-native');
+    }
+    function clearHighlights(tbl) {
+        tbl.querySelectorAll('.tcd-row-hover').forEach(function(r){ r.classList.remove('tcd-row-hover'); });
+        tbl.querySelectorAll('.tcd-col-hover').forEach(function(c){ c.classList.remove('tcd-col-hover'); });
+    }
+
+    // Use event delegation on document — always works after re-render
+    document.addEventListener('mouseover', function(e) {
+        var td = e.target.closest('#summaryGrid td, #summaryGrid th');
+        if (!td) return;
+        var tbl = getTcdTable();
+        if (!tbl) return;
+        clearHighlights(tbl);
+        var row    = td.closest('tr');
+        var colIdx = td.cellIndex;
+        var inHeader = !!td.closest('thead');
+        if (inHeader) return; // no highlight on headers
+        if (row) row.classList.add('tcd-row-hover');
+        tbl.querySelectorAll('tbody tr').forEach(function(r) {
+            var cell = r.cells[colIdx];
+            if (cell) cell.classList.add('tcd-col-hover');
+        });
+    });
+
+    document.addEventListener('mouseleave', function(e) {
+        if (!e.target.closest('#summaryGrid')) return;
+        var tbl = getTcdTable();
+        if (tbl) clearHighlights(tbl);
+    }, true);
+})();
+
+// ════════════════════════════════════════════════════
+// MULTI-DATASET builder
+// ════════════════════════════════════════════════════
+var DATASET_COLORS = ['#4e8bcd','#e07b54','#5bab6e','#c45fa0','#e6b93a','#7c6fcd','#3bbfb5','#d95555'];
+
+function getCbDatasets() {
+    var rows = document.querySelectorAll('#cbDatasetsContainer .cb-dataset-row');
+    var result = [];
+    rows.forEach(function(row) {
+        var label = row.querySelector('.cb-ds-label').value.trim();
+        var cat1s = Array.from(row.querySelectorAll('.cb-ds-cat1 option:checked')).map(function(o){return o.value;});
+        var cat2s = Array.from(row.querySelectorAll('.cb-ds-cat2 option:checked')).map(function(o){return o.value;});
+        var color = row.querySelector('.cb-ds-color').value;
+        result.push({ label: label, filterCat1: cat1s, filterCat2: cat2s, color: color });
+    });
+    return result;
+}
+
+function setCbDatasets(datasets) {
+    var container = document.getElementById('cbDatasetsContainer');
+    container.innerHTML = '';
+    (datasets && datasets.length ? datasets : [{}]).forEach(function(ds) {
+        window.addCbDataset(ds);
+    });
+}
+
+function buildDatasetRow(ds, idx) {
+    var colors = DATASET_COLORS;
+    var color  = (ds && ds.color) ? ds.color : colors[idx % colors.length];
+    var label  = (ds && ds.label) ? ds.label : ('Série ' + (idx+1));
+
+    // Build cat1 options
+    var cat1Array = Array.isArray(categories) ? categories : Object.keys(categories).map(function(k){ return {name:k}; });
+    var cat1Opts = cat1Array.map(function(c){
+        var sel = (ds && ds.filterCat1 && ds.filterCat1.indexOf(c.name) !== -1) ? ' selected' : '';
+        return '<option value="' + escapeHtml(c.name) + '"' + sel + '>' + escapeHtml(c.name) + '</option>';
+    }).join('');
+
+    var row = document.createElement('div');
+    row.className = 'cb-dataset-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr 36px;gap:6px;align-items:start;margin-bottom:8px;padding:8px;background:var(--bg);border-radius:6px;border:1px solid var(--ink-faint);';
+    row.innerHTML =
+        '<div>'
+      + '<label style="font-size:0.75em;color:var(--ink-soft);display:block;margin-bottom:2px;">Libellé</label>'
+      + '<div style="display:flex;gap:4px;">'
+      + '<input type="color" class="cb-ds-color" value="' + color + '" style="width:28px;height:28px;padding:0;border:none;cursor:pointer;border-radius:4px;" oninput="window.updateCbPreview()">'
+      + '<input type="text" class="cb-ds-label input-text" value="' + escapeHtml(label) + '" style="flex:1;font-size:0.85em;" oninput="window.updateCbPreview()">'
+      + '</div></div>'
+      + '<div>'
+      + '<label style="font-size:0.75em;color:var(--ink-soft);display:block;margin-bottom:2px;">Cat 1 (multi)</label>'
+      + '<select class="cb-ds-cat1 input-text" multiple style="width:100%;height:60px;font-size:0.82em;" onchange="window.updateCbCat2ForRow(this);window.updateCbPreview();">' + cat1Opts + '</select>'
+      + '</div>'
+      + '<div>'
+      + '<label style="font-size:0.75em;color:var(--ink-soft);display:block;margin-bottom:2px;">Cat 2 (multi)</label>'
+      + '<select class="cb-ds-cat2 input-text" multiple style="width:100%;height:60px;font-size:0.82em;" onchange="window.updateCbPreview();"></select>'
+      + '</div>'
+      + '<div style="padding-top:18px;">'
+      + '<button class="btn btn-outline" style="padding:3px 6px;font-size:0.85em;color:var(--urgent);" onclick="window.removeCbDataset(this);">✕</button>'
+      + '</div>';
+    return row;
+}
+
+
+window.removeCbDataset = function(btn) { btn.closest('.cb-dataset-row').remove(); window.updateCbPreview(); };
+window.removeCbDataset = function(btn) {
+    btn.closest('.cb-dataset-row').remove();
+    window.updateCbPreview();
+};
+
+window.addCbDataset = function(ds) {
+    var container = document.getElementById('cbDatasetsContainer');
+    if (!container) return;
+    var idx = container.querySelectorAll('.cb-dataset-row').length;
+    if (idx >= 6) { showToast('Maximum 6 jeux de données'); return; }
+    var row = buildDatasetRow(ds || {}, idx);
+    container.appendChild(row);
+    // Populate cat2 based on selected cat1
+    var cat1Sel = row.querySelector('.cb-ds-cat1');
+    window.updateCbCat2ForRow(cat1Sel, ds ? ds.filterCat2 : []);
+    window.updateCbPreview();
+};
+
+window.updateCbCat2ForRow = function(cat1Sel, preselect) {
+    var row     = cat1Sel.closest('.cb-dataset-row');
+    var cat2Sel = row.querySelector('.cb-ds-cat2');
+    var sel1    = Array.from(cat1Sel.selectedOptions).map(function(o){return o.value;});
+    var cat2Set = {};
+    var txList = Array.isArray(transactions) ? transactions : [];
+    txList.forEach(function(t) {
+        if (!t.cat2) return;
+        if (sel1.length === 0 || sel1.indexOf(t.cat1) !== -1) cat2Set[t.cat2] = true;
+    });
+    var cat2Keys = Object.keys(cat2Set).sort();
+    cat2Sel.innerHTML = cat2Keys.map(function(c){
+        var sel = (preselect && preselect.indexOf(c) !== -1) ? ' selected' : '';
+        return '<option value="' + escapeHtml(c) + '"' + sel + '>' + escapeHtml(c) + '</option>';
+    }).join('');
+};
+
 
 window.sortUncat = function(col) {
     if (uncatSortCol === col) uncatSortDir *= -1; else { uncatSortCol = col; uncatSortDir = -1; }
@@ -3159,7 +3347,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.1.4
+// EXPORT / IMPORT BASE DE DONNÉES v2.2.7
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3292,7 +3480,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.1.4+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.2.7+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -3472,7 +3660,7 @@ window.renderAccountManagerList = function() {
         let fw = isCurrent ? '700' : '400';
         let safeName = a.name.replace(/"/g, '&quot;');
         let safeId = a.id.replace(/'/g, "\'");
-        html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--ink-faint);border-radius:8px;margin-bottom:6px;background:' + bg + ';">';
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--ink-faint);border-radius:8px;background:' + bg + ';">';
         html += '<span style="font-size:1em;">' + (isCurrent ? '▸' : ' ') + '</span>';
         html += '<input type="text" value="' + safeName + '" onchange="window.renameAccount(\'' + safeId + '\',this.value)" style="flex:1;border:1px solid var(--ink-faint);border-radius:4px;padding:4px 8px;font-size:0.95em;font-weight:' + fw + ';font-family:inherit;background:var(--bg);">';
         if (isCurrent) {
@@ -3483,21 +3671,44 @@ window.renderAccountManagerList = function() {
         if (accounts.length > 1 && !isCurrent) {
             html += '<button class="btn btn-danger" style="padding:4px 8px;font-size:0.85em;" onclick="window.deleteAccount(\'' + safeId + '\')">🗑️</button>';
         }
+        html += '</div>';
     });
     list.innerHTML = html;
 };
 
-window.addAccount = function() {
+window.addAccount = async function() {
     let nameEl = document.getElementById('newAccountName');
     let name = nameEl.value.trim();
     if (!name) return;
     let id = 'acc_' + Date.now();
     accounts.push({id, name});
     saveAccountsList();
-    triggerSave(false);
     nameEl.value = '';
     window.renderAccountManagerList();
     window.renderAccountUI();
+    // Créer immédiatement le fichier .dat sur Drive
+    if (driveAccessToken) {
+        let newIdx = accounts.length; // position = dernier
+        let fname = 'appsysdata-' + newIdx + '.dat';
+        try {
+            let emptyPayload = JSON.stringify({transactions:[], categories:[], savedCharts:[]});
+            let blob = new Blob([emptyPayload], {type:'application/json'});
+            let form = new FormData();
+            form.append('metadata', new Blob([JSON.stringify({
+                name: fname, parents: ['appDataFolder']
+            })], {type:'application/json'}));
+            form.append('file', blob);
+            let resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+                method: 'POST',
+                headers: { Authorization: 'Bearer ' + driveAccessToken },
+                body: form
+            });
+            let fileData = await resp.json();
+            if (fileData.id) driveFileIdMap[id] = fileData.id;
+        } catch(e) { console.warn('Erreur création fichier Drive:', e); }
+        if (typeof window.renderDriveAdmin === 'function') window.renderDriveAdmin();
+    }
+    triggerSave(false);
     showToast('Compte "' + name + '" créé ✓');
 };
 
@@ -3514,7 +3725,10 @@ window.deleteAccount = async function(id) {
     // Supprimer fichier Drive de ce compte
     if (driveAccessToken) {
         try {
-            let fname = 'appsysdata-' + id + '.dat';
+            let idx = accounts.findIndex(a => a.id === id);
+            let fname = (id === 'default' || idx === 0)
+                ? 'appsysdata-default.dat'
+                : 'appsysdata-' + (idx + 1) + '.dat';
             let r = await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name=%27' + fname + '%27&fields=files(id)', {headers:{Authorization:'Bearer '+driveAccessToken}});
             let d = await r.json();
             if (d.files && d.files.length > 0) {
@@ -4022,7 +4236,7 @@ function exportImportResult(rawRows, importedIdx, skippedIdx, bankType) {
       <h2 style="margin:0;">⚖️ Gestion des comptes</h2>
       <button class="btn btn-outline" onclick="document.getElementById('accountManagerModal').classList.remove('open')" style="padding:4px 10px;border-radius:20px;">✕</button>
     </div>
-    <div id="accountManagerList" style="margin-bottom:16px;max-height:50vh;overflow-y:auto;"></div>
+    <div id="accountManagerList" style="margin-bottom:16px;max-height:50vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
     <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--ink-faint);">
       <input type="text" id="newAccountName" class="input-text" placeholder="Nom du nouveau compte..." style="flex:1;">
       <button class="btn btn-primary" onclick="window.addAccount()">+ Ajouter</button>
