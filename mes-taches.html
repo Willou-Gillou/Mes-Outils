@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.0.2</title>
+<title>Mes Tâches v1.0.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -680,6 +680,8 @@ document.addEventListener('DOMContentLoaded',()=>{
       taps=0;
     }
   });
+  // Démarrage Google Drive
+  driveInit();
 });
 _dbg('Script start');
 
@@ -2193,7 +2195,7 @@ const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.appdata';
 const DRIVE_LS='mt.drive.'; // app-specific prefix — no collision with other apps
 
 function _setCookie(name, value) {
-    document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=31536000; SameSite=None; Secure";
+    document.cookie = name + "=" + encodeURIComponent(value) + "; path=/; max-age=31536000; SameSite=Lax";
 }
 function _getCookie(name) {
     const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'));
@@ -2201,7 +2203,7 @@ function _getCookie(name) {
     return null;
 }
 function _deleteCookie(name) {
-    document.cookie = name + "=; path=/; max-age=-1; SameSite=None; Secure";
+    document.cookie = name + "=; path=/; max-age=-1; SameSite=Lax";
 }
 
 let driveTokenClient=null;
@@ -2285,30 +2287,38 @@ async function driveInit(){
   });
   _driveInitResolve();
   
-  if(wasConnected){
-    driveShowLoading();
-    setTimeout(()=>{
-      if(!driveAccessToken){
-        driveHideLoading();
-        driveShowLogin(true);
-      }
-    }, 5000);
-    try {
-      driveTokenClient.requestAccessToken({prompt:'none'});
-    } catch(e) {
-      driveHideLoading();
-      driveShowLogin(true);
-    }
-  }
-  else{
-    driveShowLogin(true);
-  }
+  driveShowLogin(true);
 }
 
 async function driveSignIn(){
-  await driveInitReady;
-  if(!driveTokenClient)return;
-  driveTokenClient.requestAccessToken({prompt:'select_account'});
+  driveShowLoading();
+  try{
+    if(!window.google||!google.accounts){await driveLoadLibs();}
+    driveTokenClient=google.accounts.oauth2.initTokenClient({
+      client_id:DRIVE_CLIENT_ID,scope:DRIVE_SCOPE,
+      callback:async(resp)=>{
+        if(resp.error){driveHideLoading();driveShowLogin(true);return;}
+        driveAccessToken=resp.access_token;
+        gapi.client.setToken({access_token:driveAccessToken});
+        const exp=Date.now()+((resp.expires_in||3599)*1000)-60000;
+        localStorage.setItem(DRIVE_LS+'token',driveAccessToken);
+        localStorage.setItem(DRIVE_LS+'token_exp',exp.toString());
+        try{
+          const ui=await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+driveAccessToken}});
+          const ud=await ui.json();
+          if(ud.email){localStorage.setItem(DRIVE_LS+'hint',ud.email);_setCookie(DRIVE_LS+'hint',ud.email);}
+        }catch(e){}
+        localStorage.setItem(DRIVE_LS+'connected','1');
+        _setCookie(DRIVE_LS+'connected','1');
+        await driveCheckOnConnect();
+      }
+    });
+    driveHideLoading();
+    driveTokenClient.requestAccessToken({prompt:'select_account'});
+  }catch(e){
+    driveHideLoading();driveShowLogin(true);
+    console.error('driveSignIn error:',e);
+  }
 }
 
 function driveSignOut(){
