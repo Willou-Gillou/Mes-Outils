@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mes finances - v2.3.4</title>
-    <!-- v2.3.4 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.3.5</title>
+    <!-- v2.3.5 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -274,7 +274,7 @@
 }
 
 
-/* v2.3.4 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.3.5 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -407,9 +407,13 @@
             <h4>Catégorie 1</h4>
             <div class="filter-tags" id="tcdFilterCat1Tags"></div>
         </div>
-        <div class="filter-section" id="tcdFilterSectionYears">
-            <h4>Années</h4>
-            <div class="filter-tags" id="tcdFilterYearTags"></div>
+        <div class="filter-section" id="tcdFilterSectionYearsOp">
+            <h4>Années (Date écriture)</h4>
+            <div class="filter-tags" id="tcdFilterYearOpTags"></div>
+        </div>
+        <div class="filter-section" id="tcdFilterSectionYearsExpense">
+            <h4>Années (Date réelle)</h4>
+            <div class="filter-tags" id="tcdFilterYearExpenseTags"></div>
         </div>
         <div class="filter-section" id="tcdFilterSectionCat2">
             <h4>Catégorie 2</h4>
@@ -549,9 +553,13 @@
             <h4>Catégorie 2</h4>
             <div class="filter-tags" id="tcdFilterCat2Tags"></div>
         </div>
-        <div class="filter-section" id="tcdFilterSectionYears">
-            <h4>Années</h4>
-            <div class="filter-tags" id="tcdFilterYearTags"></div>
+        <div class="filter-section" id="tcdFilterSectionYearsOp">
+            <h4>Années (Date écriture)</h4>
+            <div class="filter-tags" id="tcdFilterYearOpTags"></div>
+        </div>
+        <div class="filter-section" id="tcdFilterSectionYearsExpense">
+            <h4>Années (Date réelle)</h4>
+            <div class="filter-tags" id="tcdFilterYearExpenseTags"></div>
         </div>
         <div class="filter-section" id="tcdFilterSectionMonths">
             <h4>Mois</h4>
@@ -579,7 +587,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.3.4
+         GRAPHIQUES VIEW  — v2.3.5
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -932,7 +940,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.3.4';
+const APP_VERSION = '2.3.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -964,7 +972,7 @@ let uncatSortCol = localStorage.getItem('uncatSortCol') || 'dateOp';
 let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
-var tcdFilter = { cat1: new Set(), cat2: new Set(), years: new Set(), months: new Set() }; // sets = éléments EXCLUS
+var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
 let _lastR1Keys = [];
 let selectedUncatTxId = null;
 let selectedUncatIds = new Set();
@@ -999,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.3.4 : séquence Google d'abord, MDP ensuite
+    // v2.3.5 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1143,7 +1151,7 @@ const buildEncryptedPayload = () => {
         pivot: localStorage.getItem('f_pivot_v2') || '',
         collapsedGroups: [...collapsedGroups],
         collapsedYears:  [...collapsedYears],
-        tcdFilter: { cat1:[...tcdFilter.cat1], cat2:[...tcdFilter.cat2], years:[...tcdFilter.years], months:[...tcdFilter.months] },
+        tcdFilter: { cat1:[...tcdFilter.cat1], cat2:[...tcdFilter.cat2], yearsOp:[...tcdFilter.yearsOp], yearsExpense:[...tcdFilter.yearsExpense], months:[...tcdFilter.months] },
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
         settingsTs: Date.now(),
     };
@@ -1224,7 +1232,8 @@ function decryptPayload(remoteData) {
                     let tf = s.tcdFilter;
                     tcdFilter.cat1   = new Set(tf.cat1   || []);
                     tcdFilter.cat2   = new Set(tf.cat2   || []);
-                    tcdFilter.years  = new Set(tf.years  || []);
+                    tcdFilter.yearsOp = new Set(tf.yearsOp || tf.years || []);
+                    tcdFilter.yearsExpense = new Set(tf.yearsExpense || []);
                     tcdFilter.months = new Set(tf.months || []);
                     localStorage.setItem('tcd_filter', JSON.stringify(tf));
                     // Restaurer cellules rouges TCD
@@ -1400,10 +1409,14 @@ window.renderSummary = function(force=false) {
         let cat2 = t.cat2 || '_SANS_CATEGORIE';
         if (tcdFilter.cat1.has(cat1)) return false;
         if (tcdFilter.cat2.has(cat2)) return false;
+        let dOpStr = String(t.dateOp || '');
+        let yOp = dOpStr.length >= 4 ? dOpStr.substring(0,4) : 'vide';
+        if (tcdFilter.yearsOp.has(yOp)) return false;
+        let dExpStr = String(t.dateExpense || t.dateOp || '');
+        let yExp = dExpStr.length >= 4 ? dExpStr.substring(0,4) : 'vide';
+        if (tcdFilter.yearsExpense.has(yExp)) return false;
         let dStr = String(t[($('timeAxe')||{value:'dateOp'}).value] || t.dateOp || '');
-        let y = dStr.length >= 4 ? dStr.substring(0,4) : 'vide';
         let m = dStr.length >= 7 ? dStr.substring(5,7) : 'vide';
-        if (tcdFilter.years.has(y)) return false;
         if (tcdFilter.months.has(m)) return false;
         return true;
     });
@@ -1766,7 +1779,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.3.4
+// QUICK CAT SEARCH — v2.3.5
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -1966,7 +1979,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.3.4
+// CAT MODAL SEARCH — v2.3.5
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2019,7 +2032,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.3.4
+// GRAPHIQUES ENGINE  — v2.3.5
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -2654,7 +2667,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.3.4
+// IDÉES AMÉLIORATION — v2.3.5
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3470,7 +3483,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.3.4
+// EXPORT / IMPORT BASE DE DONNÉES v2.3.5
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3603,7 +3616,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.3.4+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.3.5+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4169,14 +4182,15 @@ const MONTH_NAMES = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep',
 
 function hasTcdFilter() {
     return tcdFilter.cat1.size > 0 || tcdFilter.cat2.size > 0 ||
-           tcdFilter.years.size > 0 || tcdFilter.months.size > 0;
+           tcdFilter.yearsOp.size > 0 || tcdFilter.yearsExpense.size > 0 || tcdFilter.months.size > 0;
 }
 
 function saveTcdFilter() {
     localStorage.setItem('tcd_filter', JSON.stringify({
         cat1:  [...tcdFilter.cat1],
         cat2:  [...tcdFilter.cat2],
-        years: [...tcdFilter.years],
+        yearsOp: [...tcdFilter.yearsOp],
+        yearsExpense: [...tcdFilter.yearsExpense],
         months:[...tcdFilter.months]
     }));
     localStorage.setItem('f_settings_ts', Date.now());
@@ -4188,7 +4202,8 @@ function loadTcdFilter() {
         let f = JSON.parse(localStorage.getItem('tcd_filter') || '{}');
         tcdFilter.cat1   = new Set(f.cat1   || []);
         tcdFilter.cat2   = new Set(f.cat2   || []);
-        tcdFilter.years  = new Set(f.years  || []);
+        tcdFilter.yearsOp = new Set(f.yearsOp || f.years || []);
+        tcdFilter.yearsExpense = new Set(f.yearsExpense || []);
         tcdFilter.months = new Set(f.months || []);
     } catch(e) {}
 }
@@ -4196,14 +4211,17 @@ function loadTcdFilter() {
 window.openTcdFilter = function(e) {
     e.stopPropagation();
     // Collecter toutes les valeurs disponibles depuis transactions
-    let allCat1 = new Set(), allCat2 = new Set(), allYears = new Set(), allMonths = new Set();
+    let allCat1 = new Set(), allCat2 = new Set(), allYearsOp = new Set(), allYearsExpense = new Set(), allMonths = new Set();
     let tAxe = ($('timeAxe')||{value:'dateOp'}).value;
     transactions.forEach(t => {
         if (t.amount === 0) return;
         allCat1.add(t.cat1 || '_SANS_CATEGORIE');
         allCat2.add(t.cat2 || '_SANS_CATEGORIE');
+        let dOpStr = String(t.dateOp || '');
+        if (dOpStr.length >= 4) allYearsOp.add(dOpStr.substring(0,4));
+        let dExpStr = String(t.dateExpense || t.dateOp || '');
+        if (dExpStr.length >= 4) allYearsExpense.add(dExpStr.substring(0,4));
         let dStr = String(t[tAxe] || t.dateOp || '');
-        if (dStr.length >= 4) allYears.add(dStr.substring(0,4));
         if (dStr.length >= 7) allMonths.add(dStr.substring(5,7));
     });
 
@@ -4229,7 +4247,8 @@ window.openTcdFilter = function(e) {
 
     buildTags('tcdFilterCat1Tags',  allCat1,  tcdFilter.cat1,  true);
     buildTags('tcdFilterCat2Tags',  allCat2,  tcdFilter.cat2,  true);
-    buildTags('tcdFilterYearTags',  allYears, tcdFilter.years, true);
+    buildTags('tcdFilterYearOpTags',  allYearsOp, tcdFilter.yearsOp, true);
+    buildTags('tcdFilterYearExpenseTags',  allYearsExpense, tcdFilter.yearsExpense, true);
     buildTags('tcdFilterMonthTags', allMonths,tcdFilter.months,false);
 
     // Positionner le popup près du bouton
@@ -4252,7 +4271,7 @@ window.closeTcdFilter = function() {
 
 window.resetTcdFilter = function() {
     tcdFilter.cat1.clear(); tcdFilter.cat2.clear();
-    tcdFilter.years.clear(); tcdFilter.months.clear();
+    tcdFilter.yearsOp.clear(); tcdFilter.yearsExpense.clear(); tcdFilter.months.clear();
     saveTcdFilter();
     window.renderSummary();
     window.closeTcdFilter();
