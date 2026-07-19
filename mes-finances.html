@@ -4,10 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Mes finances - v2.3.7</title>
-    <!-- v2.3.7 - Ajout ligne manuelle BDD, version unifiée -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Mes finances - v2.3.8</title>
+    <!-- v2.3.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -277,7 +280,7 @@
 }
 
 
-/* v2.3.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.3.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -315,7 +318,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.3.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.3.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -443,6 +446,67 @@
     .app-title { font-size: 1em; }
     .tab-btn { padding: 8px 8px; font-size: 0.8em; }
     .tcd-native { font-size: 0.65em; }
+}
+
+/* v2.3.8 — Améliorations UX iPhone supplémentaires */
+@media (max-width: 768px) {
+    /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
+    body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    header {
+        padding-top: calc(10px + env(safe-area-inset-top));
+    }
+
+    /* Zones tactiles conformes aux recommandations Apple (min 44x44px) */
+    .btn, .tab-btn, .action-cell-btn, .sort-btn, .font-btn {
+        min-height: 40px;
+        touch-action: manipulation;
+    }
+    input[type="checkbox"], input[type="radio"] {
+        width: 20px; height: 20px;
+    }
+    .resizer { width: 14px; }
+
+    /* Empêcher le double-tap zoom involontaire sur les boutons */
+    button, .btn, .tab-btn { -webkit-tap-highlight-color: transparent; }
+
+    /* Champs de saisie : taille de police >= 16px pour éviter le zoom auto iOS au focus */
+    input, select, textarea, .inline-edit {
+        font-size: 16px !important;
+    }
+
+    /* Modales : éviter que le clavier virtuel ne cache le contenu actif */
+    .modal {
+        max-height: 80vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .overlay.open {
+        align-items: flex-start;
+        padding-top: 6vh;
+    }
+
+    /* Empêcher le rebond de scroll indésirable sur le body (garder le scroll interne aux vues) */
+    html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; }
+    main { -webkit-overflow-scrolling: touch; height: 100%; }
+    .table-wrap { -webkit-overflow-scrolling: touch; }
+
+    /* Toast repositionné au-dessus du home indicator */
+    .toast {
+        bottom: calc(24px + env(safe-area-inset-bottom));
+        left: 12px; right: 12px;
+        text-align: center;
+    }
+
+    /* Select natif iOS : hauteur cohérente avec les autres champs */
+    select.input-text, .input-text { min-height: 40px; }
+
+    /* Menu contextuel TCD (clic droit devient tap-appui-long sur iOS Safari, garder lisible) */
+    #tcdContextMenu .ctx-item { min-height: 44px; }
 }
 
 </style>
@@ -723,7 +787,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.3.7
+         GRAPHIQUES VIEW  — v2.3.8
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1076,7 +1140,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.3.7';
+const APP_VERSION = '2.3.8';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1116,6 +1180,19 @@ let tcdMap = {}; tcdMap['GRAND_TOTAL'] = [];
 let tcdTabulator = null; 
 
 $('versionLabel').textContent = `v${APP_VERSION}`;
+document.title = 'Mes finances - v' + APP_VERSION;
+// Cache-busting : si une version différente est détectée en localStorage, forcer un hard-reload une seule fois
+(function() {
+    try {
+        var storedVersion = localStorage.getItem('f_app_version_seen');
+        if (storedVersion !== APP_VERSION) {
+            localStorage.setItem('f_app_version_seen', APP_VERSION);
+            if (storedVersion && 'caches' in window) {
+                caches.keys().then(function(names) { names.forEach(function(n) { caches.delete(n); }); });
+            }
+        }
+    } catch(e) {}
+})();
 
 // ==== CONFIGURATION POLICE ====
 let currentFontSize = parseInt(localStorage.getItem('f_fontSize') || '14', 10);
@@ -1143,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.3.7 : séquence Google d'abord, MDP ensuite
+    // v2.3.8 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1915,7 +1992,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.3.7
+// QUICK CAT SEARCH — v2.3.8
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2115,7 +2192,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.3.7
+// CAT MODAL SEARCH — v2.3.8
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2168,7 +2245,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.3.7
+// GRAPHIQUES ENGINE  — v2.3.8
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -2803,7 +2880,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.3.7
+// IDÉES AMÉLIORATION — v2.3.8
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3620,7 +3697,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.3.7
+// EXPORT / IMPORT BASE DE DONNÉES v2.3.8
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3753,7 +3830,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.3.7+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.3.8+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
