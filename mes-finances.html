@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.4.1</title>
-    <!-- v2.4.1 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.4.2</title>
+    <!-- v2.4.2 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -282,7 +282,7 @@
 }
 
 
-/* v2.4.1 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.4.2 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -320,7 +320,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.4.1 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.4.2 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -450,7 +450,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.4.1 — Améliorations UX iPhone supplémentaires */
+/* v2.4.2 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -790,7 +790,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.4.1
+         GRAPHIQUES VIEW  — v2.4.2
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1001,7 +1001,11 @@
             <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">
 
                 <div class="summary-card" style="flex:1;min-width:320px;">
-                    <h3 style="margin-bottom:12px;">🏠 Bailleur</h3>
+                    <h3 style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">🏠 Bailleur
+                        <select id="qCopyBailleurFrom" class="input-text" style="width:auto;font-size:0.8em;" onchange="window.copyBailleurFromBien(this.value); this.value='';">
+                            <option value="">↩️ Récupérer depuis...</option>
+                        </select>
+                    </h3>
                     <div style="display:flex;flex-direction:column;gap:8px;">
                         <input type="text" id="qBailleurNom" class="input-text" placeholder="Nom du bailleur" onchange="window.saveQuittanceField()">
                         <input type="text" id="qBailleurAdresse" class="input-text" placeholder="Adresse" onchange="window.saveQuittanceField()">
@@ -1020,12 +1024,18 @@
 
             <div class="summary-card" style="margin-top:20px;">
                 <h3 style="margin-bottom:12px;">🏢 Désignation des locaux</h3>
-                <div id="qDesignationsList" style="display:flex;flex-direction:column;gap:10px;"></div>
-                <button class="btn btn-outline" style="margin-top:10px;" onclick="window.addQuittanceDesignation()">+ Ajouter une désignation</button>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <input type="text" id="qDesignationTexte" class="input-text" placeholder="Ex: Appartement B107, T2 de 44,79 m² + parking" onchange="window.updateQuittanceDesignationUnique(this.value)">
+                    <input type="text" id="qDesignationAdresse" class="input-text" placeholder="Adresse du bien" onchange="window.updateQuittanceDesignationUnique(null, this.value)">
+                </div>
             </div>
 
             <div class="summary-card" style="margin-top:20px;">
-                <h3 style="margin-bottom:12px;">✍️ Signature & mise en forme</h3>
+                <h3 style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">✍️ Signature & mise en forme
+                    <select id="qCopySignatureFrom" class="input-text" style="width:auto;font-size:0.8em;" onchange="window.copySignatureFromBien(this.value); this.value='';">
+                        <option value="">↩️ Récupérer depuis...</option>
+                    </select>
+                </h3>
                 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
                     <input type="text" id="qFaitA" class="input-text" placeholder="Fait à..." style="flex:1;min-width:180px;" onchange="window.saveQuittanceField()">
                     <input type="text" id="qSignatureTexte" class="input-text" placeholder="Texte de signature (ex: nom du bailleur)" style="flex:1;min-width:220px;" onchange="window.saveQuittanceField()">
@@ -1046,13 +1056,28 @@
                     <label style="font-size:0.85em;">Dernière date d'anniversaire du contrat
                         <input type="date" id="qDateAnniversaire" class="input-text" style="width:auto;display:inline-block;margin-left:8px;" onchange="window.setQuittanceAnniversaire(this.value)">
                     </label>
-                    <span style="font-size:0.8em;color:var(--ink-soft);">Génère automatiquement les 12 mois suivants.</span>
+                    <span style="font-size:0.8em;color:var(--ink-soft);">Génère automatiquement les 11 mois suivants.</span>
+                    <button class="btn btn-danger" style="margin-left:auto;" onclick="window.resetQuittanceEcheancier()">♻️ RAZ Échéancier</button>
                 </div>
-                <div style="overflow-x:auto;">
-                    <table class="std-table" id="qEcheancierTable" style="min-width:640px;">
-                        <thead><tr><th style="width:30px;"><input type="checkbox" id="qEchSelectAll" onchange="window.toggleAllEcheanceSelect(this.checked)"></th><th>Date</th><th>Détail (ex: 760+50)</th><th>Montant</th><th>Statut</th></tr></thead>
-                        <tbody id="qEcheancierBody"></tbody>
-                    </table>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;">
+                    <div style="flex:1;min-width:280px;">
+                        <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;">Mois 1 à 6</div>
+                        <div style="overflow-x:auto;">
+                            <table class="std-table" id="qEcheancierTableA" style="min-width:320px;">
+                                <thead><tr><th style="width:30px;"><input type="checkbox" onchange="window.toggleAllEcheanceSelect(this.checked)"></th><th>Date</th><th>Détail (ex: 760+50)</th><th>Montant</th><th>Statut</th></tr></thead>
+                                <tbody id="qEcheancierBodyA"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div style="flex:1;min-width:280px;">
+                        <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;">Mois 7 à 11</div>
+                        <div style="overflow-x:auto;">
+                            <table class="std-table" id="qEcheancierTableB" style="min-width:320px;">
+                                <thead><tr><th style="width:30px;"></th><th>Date</th><th>Détail (ex: 760+50)</th><th>Montant</th><th>Statut</th></tr></thead>
+                                <tbody id="qEcheancierBodyB"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
                     <button class="btn btn-outline" onclick="window.duplicateEcheanceToAll()">📋 Dupliquer la 1ère ligne sur tous les mois</button>
@@ -1066,7 +1091,7 @@
                     <label style="font-size:0.85em;">Période du <input type="date" id="qGenPeriodeDebut" class="input-text" style="width:auto;display:inline-block;" onchange="window.renderQuittanceTableLignes()"></label>
                     <label style="font-size:0.85em;">au <input type="date" id="qGenPeriodeFin" class="input-text" style="width:auto;display:inline-block;" onchange="window.renderQuittanceTableLignes()"></label>
                     <button class="btn btn-outline" onclick="window.renderQuittanceTableLignes()">🔄 Charger la période</button>
-                    <button class="btn btn-primary" onclick="window.generateQuittancePdf()">📄 Générer le PDF</button>
+                    <button class="btn btn-primary" onclick="window.generateQuittanceAffichage()">🧾 Générer la quittance</button>
                 </div>
 
                 <div style="overflow-x:auto;margin-bottom:16px;">
@@ -1083,7 +1108,10 @@
                     </table>
                 </div>
 
-                <div id="quittancePreviewContainer" style="border:1px dashed var(--ink-faint);border-radius:8px;padding:10px;overflow:auto;background:#f3f4f6;">
+                <div id="quittancePreviewContainer" style="display:none;border:1px dashed var(--ink-faint);border-radius:8px;padding:10px;overflow:auto;background:#f3f4f6;">
+                    <div style="width:800px;margin:0 auto 8px;display:flex;justify-content:flex-end;">
+                        <button class="btn btn-outline" title="Télécharger en PDF" onclick="window.downloadQuittancePdf()" style="font-size:1.3em;padding:6px 12px;">📄</button>
+                    </div>
                     <div id="quittancePreview" style="background:white;width:800px;margin:0 auto;padding:32px;font-family:Arial, sans-serif;color:#111;"></div>
                 </div>
             </div>
@@ -1260,7 +1288,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.4.1';
+const APP_VERSION = '2.4.2';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1293,7 +1321,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.4.1 : Quittances ──────────────────────────────────────────────────────
+// ── v2.4.2 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1344,7 +1372,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.4.1 : séquence Google d'abord, MDP ensuite
+    // v2.4.2 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2123,7 +2151,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.4.1
+// QUICK CAT SEARCH — v2.4.2
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2323,7 +2351,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.4.1
+// CAT MODAL SEARCH — v2.4.2
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2376,7 +2404,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.4.1
+// GRAPHIQUES ENGINE  — v2.4.2
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3011,7 +3039,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.4.1
+// IDÉES AMÉLIORATION — v2.4.2
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3828,7 +3856,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.4.1
+// EXPORT / IMPORT BASE DE DONNÉES v2.4.2
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3961,7 +3989,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.4.1+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.4.2+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4213,7 +4241,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.4.1
+// QUITTANCES — v2.4.2
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4244,8 +4272,8 @@ function newQuittanceBien(nom) {
         id: 'bien_' + Date.now() + '_' + Math.floor(Math.random()*1000),
         nom: nom || 'Nouveau bien',
         bailleur: { nom:'', adresse:'', email:'', tel:'' },
-        locataires: [{ nom:'', adresse:'' }],
-        designations: [{ texte:'' }],
+        locataires: [{ nom:'', email:'', tel:'' }],
+        designation: { texte:'', adresse:'' },
         dateAnniversaire: '',
         echeancier: [],
         lignesQuittance: [],
@@ -4289,7 +4317,6 @@ function getCurrentBien() {
 window.saveQuittanceField = function() {
     let bien = getCurrentBien();
     if (!bien) return;
-    bien.nom = bien.nom;
     bien.bailleur.nom = $('qBailleurNom').value;
     bien.bailleur.adresse = $('qBailleurAdresse').value;
     bien.bailleur.email = $('qBailleurEmail').value;
@@ -4314,10 +4341,41 @@ window.uploadQuittanceLogo = function(input) {
     reader.readAsDataURL(file);
 };
 
+window.copyBailleurFromBien = function(sourceId) {
+    if (!sourceId) return;
+    let bien = getCurrentBien(); if (!bien) return;
+    let source = quittancesBiens.find(b => b.id === sourceId);
+    if (!source) return;
+    bien.bailleur = { nom: source.bailleur.nom, adresse: source.bailleur.adresse, email: source.bailleur.email, tel: source.bailleur.tel };
+    saveQuittancesBiens();
+    window.renderQuittancesView();
+    showToast('✅ Bailleur copié depuis "' + source.nom + '"');
+};
+
+window.copySignatureFromBien = function(sourceId) {
+    if (!sourceId) return;
+    let bien = getCurrentBien(); if (!bien) return;
+    let source = quittancesBiens.find(b => b.id === sourceId);
+    if (!source) return;
+    bien.faitA = source.faitA;
+    bien.signatureTexte = source.signatureTexte;
+    bien.logoDataUrl = source.logoDataUrl;
+    saveQuittancesBiens();
+    window.renderQuittancesView();
+    showToast('✅ Signature copiée depuis "' + source.nom + '"');
+};
+
+function populateCopySelectors() {
+    let others = quittancesBiens.filter(b => b.id !== currentQuittanceBienId);
+    let opts = '<option value="">↩️ Récupérer depuis...</option>' + others.map(b => `<option value="${b.id}">${b.nom}</option>`).join('');
+    let selB = $('qCopyBailleurFrom'); if (selB) selB.innerHTML = opts;
+    let selS = $('qCopySignatureFrom'); if (selS) selS.innerHTML = opts;
+}
+
 // ── Locataires ──
 window.addQuittanceLocataire = function() {
     let bien = getCurrentBien(); if (!bien) return;
-    bien.locataires.push({ nom:'', adresse:'' });
+    bien.locataires.push({ nom:'', email:'', tel:'' });
     saveQuittancesBiens();
     window.renderQuittanceLocataires();
 };
@@ -4339,59 +4397,44 @@ window.renderQuittanceLocataires = function() {
     el.innerHTML = bien.locataires.map((l, idx) => `
         <div style="display:flex;gap:6px;align-items:center;">
             <input type="text" class="input-text" placeholder="Nom locataire ${idx+1}" value="${(l.nom||'').replace(/"/g,'&quot;')}" style="flex:1;" onchange="window.updateQuittanceLocataire(${idx},'nom',this.value)">
-            <input type="text" class="input-text" placeholder="Adresse" value="${(l.adresse||'').replace(/"/g,'&quot;')}" style="flex:1;" onchange="window.updateQuittanceLocataire(${idx},'adresse',this.value)">
+            <input type="email" class="input-text" placeholder="Email" value="${(l.email||'').replace(/"/g,'&quot;')}" style="flex:1;" onchange="window.updateQuittanceLocataire(${idx},'email',this.value)">
+            <input type="text" class="input-text" placeholder="Téléphone" value="${(l.tel||'').replace(/"/g,'&quot;')}" style="flex:1;" onchange="window.updateQuittanceLocataire(${idx},'tel',this.value)">
             <button class="btn btn-outline" style="padding:4px 8px;" onclick="window.removeQuittanceLocataire(${idx})">🗑️</button>
         </div>
     `).join('');
 };
 
-// ── Désignations des locaux ──
-window.addQuittanceDesignation = function() {
+// ── Désignation des locaux (unique) ──
+window.updateQuittanceDesignationUnique = function(texte, adresse) {
     let bien = getCurrentBien(); if (!bien) return;
-    bien.designations.push({ texte:'' });
-    saveQuittancesBiens();
-    window.renderQuittanceDesignations();
-};
-window.removeQuittanceDesignation = function(idx) {
-    let bien = getCurrentBien(); if (!bien) return;
-    if (bien.designations.length <= 1) { showToast('⚠️ Au moins une désignation requise'); return; }
-    bien.designations.splice(idx, 1);
-    saveQuittancesBiens();
-    window.renderQuittanceDesignations();
-};
-window.updateQuittanceDesignation = function(idx, value) {
-    let bien = getCurrentBien(); if (!bien) return;
-    bien.designations[idx].texte = value;
+    if (!bien.designation) bien.designation = { texte:'', adresse:'' };
+    if (texte !== null && texte !== undefined) bien.designation.texte = texte;
+    if (adresse !== null && adresse !== undefined) bien.designation.adresse = adresse;
     saveQuittancesBiens();
 };
 window.renderQuittanceDesignations = function() {
     let bien = getCurrentBien(); if (!bien) return;
-    let el = $('qDesignationsList');
-    el.innerHTML = bien.designations.map((d, idx) => `
-        <div style="display:flex;gap:6px;align-items:center;">
-            <input type="text" class="input-text" placeholder="Ex: Appartement B107, T2 de 44,79 m² + parking" value="${(d.texte||'').replace(/"/g,'&quot;')}" style="flex:1;" onchange="window.updateQuittanceDesignation(${idx},this.value)">
-            <button class="btn btn-outline" style="padding:4px 8px;" onclick="window.removeQuittanceDesignation(${idx})">🗑️</button>
-        </div>
-    `).join('');
+    if (!bien.designation) bien.designation = { texte:'', adresse:'' };
+    $('qDesignationTexte').value = bien.designation.texte || '';
+    $('qDesignationAdresse').value = bien.designation.adresse || '';
 };
 
-// ── Échéancier (basé sur date anniversaire) ──
+// ── Échéancier (basé sur date anniversaire, 11 mois répartis en 2 blocs) ──
 window.setQuittanceAnniversaire = function(dateStr) {
     let bien = getCurrentBien(); if (!bien || !dateStr) return;
     bien.dateAnniversaire = dateStr;
-    // Générer 12 échéances mensuelles à partir de la date anniversaire, en conservant détail/montant existants si déjà présents pour la même date
     let oldByDate = {};
     (bien.echeancier || []).forEach(e => { oldByDate[e.date] = e; });
     let newEcheancier = [];
     let base = new Date(dateStr + 'T00:00:00');
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 11; i++) {
         let d = new Date(base);
         d.setMonth(d.getMonth() + i);
         let iso = d.toISOString().slice(0,10);
         let prev = oldByDate[iso];
         newEcheancier.push({
             date: iso,
-            detail: prev ? (prev.detail || prev.libelle || '') : '',
+            detail: prev ? (prev.detail || '') : '',
             montant: prev ? (prev.montant || 0) : 0,
             statut: prev ? (prev.statut || 'À venir') : 'À venir',
             selected: false
@@ -4402,13 +4445,22 @@ window.setQuittanceAnniversaire = function(dateStr) {
     window.renderQuittanceEcheancier();
 };
 
+window.resetQuittanceEcheancier = function() {
+    let bien = getCurrentBien(); if (!bien) return;
+    if (!confirm('Réinitialiser complètement l\'échéancier de ce bien ?')) return;
+    bien.dateAnniversaire = '';
+    bien.echeancier = [];
+    saveQuittancesBiens();
+    window.renderQuittanceEcheancier();
+    showToast('♻️ Échéancier réinitialisé');
+};
+
 window.updateQuittanceEcheance = function(idx, field, value) {
     let bien = getCurrentBien(); if (!bien) return;
     if (field === 'montant') {
         bien.echeancier[idx].montant = parseFloat(value) || 0;
     } else if (field === 'detail') {
         bien.echeancier[idx].detail = value;
-        // Calcul automatique si le détail contient une expression du type "760+50"
         let parts = String(value).split('+').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
         if (parts.length > 0) {
             bien.echeancier[idx].montant = parts.reduce((a,b) => a+b, 0);
@@ -4460,25 +4512,31 @@ window.duplicateEcheanceToSelection = function() {
     showToast('✅ Ligne dupliquée sur ' + selectedCount + ' mois sélectionné(s)');
 };
 
+function renderEcheanceRow(e, idx, showCheckbox) {
+    let fmtEur = n => (parseFloat(n)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+    let isPaid = e.statut === 'Payé';
+    let rowStyle = isPaid ? 'background:#8BC34A;color:white;' : '';
+    return `<tr style="${rowStyle}">
+        <td style="text-align:center;">${showCheckbox ? `<input type="checkbox" ${e.selected?'checked':''} onchange="window.toggleEcheanceSelect(${idx},this.checked)">` : ''}</td>
+        <td>${e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('fr-FR') : ''}</td>
+        <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" style="${isPaid?'background:transparent;color:white;border-color:rgba(255,255,255,0.5);':''}" onchange="window.updateQuittanceEcheance(${idx},'detail',this.value)"></td>
+        <td style="text-align:right;white-space:nowrap;">${fmtEur(e.montant)}</td>
+        <td>
+            <select class="input-text" style="${isPaid?'background:transparent;color:white;border-color:rgba(255,255,255,0.5);':''}" onchange="window.updateQuittanceEcheance(${idx},'statut',this.value)">
+                <option value="Payé" ${e.statut==='Payé'?'selected':''}>Payé</option>
+                <option value="À venir" ${e.statut==='À venir'?'selected':''}>À venir</option>
+            </select>
+        </td>
+    </tr>`;
+}
+
 window.renderQuittanceEcheancier = function() {
     let bien = getCurrentBien(); if (!bien) return;
     $('qDateAnniversaire').value = bien.dateAnniversaire || '';
-    let body = $('qEcheancierBody');
-    let fmtEur = n => (parseFloat(n)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
-    body.innerHTML = (bien.echeancier || []).map((e, idx) => `
-        <tr>
-            <td style="text-align:center;"><input type="checkbox" ${e.selected?'checked':''} onchange="window.toggleEcheanceSelect(${idx},this.checked)"></td>
-            <td>${e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('fr-FR') : ''}</td>
-            <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" onchange="window.updateQuittanceEcheance(${idx},'detail',this.value)"></td>
-            <td style="text-align:right;white-space:nowrap;">${fmtEur(e.montant)}</td>
-            <td>
-                <select class="input-text" onchange="window.updateQuittanceEcheance(${idx},'statut',this.value)">
-                    <option value="Payé" ${e.statut==='Payé'?'selected':''}>Payé</option>
-                    <option value="À venir" ${e.statut==='À venir'?'selected':''}>À venir</option>
-                </select>
-            </td>
-        </tr>
-    `).join('');
+    let list = bien.echeancier || [];
+    let bodyA = $('qEcheancierBodyA'), bodyB = $('qEcheancierBodyB');
+    bodyA.innerHTML = list.slice(0,6).map((e, i) => renderEcheanceRow(e, i, i===0)).join('');
+    bodyB.innerHTML = list.slice(6,11).map((e, i) => renderEcheanceRow(e, i+6, false)).join('');
 };
 
 // ── Tableau de lignes Débit/Crédit de la quittance ──
@@ -4557,14 +4615,16 @@ window.renderQuittancesView = function() {
     if (bien.logoDataUrl) { $('qLogoPreview').src = bien.logoDataUrl; $('qLogoPreview').style.display = 'inline-block'; }
     else { $('qLogoPreview').style.display = 'none'; }
 
+    populateCopySelectors();
     window.renderQuittanceLocataires();
     window.renderQuittanceDesignations();
     window.renderQuittanceEcheancier();
     window.renderQuittanceTableLignes();
+    $('quittancePreviewContainer').style.display = 'none';
 };
 
-// ── Génération PDF ──
-window.generateQuittancePdf = function() {
+// ── Génération de la quittance (affichage) + téléchargement PDF séparé ──
+window.generateQuittanceAffichage = function() {
     let bien = getCurrentBien();
     if (!bien) { alert('Sélectionnez ou créez un bien.'); return; }
     let debut = $('qGenPeriodeDebut').value, fin = $('qGenPeriodeFin').value;
@@ -4592,20 +4652,27 @@ window.generateQuittancePdf = function() {
     let echeancierRows = (bien.echeancier || []).map(e => {
         let d = e.date ? new Date(e.date + 'T00:00:00') : null;
         let inPeriode = d && d >= periodeStart && d <= periodeEnd;
-        let bg = inPeriode ? 'background:#8BC34A;color:white;' : '';
+        let isPaid = e.statut === 'Payé';
+        let bg = isPaid ? 'background:#8BC34A;color:white;' : (inPeriode ? 'background:#FFF3CD;' : '');
         return `<tr style="${bg}"><td style="padding:4px 8px;border:1px solid #ccc;">${d ? fmtDate(e.date) : ''}</td><td style="padding:4px 8px;border:1px solid #ccc;">${e.detail||''}${e.detail?' = ':''}${fmtEur(e.montant)}</td></tr>`;
     }).join('');
 
-    let locatairesHtml = bien.locataires.map(l => `<div>${l.nom}</div><div style="font-size:0.85em;color:#555;">${l.adresse}</div>`).join('<br>');
-    let designationsHtml = bien.designations.map(d => d.texte).join(' — ');
+    let designation = bien.designation || { texte:'', adresse:'' };
+    let locatairesHtml = bien.locataires.map(l => {
+        let lignesContact = [l.nom];
+        let contactInfos = [l.email, l.tel].filter(Boolean).join(' · ');
+        if (contactInfos) lignesContact.push(`<span style="font-size:0.85em;color:#555;">${contactInfos}</span>`);
+        return lignesContact.join('<br>');
+    }).join('<br><br>');
+    let adresseLocativeHtml = designation.adresse ? `<div style="font-size:0.85em;color:#555;margin-top:4px;">${designation.adresse}</div>` : '';
     let logoHtml = bien.logoDataUrl ? `<img src="${bien.logoDataUrl}" style="max-height:40px;margin-top:6px;">` : '';
 
     let html = `
     <div style="display:flex;justify-content:space-between;margin-bottom:20px;">
         <div><strong>Le bailleur:</strong><div style="margin-top:6px;">${bien.bailleur.nom}<br><span style="font-size:0.85em;color:#555;">${bien.bailleur.adresse}<br>${bien.bailleur.email}<br>${bien.bailleur.tel}</span></div></div>
-        <div><strong>Les locataires:</strong><div style="margin-top:6px;">${locatairesHtml}</div></div>
+        <div><strong>Les locataires:</strong><div style="margin-top:6px;">${locatairesHtml}${adresseLocativeHtml}</div></div>
     </div>
-    <p style="margin-bottom:16px;"><strong>Désignation des locaux :</strong> ${designationsHtml}</p>
+    <p style="margin-bottom:16px;"><strong>Désignation des locaux :</strong> ${designation.texte || ''}</p>
     <div style="border:2px solid #111;text-align:center;padding:10px;font-size:1.3em;font-weight:bold;margin-bottom:16px;">QUITTANCE DE LOYER</div>
     <p style="text-align:center;margin-bottom:14px;"><strong>Periode couverte par le loyer:</strong> ${fmtDate(debut)} au ${fmtDate(fin)}</p>
     <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
@@ -4625,9 +4692,18 @@ window.generateQuittancePdf = function() {
     <p style="margin-top:14px;font-size:0.85em;">Cette quittance atteste également du paiement des termes antérieurs selon le tableau ci-dessus.</p>
     `;
 
-    let preview = $('quittancePreview');
-    preview.innerHTML = html;
+    $('quittancePreview').innerHTML = html;
+    $('quittancePreviewContainer').style.display = 'block';
+    $('quittancePreviewContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    showToast('✅ Quittance générée');
+};
 
+window.downloadQuittancePdf = function() {
+    let bien = getCurrentBien();
+    if (!bien) return;
+    let preview = $('quittancePreview');
+    if (!preview.innerHTML.trim()) { alert('Générez d\\'abord la quittance.'); return; }
+    let debut = $('qGenPeriodeDebut').value, fin = $('qGenPeriodeFin').value;
     html2canvas(preview, { scale: 2 }).then(canvas => {
         let imgData = canvas.toDataURL('image/png');
         let pdf = new jspdf.jsPDF('p', 'mm', 'a4');
@@ -4636,7 +4712,7 @@ window.generateQuittancePdf = function() {
         let imgHeight = canvas.height * imgWidth / canvas.width;
         pdf.addImage(imgData, 'PNG', 10, 10, imgWidth, Math.min(imgHeight, pageHeight-20));
         pdf.save('Quittance_' + bien.nom.replace(/\s+/g,'_') + '_' + debut + '_' + fin + '.pdf');
-        showToast('✅ Quittance PDF générée');
+        showToast('✅ PDF téléchargé');
     });
 };
 
