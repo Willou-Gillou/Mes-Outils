@@ -2,9 +2,12 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Mes finances - v2.3.6</title>
-    <!-- v2.3.6 - Ajout ligne manuelle BDD, version unifiée -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Mes finances - v2.3.7</title>
+    <!-- v2.3.7 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -274,7 +277,7 @@
 }
 
 
-/* v2.3.6 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.3.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -307,6 +310,139 @@
 .tcd-native thead th.tcd-col-axis.tcd-col-hover {
   background: var(--tcd-header-color, #2d3748) !important;
   opacity: 1 !important;
+}
+
+
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v2.3.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
+   à la media query. Aucune règle desktop existante n'est modifiée.
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+
+    body { font-size: 13px; }
+
+    /* Header : passage en colonne, éléments compacts */
+    header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 10px 12px;
+    }
+    .app-title { font-size: 1.1em; justify-content: space-between; }
+    header > div[style*="display:flex"] {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+        justify-content: flex-start !important;
+    }
+    header .btn, header select, header .badge-sync {
+        font-size: 0.78em !important;
+        padding: 5px 8px !important;
+    }
+    .font-controls { margin-left: 0; }
+
+    /* Onglets de navigation : scroll horizontal tactile fluide */
+    .nav-tabs {
+        padding: 0 8px;
+        gap: 4px;
+        -webkit-overflow-scrolling: touch;
+    }
+    .tab-btn { padding: 10px 10px; font-size: 0.85em; }
+
+    main { padding: 10px; }
+
+    /* Configuration du TCD (sélecteurs L1/L2/Axe/couleur) : empilement vertical */
+    div[style*="pivot-config"], main > div > div[style*="flex-wrap:wrap"] {
+        gap: 6px !important;
+    }
+    .pivot-select-group, main div[style*="align-items:center"] {
+        flex-wrap: wrap;
+    }
+
+    /* Tables standards (BDD, Catégoriser, Règles) : scroll horizontal tactile */
+    .table-wrap {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .std-table { font-size: 0.85em; min-width: 900px; }
+    .std-table th, .std-table td { padding: 6px 8px; }
+
+    /* Checkbox sticky BDD : garder visible mais réduire la largeur */
+    #dataTable th:first-child, #dataTable td:first-child {
+        min-width: 34px;
+    }
+
+    /* TCD natif : réduire police et paddings, garder colonne catégorie sticky */
+    #tcdScrollWrapper { max-height: calc(100vh - 220px); }
+    .tcd-native { font-size: 0.72em; }
+    .tcd-native th, .tcd-native td { padding: 3px 5px; }
+    .tcd-col-axis { min-width: 130px; max-width: 160px; }
+
+    /* Modals plein écran sur mobile */
+    .modal {
+        width: 96vw !important;
+        max-width: 96vw !important;
+        padding: 16px !important;
+        max-height: 92vh;
+    }
+    .overlay { padding: 8px; }
+
+    /* Boutons d'action en bulk (BDD) : empilement vertical */
+    #bulkActions {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 8px !important;
+        height: auto !important;
+        position: relative !important;
+        padding: 10px !important;
+    }
+    #bulkActions > div {
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+    }
+    #dbHeaderNormal {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        height: auto !important;
+        position: relative !important;
+        gap: 8px !important;
+    }
+    #dbHeaderNormal > div {
+        flex-wrap: wrap !important;
+        justify-content: flex-start !important;
+    }
+
+    /* Cartes de résumé/paramètres : pleine largeur */
+    .summary-card { min-width: 100% !important; max-width: 100% !important; }
+    #view-settings > div[style*="flex-wrap"] { flex-direction: column; }
+
+    /* Filtres TCD popup : plein écran sur mobile */
+    #tcdFilterPopup {
+        left: 4vw !important;
+        right: 4vw !important;
+        width: 92vw !important;
+        max-width: 92vw !important;
+        top: 8vh !important;
+        max-height: 84vh;
+    }
+
+    /* Graphiques : largeur pleine, éviter débordement horizontal */
+    #chartsList { gap: 20px; }
+    #chartsList canvas { max-width: 100% !important; }
+
+    /* Boutons génériques plus tactiles */
+    .btn { padding: 8px 12px; font-size: 0.85em; }
+
+    /* Grille catégories : une seule colonne */
+    #categoriesContainer { grid-template-columns: 1fr !important; }
+}
+
+/* Très petits écrans (iPhone SE et similaires < 380px) */
+@media (max-width: 380px) {
+    .app-title { font-size: 1em; }
+    .tab-btn { padding: 8px 8px; font-size: 0.8em; }
+    .tcd-native { font-size: 0.65em; }
 }
 
 </style>
@@ -587,7 +723,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.3.6
+         GRAPHIQUES VIEW  — v2.3.7
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -940,7 +1076,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.3.6';
+const APP_VERSION = '2.3.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1007,7 +1143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.3.6 : séquence Google d'abord, MDP ensuite
+    // v2.3.7 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1779,7 +1915,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.3.6
+// QUICK CAT SEARCH — v2.3.7
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -1979,7 +2115,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.3.6
+// CAT MODAL SEARCH — v2.3.7
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2032,7 +2168,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.3.6
+// GRAPHIQUES ENGINE  — v2.3.7
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -2667,7 +2803,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.3.6
+// IDÉES AMÉLIORATION — v2.3.7
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3484,7 +3620,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.3.6
+// EXPORT / IMPORT BASE DE DONNÉES v2.3.7
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3617,7 +3753,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.3.6+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.3.7+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
