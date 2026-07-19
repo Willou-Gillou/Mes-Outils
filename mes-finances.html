@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.3.8</title>
-    <!-- v2.3.8 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.3.9</title>
+    <!-- v2.3.9 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -280,7 +280,7 @@
 }
 
 
-/* v2.3.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.3.9 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -318,7 +318,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.3.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.3.9 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -448,7 +448,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.3.8 — Améliorations UX iPhone supplémentaires */
+/* v2.3.9 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -787,7 +787,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.3.8
+         GRAPHIQUES VIEW  — v2.3.9
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1140,7 +1140,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.3.8';
+const APP_VERSION = '2.3.9';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1220,7 +1220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.3.8 : séquence Google d'abord, MDP ensuite
+    // v2.3.9 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1992,7 +1992,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.3.8
+// QUICK CAT SEARCH — v2.3.9
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2192,7 +2192,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.3.8
+// CAT MODAL SEARCH — v2.3.9
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2245,7 +2245,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.3.8
+// GRAPHIQUES ENGINE  — v2.3.9
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -2880,7 +2880,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.3.8
+// IDÉES AMÉLIORATION — v2.3.9
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3697,7 +3697,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.3.8
+// EXPORT / IMPORT BASE DE DONNÉES v2.3.9
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3830,7 +3830,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.3.8+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.3.9+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4077,6 +4077,79 @@ window.addAccount = async function() {
         if (typeof window.renderDriveAdmin === 'function') window.renderDriveAdmin();
     }
     showToast('Compte "' + name + '" créé ✓');
+};
+
+window.importAccountFromDat = async function(input) {
+    let file = input.files[0]; input.value = '';
+    if (!file) return;
+    if (!driveAccessToken) { alert('Connectez-vous à Drive d\'abord.'); return; }
+    if (!appSecretKey) { alert('Mot de passe non initialisé. Reconnectez-vous.'); return; }
+    if (!file.name.toLowerCase().endsWith('.dat')) { alert('Seuls les fichiers .dat sont acceptés.'); return; }
+    try {
+        showToast('📥 Lecture du fichier...');
+        let text = await file.text();
+        let remoteData = {};
+        if (text && text.trim().startsWith('{')) remoteData = JSON.parse(text);
+        if (!remoteData.vault) { alert('Fichier .dat invalide : format non reconnu.'); return; }
+        let decrypted;
+        try {
+            decrypted = JSON.parse(CryptoJS.AES.decrypt(remoteData.vault, appSecretKey).toString(CryptoJS.enc.Utf8));
+            if (!decrypted) throw new Error('empty');
+        } catch(e) {
+            alert('Impossible de déchiffrer ce fichier. Vérifiez que la clé de chiffrement (mot de passe) est la même que celle utilisée pour créer ce fichier.');
+            return;
+        }
+        // Générer un nouvel ID de compte local, totalement isolé (jamais réutiliser l'accountId source)
+        let newId = 'acc_' + Date.now();
+        let suggestedName = (decrypted.accounts && Array.isArray(decrypted.accounts) && decrypted.accountId)
+            ? (decrypted.accounts.find(a => a.id === decrypted.accountId) || {}).name
+            : null;
+        let defaultName = suggestedName || file.name.replace(/\.dat$/i, '');
+        let name = prompt('Nom du compte importé :', defaultName);
+        if (!name || !name.trim()) { showToast('Import annulé'); return; }
+        name = name.trim();
+
+        accounts.push({ id: newId, name });
+        saveAccountsList();
+        window.renderAccountManagerList();
+        window.renderAccountUI();
+
+        // Construire le nouvel état isolé pour ce compte (accountId propre, jamais celui du fichier source)
+        let newIdx = accounts.length;
+        let fname = 'appsysdata-' + newIdx + '.dat';
+        let isolatedState = {
+            transactions: decrypted.transactions || [],
+            rules: decrypted.rules || [],
+            categories: decrypted.categories || {},
+            savedCharts: decrypted.savedCharts || [],
+            version: APP_VERSION,
+            accounts: accounts,
+            settings: decrypted.settings || {
+                tcdHeaderColor: '', fontSize: '14', tcdFontSize: '13', pivot: '',
+                collapsedGroups: [], collapsedYears: [],
+                tcdFilter: { cat1:[], cat2:[], yearsOp:[], yearsExpense:[], months:[] },
+                tcdRedCells: {}, settingsTs: Date.now()
+            },
+            accountId: newId
+        };
+        let payload = JSON.stringify({ vault: CryptoJS.AES.encrypt(JSON.stringify(isolatedState), appSecretKey).toString() });
+        let blob = new Blob([payload], { type: 'application/json' });
+        let form = new FormData();
+        form.append('metadata', new Blob([JSON.stringify({ name: fname, parents: ['appDataFolder'] })], { type: 'application/json' }));
+        form.append('file', blob);
+        let resp = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + driveAccessToken },
+            body: form
+        });
+        let fileData = await resp.json();
+        if (fileData.id) driveFileIdMap[newId] = fileData.id;
+        if (typeof window.renderDriveAdmin === 'function') window.renderDriveAdmin();
+
+        showToast('✅ Compte "' + name + '" importé (' + (isolatedState.transactions.length) + ' transaction(s))');
+    } catch(err) {
+        alert('Erreur lors de l\'import : ' + err.message);
+    }
 };
 
 window.renameAccount = function(id, name) {
@@ -4613,6 +4686,10 @@ function exportImportResult(rawRows, importedIdx, skippedIdx, bankType) {
     <div style="display:flex;gap:8px;padding-top:12px;border-top:1px solid var(--ink-faint);">
       <input type="text" id="newAccountName" class="input-text" placeholder="Nom du nouveau compte..." style="flex:1;">
       <button class="btn btn-primary" onclick="window.addAccount()">+ Ajouter</button>
+    </div>
+    <div style="display:flex;gap:8px;padding-top:12px;">
+      <button class="btn btn-outline" style="flex:1;" onclick="$('importAccountDatInput').click()">📥 Importer un compte depuis .dat</button>
+      <input type="file" id="importAccountDatInput" accept=".dat" style="display:none;" onchange="window.importAccountFromDat(this)">
     </div>
     <p style="margin-top:12px;font-size:0.82em;color:var(--ink-soft);">ℹ️ Chaque compte a ses propres transactions, catégories et règles. La clé de chiffrement est partagée entre tous les comptes.</p>
   </div>
