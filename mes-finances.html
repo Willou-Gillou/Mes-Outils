@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.5.8</title>
-    <!-- v2.5.8 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.5.9</title>
+    <!-- v2.5.9 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -283,7 +283,7 @@
 }
 
 
-/* v2.5.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.5.9 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -321,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.5.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.5.9 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -451,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.5.8 — Responsive Quittances (mobile) */
+/* v2.5.9 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -466,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.5.8 — Améliorations UX iPhone supplémentaires */
+/* v2.5.9 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -806,7 +806,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.5.8
+         GRAPHIQUES VIEW  — v2.5.9
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1164,10 +1164,7 @@
                         <button class="btn btn-outline" title="Envoyer sur Google Drive" onclick="window.uploadQuittanceToDrive()" style="padding:4px 10px;display:inline-flex;align-items:center;margin-left:8px;">
                             <img src="https://cdn-icons-png.flaticon.com/512/5968/5968523.png" alt="Google Drive" style="height:22px;" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'📁',style:'font-size:1.3em;'}))">
                         </button>
-                        <button class="btn btn-outline" title="Envoyer par email" onclick="window.openQuittanceEmailModal()" style="padding:4px 10px;display:inline-flex;align-items:center;margin-left:8px;">
-                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDv6fPrR3__AdPw9BGGDy0O2CglbN5seVPV6oeAwIpxg&s=10" alt="Email" style="height:22px;" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'✉️',style:'font-size:1.3em;'}))">
-                        </button>
-                    </div>
+                        </div>
                     <div id="quittancePreview" style="background:white;width:800px;max-width:100%;margin:0 auto;padding:32px;font-family:Arial, sans-serif;color:#111;"></div>
                 </div>
             </div>
@@ -1344,7 +1341,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.5.8';
+const APP_VERSION = '2.5.9';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1377,7 +1374,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.5.8 : Quittances ──────────────────────────────────────────────────────
+// ── v2.5.9 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1428,7 +1425,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.5.8 : séquence Google d'abord, MDP ensuite
+    // v2.5.9 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2215,7 +2212,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.5.8
+// QUICK CAT SEARCH — v2.5.9
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2415,7 +2412,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.5.8
+// CAT MODAL SEARCH — v2.5.9
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2468,7 +2465,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.5.8
+// GRAPHIQUES ENGINE  — v2.5.9
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3103,7 +3100,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.5.8
+// IDÉES AMÉLIORATION — v2.5.9
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3920,7 +3917,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.5.8
+// EXPORT / IMPORT BASE DE DONNÉES v2.5.9
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4053,7 +4050,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.5.8+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.5.9+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4305,7 +4302,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.5.8
+// QUITTANCES — v2.5.9
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -5109,18 +5106,22 @@ window.uploadQuittanceToDrive = async function() {
     }
 };
 
-window.openQuittanceEmailModal = function() {
-    let d = window._lastQuittanceData;
-    if (!d) { alert("Générez d'abord la quittance."); return; }
-    let bien = d.bien;
+window.openQuittanceEmailModal = function(fileIdx) {
+    let bien = getCurrentBien();
+    if (!bien) return;
+    let files = window._quittanceDriveFiles || [];
+    let file = (typeof fileIdx === 'number') ? files[fileIdx] : null;
+    if (!file) { alert('Fichier introuvable. Actualisez la liste des fichiers Drive puis réessayez.'); return; }
+    let link = file.webViewLink || ('https://drive.google.com/file/d/' + file.id + '/view');
     let emails = [];
     if (bien.bailleur.email) emails.push(bien.bailleur.email);
     (bien.locataires || []).forEach(l => { if (l.email) emails.push(l.email); });
-    let mois = $('qGenPeriodeMois') ? $('qGenPeriodeMois').value : '';
-    let moisLabel = mois || (d.debut ? d.debut.slice(0,7) : '');
+    let moisMatch = (file.name || '').match(/(\d{4}-\d{2})/);
+    let moisLabel = moisMatch ? moisMatch[1] : '';
     $('qEmailDestinataires').value = emails.join(', ');
-    $('qEmailObjet').value = 'Quittance de loyer ' + moisLabel;
+    $('qEmailObjet').value = 'Quittance de loyer' + (moisLabel ? (' ' + moisLabel) : '');
     $('qEmailCorps').value = 'Bonjour, voici votre quittance de loyer. Cordialement';
+    window._quittanceEmailFileLink = link;
     $('quittanceEmailModal').style.display = 'flex';
 };
 
@@ -5129,27 +5130,16 @@ window.closeQuittanceEmailModal = function() {
 };
 
 window.sendQuittanceEmail = async function() {
-    let bien = getCurrentBien();
-    if (!bien) return;
     let to = ($('qEmailDestinataires').value || '').split(',').map(s => s.trim()).filter(Boolean);
     if (!to.length) { alert('Veuillez renseigner au moins un destinataire.'); return; }
     let subject = $('qEmailObjet').value || '';
     let body = $('qEmailCorps').value || '';
+    let link = window._quittanceEmailFileLink;
+    if (!link) { alert('Lien du document introuvable. Réessayez depuis la liste des fichiers Drive.'); return; }
     if (!driveAccessToken) { alert('Connectez-vous à Google d\'abord.'); return; }
 
-    let btn = document.activeElement;
-    showToast('⬆️ Préparation de la quittance...');
     try {
-        let pdf = await window.buildQuittancePdfBlob();
-        if (!pdf) return;
-        let fileName = window.getQuittanceFileName();
-        let folderId = bien.driveFolderId;
-        if (!folderId) { alert('Renseignez d\'abord un Partage ID Google Drive pour ce bien (section 📁 Google Drive) afin de pouvoir joindre un lien de téléchargement.'); return; }
-
-        let uploaded = await window.uploadQuittancePdfToDriveFolder(folderId, fileName, pdf);
-        window.loadQuittanceDriveFiles();
-
-        let fullBody = body + '\n\nTéléchargez votre quittance ici : ' + uploaded.link;
+        let fullBody = body + '\n\nTéléchargez votre quittance ici : ' + link;
         let rawLines = [
             'To: ' + to.join(', '),
             'Subject: ' + subject,
@@ -5204,13 +5194,17 @@ window.loadQuittanceDriveFiles = async function() {
         }
         let files = d.files || [];
         if (!files.length) { container.innerHTML = '<p style="color:var(--ink-soft);">Aucun fichier trouvé dans ce dossier Drive.</p>'; return; }
+        window._quittanceDriveFiles = files;
         let html = '<table class="std-table" style="width:100%;margin-top:8px;font-size:0.85em;"><thead><tr><th>Nom</th><th>Taille</th><th>Modifié le</th><th>Lien</th></tr></thead><tbody>';
-        files.forEach(function(f) {
+        files.forEach(function(f, idx) {
             let size = f.size ? Math.round(f.size/1024) + ' Ko' : '—';
             let date = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString('fr-FR') : '—';
             let safeName = (f.name||'').replace(/</g,'&lt;');
-            let link = f.webViewLink ? '<a href="' + f.webViewLink + '" target="_blank" rel="noopener">👁️ Ouvrir</a>' : '—';
-            html += '<tr><td>' + safeName + '</td><td style="text-align:right;">' + size + '</td><td>' + date + '</td><td>' + link + '</td></tr>';
+            let openLink = f.webViewLink ? '<a href="' + f.webViewLink + '" target="_blank" rel="noopener" title="Ouvrir">👁️</a>' : '';
+            let mailBtn = '<button class="btn btn-outline" style="padding:2px 6px;display:inline-flex;align-items:center;margin-left:6px;" title="Envoyer par email" onclick="window.openQuittanceEmailModal(' + idx + ')">'
+                + '<img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDv6fPrR3__AdPw9BGGDy0O2CglbN5seVPV6oeAwIpxg&s=10" alt="Email" style="height:16px;" onerror="this.replaceWith(Object.assign(document.createElement(\'span\'),{textContent:\'✉️\',style:\'font-size:1em;\'}))">'
+                + '</button>';
+            html += '<tr><td>' + safeName + '</td><td style="text-align:right;">' + size + '</td><td>' + date + '</td><td style="white-space:nowrap;">' + openLink + mailBtn + '</td></tr>';
         });
         html += '</tbody></table>';
         container.innerHTML = html;
