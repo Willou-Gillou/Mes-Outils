@@ -9,13 +9,14 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.5.4</title>
-    <!-- v2.5.4 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.5.5</title>
+    <!-- v2.5.5 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <style>
         :root {
@@ -282,7 +283,7 @@
 }
 
 
-/* v2.5.4 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.5.5 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -320,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.5.4 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.5.5 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -450,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.5.4 — Responsive Quittances (mobile) */
+/* v2.5.5 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -465,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.5.4 — Améliorations UX iPhone supplémentaires */
+/* v2.5.5 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -805,7 +806,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.5.4
+         GRAPHIQUES VIEW  — v2.5.5
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1339,7 +1340,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.5.4';
+const APP_VERSION = '2.5.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive';
@@ -1372,7 +1373,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.5.4 : Quittances ──────────────────────────────────────────────────────
+// ── v2.5.5 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1423,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.5.4 : séquence Google d'abord, MDP ensuite
+    // v2.5.5 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2210,7 +2211,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.5.4
+// QUICK CAT SEARCH — v2.5.5
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2410,7 +2411,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.5.4
+// CAT MODAL SEARCH — v2.5.5
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2463,7 +2464,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.5.4
+// GRAPHIQUES ENGINE  — v2.5.5
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3098,7 +3099,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.5.4
+// IDÉES AMÉLIORATION — v2.5.5
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3915,7 +3916,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.5.4
+// EXPORT / IMPORT BASE DE DONNÉES v2.5.5
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4048,7 +4049,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.5.4+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.5.5+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4300,7 +4301,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.5.4
+// QUITTANCES — v2.5.5
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4894,6 +4895,31 @@ window.generateQuittanceAffichage = function() {
     $('quittancePreview').innerHTML = html;
     $('quittancePreviewContainer').style.display = 'block';
     $('quittancePreviewContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    window._lastQuittanceData = {
+        bien, debut, fin, fmtDate, fmtEur,
+        totalDebit, totalCredit,
+        lignes: bien.lignesQuittance.map(l => ({
+            libelle: l.libelle === 'Payé par virement bancaire, le' ? (l.libelle + (l.detail ? ' ' + fmtDate(l.detail) : '')) : (l.libelle + (l.detail ? ' : ' + l.detail : '')),
+            debit: (l.debit||0) > 0 ? fmtEur(l.debit) : '',
+            credit: (l.credit||0) > 0 ? fmtEur(l.credit) : ''
+        })),
+        echeancierA: echList.slice(0,6).map(e => ({
+            date: e.date ? fmtDate(e.date) : '',
+            detail: (e.detail||'') + (e.detail?' = ':'') + fmtEur(e.montant),
+            paid: e.statut === 'Payé',
+            inPeriode: (() => { let d = e.date ? new Date(e.date+'T00:00:00') : null; return d && d >= periodeStart && d <= periodeEnd; })()
+        })),
+        echeancierB: echList.slice(6,12).map(e => ({
+            date: e.date ? fmtDate(e.date) : '',
+            detail: (e.detail||'') + (e.detail?' = ':'') + fmtEur(e.montant),
+            paid: e.statut === 'Payé',
+            inPeriode: (() => { let d = e.date ? new Date(e.date+'T00:00:00') : null; return d && d >= periodeStart && d <= periodeEnd; })()
+        })),
+        echTitre, designation, nomsLocataires: bien.locataires.map(l => l.nom || '').filter(Boolean),
+        locatairesContacts: bien.locataires.map(l => [l.email, l.tel].filter(Boolean).join(' / ')).filter(Boolean)
+    };
+
     showToast('✅ Quittance générée');
 };
 
@@ -4904,15 +4930,116 @@ window.getQuittanceFileName = function() {
 };
 
 window.buildQuittancePdfBlob = async function() {
-    let preview = $('quittancePreview');
-    if (!preview.innerHTML.trim()) { alert("Générez d'abord la quittance."); return null; }
-    let canvas = await html2canvas(preview, { scale: 1.5, backgroundColor: '#ffffff' });
-    let imgData = canvas.toDataURL('image/jpeg', 0.75);
+    let d = window._lastQuittanceData;
+    if (!d) { alert("Générez d'abord la quittance."); return null; }
+    let bien = d.bien;
     let pdf = new jspdf.jsPDF('p', 'mm', 'a4', { compress: true });
-    let pageWidth = 210, pageHeight = 297;
-    let imgWidth = pageWidth - 20;
-    let imgHeight = canvas.height * imgWidth / canvas.width;
-    pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, Math.min(imgHeight, pageHeight-20));
+    let pageW = 210, marginX = 14, y = 16;
+    const lh = (n) => n * 5;
+
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10);
+    pdf.text('Le bailleur:', marginX, y);
+    pdf.text('Les locataires:', pageW/2 + 4, y);
+    y += 5;
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(9);
+    let bLines = [bien.bailleur.nom, bien.bailleur.adresse, bien.bailleur.email, bien.bailleur.tel].filter(Boolean);
+    let lLines = [...d.nomsLocataires, (d.designation.adresse||''), ...d.locatairesContacts].filter(Boolean);
+    let maxLines = Math.max(bLines.length, lLines.length);
+    for (let i = 0; i < maxLines; i++) {
+        if (bLines[i]) pdf.text(String(bLines[i]), marginX, y);
+        if (lLines[i]) pdf.text(String(lLines[i]), pageW/2 + 4, y);
+        y += 4.5;
+    }
+    y += 4;
+
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
+    pdf.text('Désignation des locaux : ' + (d.designation.texte || ''), marginX, y, { maxWidth: pageW - marginX*2 });
+    y += 10;
+
+    pdf.setDrawColor(17,17,17); pdf.setLineWidth(0.6);
+    pdf.rect(marginX, y, pageW - marginX*2, 10);
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13);
+    pdf.text('QUITTANCE DE LOYER', pageW/2, y + 6.8, { align: 'center' });
+    y += 16;
+
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
+    pdf.text('Periode couverte par le loyer: ' + d.fmtDate(d.debut) + ' au ' + d.fmtDate(d.fin), marginX, y);
+    y += 6;
+
+    let rows = d.lignes.map(l => [l.libelle, l.debit, l.credit]);
+    pdf.autoTable({
+        startY: y,
+        margin: { left: marginX, right: marginX },
+        head: [['Libellé', 'Débit', 'Crédit']],
+        body: rows,
+        foot: [['TOTAL', d.fmtEur(d.totalDebit), d.fmtEur(d.totalCredit)]],
+        theme: 'plain',
+        styles: { fontSize: 9, cellPadding: 2 },
+        headStyles: { fillColor: [51,51,51], textColor: 255, fontStyle: 'bold' },
+        footStyles: { fontStyle: 'bold', lineWidth: { top: 0.4 }, lineColor: [51,51,51] },
+        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' } },
+        bodyStyles: { lineColor: [230,230,230], lineWidth: 0.2 }
+    });
+    y = pdf.lastAutoTable.finalY + 10;
+
+    pdf.setFontSize(9);
+    pdf.text('Fait à ' + (bien.faitA || '') + ', le ' + new Date().toLocaleDateString('fr-FR'), pageW - marginX, y, { align: 'right' });
+    y += 5;
+    if (bien.signatureTexte) { pdf.text(bien.signatureTexte, pageW - marginX, y, { align: 'right' }); y += 5; }
+    if (bien.logoDataUrl) {
+        try {
+            let imgProps = pdf.getImageProperties(bien.logoDataUrl);
+            let logoH = 12, logoW = imgProps.width * logoH / imgProps.height;
+            pdf.addImage(bien.logoDataUrl, pageW - marginX - logoW, y, logoW, logoH);
+            y += logoH + 4;
+        } catch(e) {}
+    }
+    y += 4;
+
+    if ((bien.commentaires || '').trim()) {
+        pdf.setFont('helvetica', 'bold'); pdf.text('Commentaires:', marginX, y); y += 5;
+        pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5);
+        let commLines = pdf.splitTextToSize(bien.commentaires, pageW - marginX*2);
+        pdf.text(commLines, marginX, y);
+        y += commLines.length * 4 + 6;
+        pdf.setFontSize(9);
+    }
+
+    if (d.echeancierA.length || d.echeancierB.length) {
+        pdf.setFont('helvetica', 'bold'); pdf.setFontSize(10);
+        pdf.text(d.echTitre + ':', marginX, y);
+        y += 4;
+        function echBody(list) { return list.map(e => [e.date, e.detail]); }
+        function rowColor(list) {
+            return function(hookData) {
+                if (hookData.section !== 'body') return;
+                let e = list[hookData.row.index];
+                if (!e) return;
+                if (e.paid) { hookData.cell.styles.fillColor = [139,195,74]; hookData.cell.styles.textColor = [17,17,17]; }
+                else if (e.inPeriode) { hookData.cell.styles.fillColor = [255,243,205]; hookData.cell.styles.textColor = [17,17,17]; }
+            };
+        }
+        let colWidth = (pageW - marginX*2 - 6) / 2;
+        pdf.autoTable({
+            startY: y, margin: { left: marginX }, tableWidth: colWidth,
+            body: echBody(d.echeancierA), theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 1.5, lineColor: [204,204,204], lineWidth: 0.2 },
+            willDrawCell: rowColor(d.echeancierA)
+        });
+        let yA = pdf.lastAutoTable.finalY;
+        pdf.autoTable({
+            startY: y, margin: { left: marginX + colWidth + 6 }, tableWidth: colWidth,
+            body: echBody(d.echeancierB), theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 1.5, lineColor: [204,204,204], lineWidth: 0.2 },
+            willDrawCell: rowColor(d.echeancierB)
+        });
+        let yB = pdf.lastAutoTable.finalY;
+        y = Math.max(yA, yB) + 8;
+    }
+
+    pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5);
+    pdf.text('Cette quittance atteste également du paiement des termes antérieurs selon le tableau ci-dessus.', marginX, y, { maxWidth: pageW - marginX*2 });
+
     return pdf;
 };
 
