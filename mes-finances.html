@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.5.6</title>
-    <!-- v2.5.6 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.5.7</title>
+    <!-- v2.5.7 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -283,7 +283,7 @@
 }
 
 
-/* v2.5.6 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.5.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -321,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.5.6 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.5.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -451,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.5.6 — Responsive Quittances (mobile) */
+/* v2.5.7 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -466,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.5.6 — Améliorations UX iPhone supplémentaires */
+/* v2.5.7 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -806,7 +806,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.5.6
+         GRAPHIQUES VIEW  — v2.5.7
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1074,9 +1074,10 @@
             <div class="summary-card" style="margin-top:20px;">
                 <h3 style="margin-bottom:12px;">📁 Google Drive</h3>
                 <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-                    <input type="text" id="qDriveFolderId" class="input-text" placeholder="Partage ID Google Drive (ex. 1BHLiILj0RCqTn6zDoBUpOiXCM0K0xxxx)" style="flex:1;min-width:280px;" onchange="window.saveQuittanceField()">
+                    <input type="text" id="qDriveFolderId" class="input-text" placeholder="Partage ID Google Drive (ex. 1BHLiILj0RCqTn6zDoBUpOiXCM0K0xxxx)" style="flex:1;min-width:280px;" oninput="window.updateQuittanceDriveLink()" onchange="window.saveQuittanceField()">
                     <button class="btn btn-outline" onclick="window.loadQuittanceDriveFiles()">🔄 Actualiser la liste</button>
                 </div>
+                <div id="qDriveFolderLink" style="margin-top:8px;font-size:0.85em;"></div>
                 <div id="qDriveFilesList" style="margin-top:14px;"></div>
             </div>
 
@@ -1162,6 +1163,9 @@
                         </button>
                         <button class="btn btn-outline" title="Envoyer sur Google Drive" onclick="window.uploadQuittanceToDrive()" style="padding:4px 10px;display:inline-flex;align-items:center;margin-left:8px;">
                             <img src="https://cdn-icons-png.flaticon.com/512/5968/5968523.png" alt="Google Drive" style="height:22px;" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'📁',style:'font-size:1.3em;'}))">
+                        </button>
+                        <button class="btn btn-outline" title="Envoyer par email" onclick="window.openQuittanceEmailModal()" style="padding:4px 10px;display:inline-flex;align-items:center;margin-left:8px;">
+                            <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQDv6fPrR3__AdPw9BGGDy0O2CglbN5seVPV6oeAwIpxg&s=10" alt="Email" style="height:22px;" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'✉️',style:'font-size:1.3em;'}))">
                         </button>
                     </div>
                     <div id="quittancePreview" style="background:white;width:800px;max-width:100%;margin:0 auto;padding:32px;font-family:Arial, sans-serif;color:#111;"></div>
@@ -1340,7 +1344,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.5.6';
+const APP_VERSION = '2.5.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive';
@@ -1373,7 +1377,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.5.6 : Quittances ──────────────────────────────────────────────────────
+// ── v2.5.7 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1424,7 +1428,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.5.6 : séquence Google d'abord, MDP ensuite
+    // v2.5.7 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2211,7 +2215,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.5.6
+// QUICK CAT SEARCH — v2.5.7
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2411,7 +2415,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.5.6
+// CAT MODAL SEARCH — v2.5.7
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2464,7 +2468,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.5.6
+// GRAPHIQUES ENGINE  — v2.5.7
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3099,7 +3103,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.5.6
+// IDÉES AMÉLIORATION — v2.5.7
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3916,7 +3920,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.5.6
+// EXPORT / IMPORT BASE DE DONNÉES v2.5.7
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4049,7 +4053,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.5.6+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.5.7+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4301,7 +4305,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.5.6
+// QUITTANCES — v2.5.7
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4800,6 +4804,7 @@ window.renderQuittancesView = function() {
     $('qSignatureTexte').value = bien.signatureTexte || '';
     $('qCommentaires').value = bien.commentaires || '';
     $('qDriveFolderId').value = bien.driveFolderId || '';
+    window.updateQuittanceDriveLink();
     if (bien.logoDataUrl) { $('qLogoPreview').src = bien.logoDataUrl; $('qLogoPreview').style.display = 'inline-block'; }
     else { $('qLogoPreview').style.display = 'none'; }
     if (bien.driveFolderId) { window.loadQuittanceDriveFiles(); } else { $('qDriveFilesList').innerHTML = ''; }
@@ -4867,29 +4872,29 @@ window.generateQuittanceAffichage = function() {
     let logoHtml = bien.logoDataUrl ? `<img src="${bien.logoDataUrl}" style="max-height:40px;margin-top:6px;">` : '';
 
     let html = `
-    <div style="display:flex;justify-content:space-between;margin-bottom:20px;">
-        <div><strong>Le bailleur:</strong><div style="margin-top:6px;">${bien.bailleur.nom}<br><span style="font-size:0.85em;color:#555;">${bien.bailleur.adresse}<br>${bien.bailleur.email}<br>${bien.bailleur.tel}</span></div></div>
-        <div><strong>Le(s) locataire(s):</strong><div style="margin-top:6px;">${locatairesHtml}</div></div>
+    <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:0.92em;">
+        <div style="width:48%;"><strong>Le bailleur:</strong><div style="margin-top:4px;">${bien.bailleur.nom}<br>${bien.bailleur.adresse}<br>${bien.bailleur.email}<br>${bien.bailleur.tel}</div></div>
+        <div style="width:48%;"><strong>Le(s) locataire(s):</strong><div style="margin-top:4px;">${locatairesHtml}</div></div>
     </div>
-    <p style="margin-bottom:16px;"><strong>Désignation des locaux :</strong> ${designation.texte || ''}</p>
-    <div style="border:2px solid #111;text-align:center;padding:10px;font-size:1.3em;font-weight:bold;margin-bottom:16px;">QUITTANCE DE LOYER</div>
-    <p style="text-align:left;margin-bottom:14px;"><strong>Periode couverte par le loyer:</strong> ${fmtDate(debut)} au ${fmtDate(fin)}</p>
-    <table style="width:100%;border-collapse:collapse;margin-bottom:10px;">
-        <thead><tr style="background:#333;color:white;"><th style="padding:6px 10px;text-align:left;">Libellé</th><th style="padding:6px 10px;text-align:right;">Débit</th><th style="padding:6px 10px;text-align:right;">Crédit</th></tr></thead>
+    <p style="margin-bottom:12px;font-size:0.92em;">Désignation des locaux : ${designation.texte || ''}</p>
+    <div style="border:0.6px solid #111;text-align:center;padding:8px;font-size:1.1em;font-weight:bold;margin-bottom:12px;">QUITTANCE DE LOYER</div>
+    <p style="text-align:left;margin-bottom:10px;font-size:0.92em;font-weight:bold;">Periode couverte par le loyer: ${fmtDate(debut)} au ${fmtDate(fin)}</p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:0;font-size:0.85em;">
+        <thead><tr style="background:#333;color:white;"><th style="padding:5px 8px;text-align:left;font-weight:bold;">Libellé</th><th style="padding:5px 8px;text-align:right;font-weight:bold;">Débit</th><th style="padding:5px 8px;text-align:right;font-weight:bold;">Crédit</th></tr></thead>
         <tbody>${lignesHtml}</tbody>
-        <tfoot><tr style="font-weight:bold;border-top:2px solid #333;"><td style="padding:8px 10px;">TOTAL</td><td style="padding:8px 10px;text-align:right;">${fmtEur(totalDebit)}</td><td style="padding:8px 10px;text-align:right;">${fmtEur(totalCredit)}</td></tr></tfoot>
+        <tfoot><tr style="font-weight:bold;border-top:0.6px solid #333;"><td style="padding:6px 8px;">TOTAL</td><td style="padding:6px 8px;text-align:right;">${fmtEur(totalDebit)}</td><td style="padding:6px 8px;text-align:right;">${fmtEur(totalCredit)}</td></tr></tfoot>
     </table>
-    <p style="text-align:right;margin:20px 0 4px;">Fait à ${bien.faitA || ''}, le ${new Date().toLocaleDateString('fr-FR')}</p>
-    <p style="text-align:right;">${bien.signatureTexte || ''}</p>
+    <p style="text-align:right;margin:16px 0 3px;font-size:0.85em;">Fait à ${bien.faitA || ''}, le ${new Date().toLocaleDateString('fr-FR')}</p>
+    <p style="text-align:right;font-size:0.85em;">${bien.signatureTexte || ''}</p>
     <div style="text-align:right;">${logoHtml}</div>
-    <div style="margin-top:20px;"><strong>Commentaires:</strong><br>${(bien.commentaires||'').replace(/\n/g,'<br>')}</div>
-    <div style="margin-top:20px;"><strong>${echTitre}:</strong>
-        <div style="display:flex;gap:20px;margin-top:8px;justify-content:center;">
-            <table style="border-collapse:collapse;font-size:0.85em;">${echeancierRowsA}</table>
-            <table style="border-collapse:collapse;font-size:0.85em;">${echeancierRowsB}</table>
+    ${(bien.commentaires||'').trim() ? `<div style="margin-top:14px;font-size:0.8em;"><strong>Commentaires:</strong><br>${(bien.commentaires||'').replace(/\n/g,'<br>')}</div>` : ''}
+    <div style="margin-top:14px;font-size:0.85em;"><strong>${echTitre}:</strong>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+            <table style="border-collapse:collapse;font-size:0.78em;width:50%;">${echeancierRowsA}</table>
+            <table style="border-collapse:collapse;font-size:0.78em;width:50%;">${echeancierRowsB}</table>
         </div>
     </div>
-    <p style="margin-top:14px;font-size:0.85em;">Cette quittance atteste également du paiement des termes antérieurs selon le tableau ci-dessus.</p>
+    <p style="margin-top:12px;font-size:0.75em;">Cette quittance atteste également du paiement des termes antérieurs selon le tableau ci-dessus.</p>
     `;
 
     $('quittancePreview').innerHTML = html;
@@ -4963,11 +4968,8 @@ window.buildQuittancePdfBlob = async function() {
     y += 16;
 
     pdf.setFont('helvetica', 'normal'); pdf.setFontSize(10);
-    let periodeLabel = 'Periode couverte par le loyer: ';
-    pdf.text(periodeLabel, marginX, y);
-    let periodeLabelW = pdf.getTextWidth(periodeLabel);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(d.fmtDate(d.debut) + ' au ' + d.fmtDate(d.fin), marginX + periodeLabelW, y);
+    pdf.text('Periode couverte par le loyer: ' + d.fmtDate(d.debut) + ' au ' + d.fmtDate(d.fin), marginX, y);
     pdf.setFont('helvetica', 'normal');
     y += 6;
 
@@ -5090,6 +5092,42 @@ window.uploadQuittanceToDrive = async function() {
     } catch(e) {
         alert('Erreur lors de l\'envoi vers Drive : ' + e.message);
     }
+};
+
+window.openQuittanceEmailModal = function() {
+    let d = window._lastQuittanceData;
+    if (!d) { alert("Générez d'abord la quittance."); return; }
+    let bien = d.bien;
+    let emails = [];
+    if (bien.bailleur.email) emails.push(bien.bailleur.email);
+    (bien.locataires || []).forEach(l => { if (l.email) emails.push(l.email); });
+    let mois = $('qGenPeriodeMois') ? $('qGenPeriodeMois').value : '';
+    let moisLabel = mois || (d.debut ? d.debut.slice(0,7) : '');
+    $('qEmailDestinataires').value = emails.join(', ');
+    $('qEmailObjet').value = 'Quittance de loyer ' + moisLabel;
+    $('qEmailCorps').value = 'Bonjour, voici votre quittance de loyer. Cordialement';
+    $('quittanceEmailModal').style.display = 'flex';
+};
+
+window.closeQuittanceEmailModal = function() {
+    $('quittanceEmailModal').style.display = 'none';
+};
+
+window.sendQuittanceEmail = function() {
+    let to = ($('qEmailDestinataires').value || '').split(',').map(s => s.trim()).filter(Boolean).join(',');
+    let subject = $('qEmailObjet').value || '';
+    let body = $('qEmailCorps').value || '';
+    let url = 'mailto:' + encodeURIComponent(to).replace(/%2C/g, ',') + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+    window.location.href = url;
+    window.closeQuittanceEmailModal();
+};
+
+window.updateQuittanceDriveLink = function() {
+    let container = $('qDriveFolderLink');
+    if (!container) return;
+    let id = ($('qDriveFolderId').value || '').trim();
+    if (!id) { container.innerHTML = ''; return; }
+    container.innerHTML = '<a href="https://drive.google.com/drive/folders/' + encodeURIComponent(id) + '" target="_blank" rel="noopener">🔗 Ouvrir le dossier Google Drive</a>';
 };
 
 window.loadQuittanceDriveFiles = async function() {
@@ -5967,6 +6005,28 @@ window.addManualRow = function() {
 };
 
 </script>
+
+<div id="quittanceEmailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:10px;padding:24px;max-width:480px;width:92%;max-height:85vh;overflow:auto;">
+        <h3 style="margin-bottom:14px;">✉️ Envoyer la quittance par email</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <label style="font-size:0.85em;font-weight:600;">Destinataires (séparés par des virgules)
+                <textarea id="qEmailDestinataires" class="input-text" rows="2" style="width:100%;margin-top:4px;resize:vertical;"></textarea>
+            </label>
+            <label style="font-size:0.85em;font-weight:600;">Objet
+                <input type="text" id="qEmailObjet" class="input-text" style="width:100%;margin-top:4px;">
+            </label>
+            <label style="font-size:0.85em;font-weight:600;">Message
+                <textarea id="qEmailCorps" class="input-text" rows="4" style="width:100%;margin-top:4px;resize:vertical;"></textarea>
+            </label>
+            <p style="font-size:0.8em;color:var(--ink-soft);margin-top:4px;">⚠️ Le PDF n'est pas joint automatiquement (limitation des navigateurs). Téléchargez-le d'abord (icône 📄) puis joignez-le manuellement dans votre client mail.</p>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+            <button class="btn btn-outline" onclick="window.closeQuittanceEmailModal()">Annuler</button>
+            <button class="btn btn-primary" onclick="window.sendQuittanceEmail()">✉️ Ouvrir dans le client mail</button>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
