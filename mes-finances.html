@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.4.7</title>
-    <!-- v2.4.7 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.4.8</title>
+    <!-- v2.4.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -282,7 +282,7 @@
 }
 
 
-/* v2.4.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.4.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -320,7 +320,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.4.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.4.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -450,7 +450,21 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.4.7 — Améliorations UX iPhone supplémentaires */
+/* v2.4.8 — Responsive Quittances (mobile) */
+@media (max-width: 768px) {
+    #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
+    #qLignesTable, #qRevenusTable, #qEcheancierTableA, #qEcheancierTableB { font-size: 0.75em; }
+    #quittancePreview, #quittancePreviewContainer > div { width: 100% !important; padding: 14px !important; }
+    #view-quittances .summary-card { padding: 12px !important; }
+    #view-quittances h3 { font-size: 1em; }
+    #view-quittances input, #view-quittances select, #view-quittances textarea { font-size: 0.85em; }
+    #view-quittances .btn { font-size: 0.8em; padding: 6px 10px; }
+    #qRevenusBody, #qRevenusTable { max-width: 100%; }
+    #qGenColRight { order: 2; }
+    #qGenColLeft { order: 1; }
+}
+
+/* v2.4.8 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -790,7 +804,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.4.7
+         GRAPHIQUES VIEW  — v2.4.8
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1066,8 +1080,8 @@
                     <div style="flex:1;min-width:280px;">
                         <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;">Mois 1 à 6</div>
                         <div style="overflow-x:auto;">
-                            <table class="std-table" id="qEcheancierTableA" style="min-width:320px;">
-                                <thead><tr><th style="width:30px;"><input type="checkbox" onchange="window.toggleAllEcheanceSelect(this.checked)"></th><th>Date</th><th>Détail (ex: 760+50)</th><th>Montant</th><th>Statut</th></tr></thead>
+                            <table class="std-table" id="qEcheancierTableA" style="min-width:280px;">
+                                <thead><tr><th>Date</th><th>Détail (ex: 760+50)</th><th>Montant</th><th>Statut</th></tr></thead>
                                 <tbody id="qEcheancierBodyA"></tbody>
                             </table>
                         </div>
@@ -1075,8 +1089,8 @@
                     <div style="flex:1;min-width:280px;">
                         <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;">Mois 7 à 11</div>
                         <div style="overflow-x:auto;">
-                            <table class="std-table" id="qEcheancierTableB" style="min-width:320px;">
-                                <thead><tr><th style="width:30px;"></th><th>Date</th><th>Détail (ex: 760+50)</th><th>Montant</th><th>Statut</th></tr></thead>
+                            <table class="std-table" id="qEcheancierTableB" style="min-width:280px;">
+                                <thead><tr><th>Date</th><th>Détail (ex: 760+50)</th><th>Montant</th><th>Statut</th></tr></thead>
                                 <tbody id="qEcheancierBodyB"></tbody>
                             </table>
                         </div>
@@ -1084,42 +1098,57 @@
                 </div>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
                     <button class="btn btn-outline" onclick="window.duplicateEcheanceToAll()">📋 Dupliquer la 1ère ligne sur tous les mois</button>
-                    <button class="btn btn-outline" onclick="window.duplicateEcheanceToSelection()">📋 Dupliquer la 1ère ligne sur la sélection</button>
+                    <button class="btn btn-outline" style="display:none;" onclick="window.duplicateEcheanceToSelection()">📋 Dupliquer la 1ère ligne sur la sélection</button>
                 </div>
             </div>
 
             <div class="summary-card" style="margin-top:20px;">
                 <h3 style="margin-bottom:12px;">🖨️ Générer une quittance</h3>
-                <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
-                    <label style="font-size:0.85em;">Période du <input type="date" id="qGenPeriodeDebut" class="input-text" style="width:auto;display:inline-block;" onchange="window.renderQuittanceTableLignes()"></label>
-                    <label style="font-size:0.85em;">au <input type="date" id="qGenPeriodeFin" class="input-text" style="width:auto;display:inline-block;" onchange="window.renderQuittanceTableLignes()"></label>
-                    <button class="btn btn-outline" onclick="window.renderQuittanceTableLignes()">🔄 Charger la période</button>
-                    <button class="btn btn-primary" onclick="window.generateQuittanceAffichage()">🧾 Générer la quittance</button>
+                <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start;">
+                    <div id="qGenColLeft" style="flex:1 1 480px;min-width:320px;">
+                        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
+                            <label style="font-size:0.85em;">Mois couvert <input type="month" id="qGenPeriodeMois" class="input-text" style="width:auto;display:inline-block;" onchange="window.updateQuittancePeriodeFromMonth()"></label>
+                            <input type="hidden" id="qGenPeriodeDebut">
+                            <input type="hidden" id="qGenPeriodeFin">
+                            <span id="qGenPeriodeAffichee" style="font-size:0.85em;color:var(--ink-soft);"></span>
+                            <button class="btn btn-primary" onclick="window.generateQuittanceAffichage()">🧾 Générer la quittance</button>
+                        </div>
+
+                        <div style="overflow-x:auto;margin-bottom:16px;">
+                            <table class="std-table" id="qLignesTable" style="min-width:560px;">
+                                <thead><tr><th>Libellé</th><th>Détail</th><th>Débit (€)</th><th>Crédit (€)</th><th>Actions</th></tr></thead>
+                                <tbody id="qLignesBody"></tbody>
+                                <tfoot>
+                                    <tr style="font-weight:700;">
+                                        <td colspan="2">TOTAL</td>
+                                        <td id="qTotalDebit">0,00 €</td>
+                                        <td id="qTotalCredit">0,00 €</td>
+                                        <td></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                            <button class="btn btn-outline" style="margin-top:8px;" onclick="window.insertQuittanceLigne(qBienLignesLength()-1)">+ Ajouter une ligne</button>
+                        </div>
+                    </div>
+
+                    <div id="qGenColRight" style="flex:1 1 380px;min-width:280px;">
+                        <div style="font-weight:600;font-size:0.9em;margin-bottom:8px;">💰 Revenus enregistrés (12 derniers mois)</div>
+                        <div style="overflow:auto;max-height:520px;border:1px solid var(--ink-faint);border-radius:8px;">
+                            <table class="std-table" id="qRevenusTable" style="min-width:520px;font-size:0.82em;">
+                                <thead><tr><th>Date écriture</th><th>Date réelle</th><th>Détails</th><th>Note</th><th style="text-align:right;">Montant</th></tr></thead>
+                                <tbody id="qRevenusBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
 
-                <div style="overflow-x:auto;margin-bottom:16px;">
-                    <table class="std-table" id="qLignesTable" style="min-width:700px;">
-                        <thead><tr><th>Libellé</th><th>Détail</th><th>Débit (€)</th><th>Crédit (€)</th><th>Actions</th></tr></thead>
-                        <tbody id="qLignesBody"></tbody>
-                        <tfoot>
-                            <tr style="font-weight:700;">
-                                <td colspan="2">TOTAL</td>
-                                <td id="qTotalDebit">0,00 €</td>
-                                <td id="qTotalCredit">0,00 €</td>
-                                <td></td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                    <button class="btn btn-outline" style="margin-top:8px;" onclick="window.insertQuittanceLigne(qBienLignesLength()-1)">+ Ajouter une ligne</button>
-                </div>
-
-                <div id="quittancePreviewContainer" style="display:none;border:1px dashed var(--ink-faint);border-radius:8px;padding:10px;overflow:auto;background:#f3f4f6;">
-                    <div style="width:800px;margin:0 auto 8px;display:flex;justify-content:flex-end;">
+                <div id="quittancePreviewContainer" style="display:none;border:1px dashed var(--ink-faint);border-radius:8px;padding:10px;overflow:auto;background:#f3f4f6;margin-top:20px;">
+                    <div style="width:800px;max-width:100%;margin:0 auto 8px;display:flex;justify-content:flex-end;">
                         <button class="btn btn-outline" title="Télécharger en PDF" onclick="window.downloadQuittancePdf()" style="padding:4px 10px;display:inline-flex;align-items:center;">
                             <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQlI7shKwcGllXkOK3vefOrvR5L7y3skacOXnecHa--bA&s=10" alt="PDF" style="height:22px;" onerror="this.replaceWith(Object.assign(document.createElement('span'),{textContent:'📄',style:'font-size:1.3em;'}))">
                         </button>
                     </div>
-                    <div id="quittancePreview" style="background:white;width:800px;margin:0 auto;padding:32px;font-family:Arial, sans-serif;color:#111;"></div>
+                    <div id="quittancePreview" style="background:white;width:800px;max-width:100%;margin:0 auto;padding:32px;font-family:Arial, sans-serif;color:#111;"></div>
                 </div>
             </div>
 
@@ -1295,7 +1324,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.4.7';
+const APP_VERSION = '2.4.8';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1328,7 +1357,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.4.7 : Quittances ──────────────────────────────────────────────────────
+// ── v2.4.8 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1379,7 +1408,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.4.7 : séquence Google d'abord, MDP ensuite
+    // v2.4.8 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2158,7 +2187,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.4.7
+// QUICK CAT SEARCH — v2.4.8
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2358,7 +2387,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.4.7
+// CAT MODAL SEARCH — v2.4.8
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2411,7 +2440,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.4.7
+// GRAPHIQUES ENGINE  — v2.4.8
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3046,7 +3075,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.4.7
+// IDÉES AMÉLIORATION — v2.4.8
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3863,7 +3892,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.4.7
+// EXPORT / IMPORT BASE DE DONNÉES v2.4.8
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3996,7 +4025,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.4.7+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.4.8+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4248,7 +4277,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.4.7
+// QUITTANCES — v2.4.8
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4569,7 +4598,6 @@ function renderEcheanceRow(e, idx, showCheckbox) {
     let isPaid = e.statut === 'Payé';
     let rowStyle = isPaid ? 'background:#8BC34A;color:#111;' : '';
     return `<tr style="${rowStyle}">
-        <td style="text-align:center;">${showCheckbox ? `<input type="checkbox" ${e.selected?'checked':''} onchange="window.toggleEcheanceSelect(${idx},this.checked)">` : ''}</td>
         <td style="color:#111;">${e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('fr-FR') : ''}</td>
         <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance(${idx},'detail',this.value)"></td>
         <td style="text-align:right;white-space:nowrap;color:#111;">${fmtEur(e.montant)}</td>
@@ -4595,6 +4623,44 @@ window.renderQuittanceEcheancier = function() {
 function newQuittanceLigne(libelle) {
     return { libelle: libelle, detail: '', debit: 0, credit: 0 };
 }
+
+window.updateQuittancePeriodeFromMonth = function() {
+    let val = $('qGenPeriodeMois').value;
+    if (!val) return;
+    let [y, m] = val.split('-').map(Number);
+    let debut = y + '-' + String(m).padStart(2,'0') + '-01';
+    let lastDay = new Date(y, m, 0).getDate();
+    let fin = y + '-' + String(m).padStart(2,'0') + '-' + String(lastDay).padStart(2,'0');
+    $('qGenPeriodeDebut').value = debut;
+    $('qGenPeriodeFin').value = fin;
+    let fmt = d => { let [yy,mm,dd] = d.split('-'); return dd+'/'+mm+'/'+yy; };
+    $('qGenPeriodeAffichee').textContent = 'Du ' + fmt(debut) + ' au ' + fmt(fin);
+    window.renderQuittanceTableLignes();
+};
+
+window.renderQuittanceRevenusTable = function() {
+    let body = $('qRevenusBody');
+    if (!body) return;
+    let today = new Date();
+    let cutoff = new Date(today.getFullYear(), today.getMonth() - 12, today.getDate());
+    let norm = s => (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
+    let revenus = (transactions || []).filter(t => {
+        let c = norm(t.cat1);
+        if (!(c.startsWith('1') && c.includes('revenu'))) return false;
+        let d = t.dateOp ? new Date(t.dateOp) : null;
+        return d && d >= cutoff;
+    });
+    revenus.sort((a,b) => new Date(b.dateOp) - new Date(a.dateOp));
+    let fmtDate = s => { if (!s) return ''; let [y,m,d] = s.split('-'); return d+'/'+m+'/'+y; };
+    let fmtEur = n => (parseFloat(n)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+    body.innerHTML = revenus.map(t => `<tr>
+        <td>${fmtDate(t.dateOp)}</td>
+        <td>${fmtDate(t.dateExpense)}</td>
+        <td>${(t.details||t.label||'').toString()}</td>
+        <td>${(t.note||'').toString()}</td>
+        <td style="text-align:right;white-space:nowrap;">${fmtEur(t.amount)}</td>
+    </tr>`).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:16px;">Aucun revenu trouvé sur les 12 derniers mois</td></tr>';
+};
 
 window.renderQuittanceTableLignes = function() {
     let bien = getCurrentBien(); if (!bien) return;
@@ -4710,6 +4776,7 @@ window.renderQuittancesView = function() {
     window.renderQuittanceDesignations();
     window.renderQuittanceEcheancier();
     window.renderQuittanceTableLignes();
+    window.renderQuittanceRevenusTable();
     $('quittancePreviewContainer').style.display = 'none';
 };
 
