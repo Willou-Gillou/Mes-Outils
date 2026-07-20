@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.4.6</title>
-    <!-- v2.4.6 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.4.7</title>
+    <!-- v2.4.7 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -282,7 +282,7 @@
 }
 
 
-/* v2.4.6 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.4.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -320,7 +320,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.4.6 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.4.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -450,7 +450,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.4.6 — Améliorations UX iPhone supplémentaires */
+/* v2.4.7 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -790,7 +790,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.4.6
+         GRAPHIQUES VIEW  — v2.4.7
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -988,6 +988,9 @@
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 <select id="quittanceBienSelector" class="input-text" style="width:auto;" onchange="window.selectQuittanceBien(this.value)"></select>
                 <button class="btn btn-outline" onclick="window.addQuittanceBien()">+ Nouveau bien</button>
+                <button class="btn btn-outline" onclick="window.exportQuittanceBien()">📤 Exporter</button>
+                <button class="btn btn-outline" onclick="$('qImportInput').click()">📥 Importer</button>
+                <input type="file" id="qImportInput" accept=".json" style="display:none;" onchange="window.importQuittanceBien(this)">
                 <button class="btn btn-danger" onclick="window.deleteQuittanceBien()">🗑️ Supprimer ce bien</button>
             </div>
         </div>
@@ -1095,17 +1098,19 @@
                 </div>
 
                 <div style="overflow-x:auto;margin-bottom:16px;">
-                    <table class="std-table" id="qLignesTable" style="min-width:600px;">
-                        <thead><tr><th>Libellé</th><th>Détail</th><th>Débit (€)</th><th>Crédit (€)</th></tr></thead>
+                    <table class="std-table" id="qLignesTable" style="min-width:700px;">
+                        <thead><tr><th>Libellé</th><th>Détail</th><th>Débit (€)</th><th>Crédit (€)</th><th>Actions</th></tr></thead>
                         <tbody id="qLignesBody"></tbody>
                         <tfoot>
                             <tr style="font-weight:700;">
                                 <td colspan="2">TOTAL</td>
                                 <td id="qTotalDebit">0,00 €</td>
                                 <td id="qTotalCredit">0,00 €</td>
+                                <td></td>
                             </tr>
                         </tfoot>
                     </table>
+                    <button class="btn btn-outline" style="margin-top:8px;" onclick="window.insertQuittanceLigne(qBienLignesLength()-1)">+ Ajouter une ligne</button>
                 </div>
 
                 <div id="quittancePreviewContainer" style="display:none;border:1px dashed var(--ink-faint);border-radius:8px;padding:10px;overflow:auto;background:#f3f4f6;">
@@ -1290,7 +1295,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.4.6';
+const APP_VERSION = '2.4.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata';
@@ -1323,7 +1328,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.4.6 : Quittances ──────────────────────────────────────────────────────
+// ── v2.4.7 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1374,7 +1379,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.4.6 : séquence Google d'abord, MDP ensuite
+    // v2.4.7 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2153,7 +2158,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.4.6
+// QUICK CAT SEARCH — v2.4.7
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2353,7 +2358,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.4.6
+// CAT MODAL SEARCH — v2.4.7
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2406,7 +2411,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.4.6
+// GRAPHIQUES ENGINE  — v2.4.7
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3041,7 +3046,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.4.6
+// IDÉES AMÉLIORATION — v2.4.7
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3858,7 +3863,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.4.6
+// EXPORT / IMPORT BASE DE DONNÉES v2.4.7
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -3991,7 +3996,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.4.6+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.4.7+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4243,7 +4248,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.4.6
+// QUITTANCES — v2.4.7
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4365,6 +4370,45 @@ window.copySignatureFromBien = function(sourceId) {
     saveQuittancesBiens();
     window.renderQuittancesView();
     showToast('✅ Signature copiée depuis "' + source.nom + '"');
+};
+
+window.exportQuittanceBien = function() {
+    let bien = getCurrentBien(); if (!bien) return;
+    let dataStr = JSON.stringify(bien, null, 2);
+    let blob = new Blob([dataStr], { type: 'application/json' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = 'Quittance_' + bien.nom.replace(/\s+/g,'_') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ Bien exporté');
+};
+
+window.importQuittanceBien = function(input) {
+    let file = input.files[0]; if (!file) return;
+    let reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let imported = JSON.parse(e.target.result);
+            imported.id = 'bien_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+            if (!imported.nom) imported.nom = 'Bien importé';
+            else imported.nom = imported.nom + ' (importé)';
+            if (!imported.locataires) imported.locataires = [{ nom:'', email:'', tel:'' }];
+            if (!imported.designation) imported.designation = { texte:'', adresse:'' };
+            if (!imported.lignesQuittance) imported.lignesQuittance = [];
+            if (!imported.echeancier) imported.echeancier = [];
+            quittancesBiens.push(imported);
+            currentQuittanceBienId = imported.id;
+            saveQuittancesBiens();
+            window.renderQuittancesView();
+            showToast('✅ Bien importé : ' + imported.nom);
+        } catch (err) {
+            alert('Fichier invalide ou corrompu.');
+        }
+        input.value = '';
+    };
+    reader.readAsText(file);
 };
 
 function populateCopySelectors() {
@@ -4586,16 +4630,54 @@ window.renderQuittanceLignesBody = function() {
             ? `<input type="date" class="input-text" value="${l.detail||''}" onchange="window.updateQuittanceLigne(${idx},'detail',this.value)">`
             : `<input type="text" class="input-text" placeholder="détail optionnel" value="${(l.detail||'').replace(/"/g,'&quot;')}" onchange="window.updateQuittanceLigne(${idx},'detail',this.value)">`;
         return `<tr>
-            <td>${l.libelle}</td>
+            <td><input type="text" class="input-text" value="${(l.libelle||'').replace(/"/g,'&quot;')}" onchange="window.updateQuittanceLigne(${idx},'libelle',this.value)"></td>
             <td>${detailInput}</td>
             <td><input type="number" step="0.01" class="input-text" value="${l.debit||0}" onchange="window.updateQuittanceLigne(${idx},'debit',this.value)"></td>
             <td><input type="number" step="0.01" class="input-text" value="${l.credit||0}" onchange="window.updateQuittanceLigne(${idx},'credit',this.value)"></td>
+            <td style="white-space:nowrap;text-align:center;">
+                <button class="btn btn-outline" style="padding:2px 6px;" title="Monter" onclick="window.moveQuittanceLigne(${idx},-1)" ${idx===0?'disabled':''}>↑</button>
+                <button class="btn btn-outline" style="padding:2px 6px;" title="Descendre" onclick="window.moveQuittanceLigne(${idx},1)" ${idx===bien.lignesQuittance.length-1?'disabled':''}>↓</button>
+                <button class="btn btn-outline" style="padding:2px 6px;" title="Insérer une ligne ici" onclick="window.insertQuittanceLigne(${idx})">➕</button>
+                <button class="btn btn-outline" style="padding:2px 6px;" title="Supprimer" onclick="window.removeQuittanceLigne(${idx})">🗑️</button>
+            </td>
         </tr>`;
     }).join('');
     let totalDebit = bien.lignesQuittance.reduce((s,l) => s + (parseFloat(l.debit)||0), 0);
     let totalCredit = bien.lignesQuittance.reduce((s,l) => s + (parseFloat(l.credit)||0), 0);
     $('qTotalDebit').textContent = fmtEur(totalDebit) + ' €';
     $('qTotalCredit').textContent = fmtEur(totalCredit) + ' €';
+};
+
+function qBienLignesLength() {
+    let bien = getCurrentBien();
+    return bien ? bien.lignesQuittance.length : 0;
+}
+
+window.insertQuittanceLigne = function(afterIdx) {
+    let bien = getCurrentBien(); if (!bien) return;
+    let nouvelleLibelle = prompt('Libellé de la nouvelle ligne :', 'Nouvelle ligne');
+    if (nouvelleLibelle === null) return;
+    bien.lignesQuittance.splice(afterIdx + 1, 0, { libelle: nouvelleLibelle.trim() || 'Nouvelle ligne', detail: '', debit: 0, credit: 0 });
+    saveQuittancesBiens();
+    window.renderQuittanceLignesBody();
+};
+
+window.removeQuittanceLigne = function(idx) {
+    let bien = getCurrentBien(); if (!bien) return;
+    if (bien.lignesQuittance.length <= 1) { showToast('⚠️ Au moins une ligne requise'); return; }
+    bien.lignesQuittance.splice(idx, 1);
+    saveQuittancesBiens();
+    window.renderQuittanceLignesBody();
+};
+
+window.moveQuittanceLigne = function(idx, direction) {
+    let bien = getCurrentBien(); if (!bien) return;
+    let newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= bien.lignesQuittance.length) return;
+    let arr = bien.lignesQuittance;
+    [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+    saveQuittancesBiens();
+    window.renderQuittanceLignesBody();
 };
 
 // ── Rendu global de la vue ──
@@ -4670,12 +4752,12 @@ window.generateQuittanceAffichage = function() {
 
     let designation = bien.designation || { texte:'', adresse:'' };
     let nomsLocatairesHtml = bien.locataires.map(l => l.nom || '').filter(Boolean).join('<br>');
-    let adresseLocativeHtml = designation.adresse ? `<div style="margin-top:0;">${designation.adresse}</div>` : '';
+    let adresseLocativeHtml = designation.adresse ? `<span style="font-size:0.85em;color:#555;">${designation.adresse}</span><br>` : '';
     let contactsLocatairesHtml = bien.locataires.map(l => {
-        let infos = [l.email, l.tel].filter(Boolean).join(' · ');
-        return infos ? `<div style="font-size:0.85em;color:#555;">${infos}</div>` : '';
-    }).filter(Boolean).join('');
-    let locatairesHtml = `${nomsLocatairesHtml}${adresseLocativeHtml}${contactsLocatairesHtml}`;
+        let lignes = [l.email, l.tel].filter(Boolean);
+        return lignes.length ? `<span style="font-size:0.85em;color:#555;">${lignes.join('<br>')}</span>` : '';
+    }).filter(Boolean).join('<br>');
+    let locatairesHtml = `${nomsLocatairesHtml}<br>${adresseLocativeHtml}${contactsLocatairesHtml}`;
     let logoHtml = bien.logoDataUrl ? `<img src="${bien.logoDataUrl}" style="max-height:40px;margin-top:6px;">` : '';
 
     let html = `
