@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.6.7</title>
-    <!-- v2.6.7 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.6.8</title>
+    <!-- v2.6.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -283,7 +283,7 @@
 }
 
 
-/* v2.6.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.6.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -321,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.6.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.6.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -451,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.6.7 — Responsive Quittances (mobile) */
+/* v2.6.8 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -466,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.6.7 — Améliorations UX iPhone supplémentaires */
+/* v2.6.8 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -806,7 +806,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.6.7
+         GRAPHIQUES VIEW  — v2.6.8
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1361,7 +1361,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.6.7';
+const APP_VERSION = '2.6.8';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1394,7 +1394,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.6.7 : Quittances ──────────────────────────────────────────────────────
+// ── v2.6.8 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1445,7 +1445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.6.7 : séquence Google d'abord, MDP ensuite
+    // v2.6.8 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2236,7 +2236,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.6.7
+// QUICK CAT SEARCH — v2.6.8
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2436,7 +2436,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.6.7
+// CAT MODAL SEARCH — v2.6.8
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2489,7 +2489,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.6.7
+// GRAPHIQUES ENGINE  — v2.6.8
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3124,7 +3124,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.6.7
+// IDÉES AMÉLIORATION — v2.6.8
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3941,7 +3941,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.6.7
+// EXPORT / IMPORT BASE DE DONNÉES v2.6.8
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4074,7 +4074,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.6.7+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.6.8+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4326,7 +4326,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.6.7
+// QUITTANCES — v2.6.8
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4654,7 +4654,7 @@ function renderEcheanceRow(e, idx, showCheckbox) {
     return `<tr style="${rowStyle}">
         <td style="color:#111;">${e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('fr-FR') : ''}</td>
         <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance(${idx},'detail',this.value)"></td>
-        <td style="text-align:right;white-space:nowrap;color:#111;">${fmtEur(e.montant)}</td>
+        <td style="text-align:right;white-space:nowrap;color:#111;">${(e.detail||'').trim() ? 'A confirmer' : fmtEur(e.montant)}</td>
         <td>
             <select class="input-text" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance(${idx},'statut',this.value)">
                 <option value="Payé" ${e.statut==='Payé'?'selected':''}>Payé</option>
@@ -4692,10 +4692,15 @@ window.updateQuittancePeriodeFromMonth = function() {
     window.renderQuittanceTableLignes();
 };
 
-window.applyRevenuToQuittanceLignes = function(dateIso, montant) {
+window.applyRevenuToQuittanceLignes = function(dateIso, montant, dateExpenseIso) {
     let bien = getCurrentBien(); if (!bien) return;
     if (!dateIso) { showToast('⚠️ Date manquante sur cette écriture'); return; }
     let amt = parseFloat(montant) || 0;
+    let moisRef = (dateExpenseIso || dateIso || '').slice(0,7);
+    if (moisRef && $('qGenPeriodeMois')) {
+        $('qGenPeriodeMois').value = moisRef;
+        window.updateQuittancePeriodeFromMonth();
+    }
     let absAmt = Math.abs(amt);
     let updatedCount = 0;
 
@@ -4742,8 +4747,9 @@ window.renderQuittanceRevenusTable = function() {
         let detailTxt = (t.details||t.label||'').toString();
         let escaped = detailTxt.replace(/"/g,'&quot;');
         let dateIso = t.dateOp || '';
+        let dateExpenseIso = t.dateExpense || '';
         let amount = parseFloat(t.amount) || 0;
-        return `<tr style="cursor:pointer;" title="Cliquer pour reporter cette écriture dans les lignes datées des tableaux de quittance" onclick="window.applyRevenuToQuittanceLignes('${dateIso}', ${amount})">
+        return `<tr style="cursor:pointer;" title="Cliquer pour reporter cette écriture dans les lignes datées des tableaux de quittance" onclick="window.applyRevenuToQuittanceLignes('${dateIso}', ${amount}, '${dateExpenseIso}')">
         <td>${fmtDate(t.dateOp)}</td>
         <td>${fmtDate(t.dateExpense)}</td>
         <td colspan="2" title="${escaped}" style="max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${detailTxt}</td>
@@ -4867,11 +4873,12 @@ function qBienCautionLignesLength() {
     return bien ? bien.lignesCaution.length : 0;
 }
 
-window.insertQuittanceCautionLigne = function(afterIdx) {
+window.insertQuittanceCautionLigne = async function(afterIdx) {
     let bien = getCurrentBien(); if (!bien) return;
     let nouvelleLibelle = prompt('Libellé de la nouvelle ligne :', 'Nouvelle ligne');
     if (nouvelleLibelle === null) return;
-    let dateDetail = confirm('Le champ Détail de cette ligne doit-il être une date ?\n\nOK = Oui (champ date)\nAnnuler = Non (champ texte libre)');
+    let dateDetail = await window.askQuittanceLigneType();
+    if (dateDetail === null) return;
     bien.lignesCaution.splice(afterIdx + 1, 0, { libelle: nouvelleLibelle.trim() || 'Nouvelle ligne', detail: '', debit: 0, credit: 0, dateDetail });
     saveQuittancesBiens();
     window.renderQuittanceCautionLignesBody();
@@ -4907,11 +4914,22 @@ function qBienLignesLength() {
     return bien ? bien.lignesQuittance.length : 0;
 }
 
-window.insertQuittanceLigne = function(afterIdx) {
+window.askQuittanceLigneType = function() {
+    return new Promise(resolve => {
+        window._resolveQuittanceLigneType = function(value) {
+            $('quittanceLigneTypeModal').style.display = 'none';
+            resolve(value);
+        };
+        $('quittanceLigneTypeModal').style.display = 'flex';
+    });
+};
+
+window.insertQuittanceLigne = async function(afterIdx) {
     let bien = getCurrentBien(); if (!bien) return;
     let nouvelleLibelle = prompt('Libellé de la nouvelle ligne :', 'Nouvelle ligne');
     if (nouvelleLibelle === null) return;
-    let dateDetail = confirm('Le champ Détail de cette ligne doit-il être une date ?\n\nOK = Oui (champ date)\nAnnuler = Non (champ texte libre)');
+    let dateDetail = await window.askQuittanceLigneType();
+    if (dateDetail === null) return;
     bien.lignesQuittance.splice(afterIdx + 1, 0, { libelle: nouvelleLibelle.trim() || 'Nouvelle ligne', detail: '', debit: 0, credit: 0, dateDetail });
     saveQuittancesBiens();
     window.renderQuittanceLignesBody();
@@ -6245,6 +6263,20 @@ window.addManualRow = function() {
 };
 
 </script>
+
+<div id="quittanceLigneTypeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:10px;padding:24px;max-width:400px;width:92%;">
+        <h3 style="margin-bottom:14px;">Type du champ Détail</h3>
+        <p style="font-size:0.9em;margin-bottom:16px;">Quel type de champ souhaitez-vous pour le "Détail" de cette nouvelle ligne ?</p>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-primary" style="width:100%;" onclick="window._resolveQuittanceLigneType(true)">📅 Champ date</button>
+            <button class="btn btn-outline" style="width:100%;" onclick="window._resolveQuittanceLigneType(false)">📝 Champ texte libre</button>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+            <button class="btn btn-outline" onclick="window._resolveQuittanceLigneType(null)">Annuler</button>
+        </div>
+    </div>
+</div>
 
 <div id="quittanceEmailModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
     <div style="background:white;border-radius:10px;padding:24px;max-width:480px;width:92%;max-height:85vh;overflow:auto;">
