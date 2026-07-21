@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.1.0</title>
+<title>Mes Tâches v1.1.1</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -176,12 +176,12 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 .obj-divider-line{height:1px;background:var(--ink);opacity:.7;margin:0 4px 12px;}
 .olay-btn{flex:1;padding:5px;border-radius:8px;border:1.5px solid var(--ink-faint);background:transparent;font-size:14px;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
 .olay-btn.sel{background:var(--ink);border-color:var(--ink);color:#fff;}
-.obj-scroll.layout-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;}
+.obj-scroll.layout-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;align-items:start;}
 .obj-scroll.layout-grid .obj-group-label{grid-column:1 / -1;}
-.obj-scroll.layout-right .obj-bucket{display:flex;align-items:stretch;}
-.obj-scroll.layout-right .bucket-head{flex-shrink:0;width:220px;border-right:1px solid var(--bg);}
-.obj-scroll.layout-right .bucket-body{display:block!important;flex:1;padding:12px;}
-.obj-scroll.layout-right .obj-bucket:not(.bucket-open) .bucket-body{display:none!important;}
+.obj-scroll.layout-grid .obj-bucket{margin-bottom:0;}
+.obj-scroll.layout-right{display:flex;flex-direction:row;gap:10px;overflow-x:auto;overflow-y:hidden;align-items:flex-start;padding-bottom:12px;scrollbar-width:thin;}
+.obj-scroll.layout-right .obj-group-label{flex-shrink:0;writing-mode:vertical-rl;text-orientation:mixed;align-self:stretch;display:flex;align-items:center;margin:0;padding:6px 4px;border-top:none;}
+.obj-scroll.layout-right .obj-bucket{flex-shrink:0;width:280px;margin-bottom:0;}
 
 .bucket-add-btn{display:flex;align-items:center;gap:6px;width:100%;padding:8px 4px;margin-top:6px;background:none;border:1.5px dashed var(--ink-faint);border-radius:8px;font-family:'Figtree',sans-serif;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:all .15s;justify-content:center;}
 .bucket-add-btn:hover{border-color:var(--obj);color:var(--obj);background:var(--obj-soft);}
@@ -725,7 +725,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 _dbg('Script start');
 
 // ── APP VERSION ────────────────────────────────────────────
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.1.1';
 
 // ── STORAGE ───────────────────────────────────────────────
 const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v2-ui';
