@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.1.2</title>
+<title>Mes Tâches v1.1.3</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -204,13 +204,13 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 /* ── KANBAN ── */
 .kanban-outer{display:flex;flex-direction:column;height:100%;min-height:0;}
 .kanban-header-bar{flex-shrink:0;overflow:hidden;background:var(--bg);z-index:20;}
-.kanban-header-inner{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:10px;padding:10px 12px 0;}
+.kanban-header-inner{display:grid;grid-template-columns:repeat(6,minmax(200px,1fr));gap:10px;padding:10px 12px 0;}
 .kanban-col-head{padding:10px 14px;display:flex;align-items:center;gap:8px;background:var(--surface);border-radius:var(--radius) var(--radius) 0 0;border-bottom:2px solid var(--ink-faint);user-select:none;}
 .kanban-col-head.col-drag-over{border-bottom-color:var(--obj);background:var(--obj-soft);}
 .kcol-drag-handle{color:var(--ink-faint);font-size:14px;cursor:grab;flex-shrink:0;}
 .kcol-drag-handle:active{cursor:grabbing;}
 .kanban-scroll{overflow-x:auto;overflow-y:auto;flex:1;}
-.kanban-wrap{display:grid;grid-template-columns:repeat(5,minmax(200px,1fr));gap:10px;padding:0 12px 120px;align-items:start;}
+.kanban-wrap{display:grid;grid-template-columns:repeat(6,minmax(200px,1fr));gap:10px;padding:0 12px 120px;align-items:start;}
 .kanban-col{background:var(--bg);border-radius:0 0 var(--radius) var(--radius);}
 .gist-modal-overlay{display:none;}
 .gist-modal{display:none;}
@@ -256,6 +256,7 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 .kanban-sub-head{display:flex;align-items:center;justify-content:space-between;padding:14px 4px 6px;margin-top:10px;border-top:1px solid var(--ink-faint);}
 .kanban-someday .kcard{opacity:.75;background:var(--someday-soft);}
 .kanban-waiting .kcard{opacity:.75;background:var(--waiting-soft);}
+.kanban-col[data-colkey='en-service'] .kcard{border-left-color:var(--service);}
 .obj-group-label{font-family:'DM Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.8px;color:var(--ink-soft);padding:16px 4px 6px;border-top:1px solid var(--ink-faint);margin-top:4px;}
 
 .obj-picker{position:relative;}
@@ -427,13 +428,13 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <header>
   <div class="header-top">
     <div style="display:flex;align-items:baseline;gap:8px;">
+      <span style="font-size:22px;line-height:1;">📋</span>
+      <h1>Mes Tâches</h1>
+      <span id="headerVersionTag" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-faint);font-weight:500;"></span>
       <div class="font-size-toggle" style="display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:2px;border:1.5px solid var(--ink-faint);">
         <button id="fontDecBtn" type="button" title="Réduire la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A-</button>
         <button id="fontIncBtn" type="button" title="Augmenter la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A+</button>
       </div>
-      <span style="font-size:22px;line-height:1;">📋</span>
-      <h1>Mes Tâches</h1>
-      <span id="headerVersionTag" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-faint);font-weight:500;"></span>
     </div>
     <div class="date-label" id="dateLabel"></div>
   </div>
@@ -710,7 +711,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 _dbg('Script start');
 
 // ── APP VERSION ────────────────────────────────────────────
-const APP_VERSION = '1.1.2';
+const APP_VERSION = '1.1.3';
 
 // ── STORAGE ───────────────────────────────────────────────
 const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v2-ui';
@@ -751,7 +752,7 @@ let editingTaskId=null, editingObjId=null, optOpen=false;
 let presetObjId=null; // used when adding task from a bucket
 
 const EMOJIS=['🎯','🚀','💡','📈','🌱','🏆','📚','💪','🤝','✨','🔑','🌟'];
-const STATUSES={'a-faire':null,'en-cours':'⚡ En cours','en-attente-retour':'⏳ En attente retour','planifie':'🗓 Planifié','un-jour':'☁️ Un jour'};
+const STATUSES={'a-faire':null,'en-cours':'⚡ En cours','en-attente-retour':'⏳ En attente retour','planifie':'🗓 Planifié','un-jour':'☁️ Un jour','en-service':'🛠 En service'};
 const todayStr=new Date().toISOString().slice(0,10);
 
 function dueInfo(due){
@@ -2058,6 +2059,7 @@ function renderKanban(wrap){
     {key:'en-cours',          label:'En cours',       items:kvis.filter(t=>t.status==='en-cours')},
     {key:'en-attente-retour', label:'Attente retour', items:kvis.filter(t=>t.status==='en-attente-retour')},
     {key:'planifie',          label:'Planifié',       items:kvis.filter(t=>t.status==='planifie')},
+    {key:'en-service',        label:'🛠 En service',  items:kvis.filter(t=>t.status==='en-service')},
     {key:'un-jour',           label:'☁️ Un jour',    items:kvis.filter(t=>t.status==='un-jour')},
   ];
   function sortK(arr){
