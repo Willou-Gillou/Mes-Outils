@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.1.4</title>
+<title>Mes Tâches v1.1.5</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -152,8 +152,14 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 
 /* ── OBJECTIVES PAGE — sticky Non Défini ── */
 .obj-page-wrap{display:flex;flex-direction:column;height:100%;}
-.obj-sticky{flex-shrink:0;padding:16px 16px 0;max-width:680px;margin:0 auto;width:100%;background:var(--bg);z-index:10;}
-.obj-scroll{flex:1;overflow-y:auto;padding:8px 16px 120px;max-width:680px;margin:0 auto;width:100%;}
+.obj-sticky{flex-shrink:0;padding:16px 16px 0;width:100%;background:var(--bg);z-index:10;}
+.obj-scroll{flex:1;overflow-y:auto;padding:8px 16px 120px;width:100%;}
+.obj-layout-toggle{display:flex;gap:2px;padding:6px 16px 0;flex-shrink:0;}
+.olay-btn{padding:5px 12px;border-radius:8px;border:1.5px solid var(--ink-faint);background:transparent;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px;}
+.olay-btn.sel{background:var(--ink);border-color:var(--ink);color:#fff;}
+.obj-scroll.layout-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;align-items:start;}
+.obj-scroll.layout-grid .obj-group-label{grid-column:1 / -1;}
+.obj-sticky.layout-grid{}
 
 /* ── OBJECTIVE BUCKET ── */
 .obj-bucket{background:var(--surface);border-radius:var(--radius);margin-bottom:10px;box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .15s,background .15s;}
@@ -478,6 +484,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <div class="page" id="pageObj">
       <div class="obj-page-wrap" id="objPageWrap">
+        <div class="obj-layout-toggle" id="objLayoutToggle">
+          <button class="olay-btn sel" data-lay="down" title="Vue en liste">↓ Liste</button>
+          <button class="olay-btn" data-lay="grid" title="Vue mosaïque">▦ Mosaïque</button>
+        </div>
         <div class="obj-sticky" id="objSticky"></div>
         <div class="obj-scroll" id="objScroll"></div>
       </div>
@@ -711,7 +721,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 _dbg('Script start');
 
 // ── APP VERSION ────────────────────────────────────────────
-const APP_VERSION = '1.1.4';
+const APP_VERSION = '1.1.5';
 
 // ── STORAGE ───────────────────────────────────────────────
 const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v2-ui';
@@ -732,6 +742,18 @@ applyFontScale();
 
 let tasks=loadTasks(), objectives=loadObjs();
 tasks.forEach(t=>{if(t.status==='en-service'&&t.recur){t.recur=null;t.recurN=null;t.recurMode=null;t.recurFixedDate=null;}});
+
+// ── OBJ LAYOUT (liste / mosaïque) ─────────────────────────
+let _objLayout=(()=>{try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};return ui.objLayout||'down';}catch{return'down';}})();
+function saveObjLayout(){try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};ui.objLayout=_objLayout;localStorage.setItem(UI_KEY,JSON.stringify(ui));}catch{}}
+function applyObjLayout(){
+  const scroll=document.getElementById('objScroll');
+  if(scroll)scroll.classList.toggle('layout-grid',_objLayout==='grid');
+  document.querySelectorAll('.olay-btn').forEach(b=>b.classList.toggle('sel',b.dataset.lay===_objLayout));
+}
+document.querySelectorAll('.olay-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{_objLayout=btn.dataset.lay;saveObjLayout();applyObjLayout();});
+});
 if(tasks.some(t=>t.status==='en-attente')){tasks=tasks.map(t=>({...t,status:t.status==='en-attente'?'en-attente-retour':t.status}));saveTasks(tasks);}
 const uiState=loadUI();
 
@@ -1680,6 +1702,7 @@ function renderObjectives(){
       btn.addEventListener('click',e=>{e.stopPropagation();promoteSubtask(+btn.dataset.tid,+btn.dataset.si);});
     });
   });
+  applyObjLayout();
 }
 
 function renderBucket(objId,icon,title,subHtml,taskList,progress,isOpen,extraClass,doneN,totalN){
