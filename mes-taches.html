@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.0.5</title>
+<title>Mes Tâches v1.0.6</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -686,10 +686,10 @@ document.addEventListener('DOMContentLoaded',()=>{
 _dbg('Script start');
 
 // ── APP VERSION ────────────────────────────────────────────
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.6';
 
 // ── STORAGE ───────────────────────────────────────────────
-const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v6-ui';
+const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v2-ui';
 const normT=a=>(a||[]).map(t=>({...t,id:+t.id,objectiveId:t.objectiveId?+t.objectiveId:null}));
 const normO=a=>(a||[]).map(o=>({...o,id:+o.id}));
 function loadTasks(){try{return normT(JSON.parse(localStorage.getItem(TASKS_KEY)));}catch{return[];}}
@@ -698,7 +698,7 @@ function loadUI(){try{return JSON.parse(localStorage.getItem(UI_KEY))||{};}catch
 function saveTasks(d){localStorage.setItem(TASKS_KEY,JSON.stringify(d));driveSave();}
 function saveObjs(d){localStorage.setItem(OBJS_KEY,JSON.stringify(d));driveSave();}
 function saveUI(d){localStorage.setItem(UI_KEY,JSON.stringify(d));}
-(()=>{const o=localStorage.getItem('mes-taches-v1');if(o&&!localStorage.getItem(TASKS_KEY))try{saveTasks(normT(JSON.parse(o)));}catch{}})();
+(()=>{const o=localStorage.getItem('mes-taches-v1');if(o&&!localStorage.getItem(TASKS_KEY)){try{saveTasks(normT(JSON.parse(o)));localStorage.removeItem('mes-taches-v1');}catch{}}const oldUi=localStorage.getItem('mes-taches-v6-ui');if(oldUi&&!localStorage.getItem(UI_KEY)){try{localStorage.setItem(UI_KEY,oldUi);localStorage.removeItem('mes-taches-v6-ui');}catch{}}})();
 
 let tasks=loadTasks(), objectives=loadObjs();
 if(tasks.some(t=>t.status==='en-attente')){tasks=tasks.map(t=>({...t,status:t.status==='en-attente'?'en-attente-retour':t.status}));saveTasks(tasks);}
@@ -2212,6 +2212,9 @@ let driveFileId=null;
 let _drivePendingRemote=null;
 let _drivePollTimer=null;
 let _driveSaveTimer=null;
+let _driveSaveInFlight=false;
+let _driveSavePending=false;
+let _driveLastActiveTime=Date.now();
 let _driveInitResolve=null;
 const driveInitReady=new Promise(res=>{_driveInitResolve=res;});
 
@@ -2353,9 +2356,19 @@ function driveHideLoading(){document.getElementById('driveLoadingOverlay').class
 async function driveGetFileId(){
   if(driveFileId)return driveFileId;
   const cached=localStorage.getItem(DRIVE_LS+'file_id');if(cached){driveFileId=cached;return driveFileId;}
-  const resp=await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id)`,{headers:{Authorization:'Bearer '+driveAccessToken}});
+  const resp=await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${DRIVE_FILE_NAME}'&fields=files(id,modifiedTime)&orderBy=modifiedTime desc`,{headers:{Authorization:'Bearer '+driveAccessToken}});
   const data=await resp.json();
-  if(data.files&&data.files.length>0){driveFileId=data.files[0].id;localStorage.setItem(DRIVE_LS+'file_id',driveFileId);return driveFileId;}
+  if(data.files&&data.files.length>0){
+    driveFileId=data.files[0].id;
+    localStorage.setItem(DRIVE_LS+'file_id',driveFileId);
+    if(data.files.length>1){
+      _dbg('driveGetFileId: '+data.files.length+' doublons trouvés, suppression des anciens');
+      for(let i=1;i<data.files.length;i++){
+        fetch('https://www.googleapis.com/drive/v3/files/'+data.files[i].id,{method:'DELETE',headers:{Authorization:'Bearer '+driveAccessToken}}).catch(()=>{});
+      }
+    }
+    return driveFileId;
+  }
   return null;
 }
 
@@ -2365,13 +2378,19 @@ function driveSave(){
   if(!driveAccessToken)return;
   clearTimeout(_driveSaveTimer);
   _driveSaveTimer=setTimeout(async()=>{
+    if(_driveSaveInFlight){_driveSavePending=true;return;}
+    _driveSaveInFlight=true;
     setSyncBadge('syncing','↻ Sync…');
     try{
       const payload=JSON.stringify(buildDrivePayload(),null,2);
       const fileId=await driveGetFileId();
-      let url,method;
-      if(fileId){url='https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=media&fields=id,modifiedTime';method='PATCH';}
-      else{
+      let iso;
+      if(fileId){
+        const url='https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=media&fields=id,modifiedTime';
+        const resp=await fetch(url,{method:'PATCH',headers:{Authorization:'Bearer '+driveAccessToken,'Content-Type':'application/json'},body:payload});
+        const data=await resp.json();
+        iso=data.modifiedTime||new Date().toISOString();
+      }else{
         const meta={name:DRIVE_FILE_NAME,parents:['appDataFolder']};
         const form=new FormData();
         form.append('metadata',new Blob([JSON.stringify(meta)],{type:'application/json'}));
@@ -2379,16 +2398,15 @@ function driveSave(){
         const cr=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime',{method:'POST',headers:{Authorization:'Bearer '+driveAccessToken},body:form});
         const cd=await cr.json();
         driveFileId=cd.id;localStorage.setItem(DRIVE_LS+'file_id',driveFileId);
-        const iso=cd.modifiedTime||new Date().toISOString();
-        localStorage.setItem(DRIVE_LS+'last_sync_iso',iso);localStorage.setItem(DRIVE_LS+'last_sync',new Date(iso).toLocaleString('fr-FR'));
-        setSyncBadge('synced','✓ Drive');return;
+        iso=cd.modifiedTime||new Date().toISOString();
       }
-      const resp=await fetch(url,{method,headers:{Authorization:'Bearer '+driveAccessToken,'Content-Type':'application/json'},body:payload});
-      const data=await resp.json();
-      const iso=data.modifiedTime||new Date().toISOString();
       localStorage.setItem(DRIVE_LS+'last_sync_iso',iso);localStorage.setItem(DRIVE_LS+'last_sync',new Date(iso).toLocaleString('fr-FR'));
       setSyncBadge('synced','✓ Drive');
     }catch(e){setSyncBadge('error','✕ Erreur');_dbg('driveSave error: '+e.message);}
+    finally{
+      _driveSaveInFlight=false;
+      if(_driveSavePending){_driveSavePending=false;driveSave();}
+    }
   },1500);
 }
 
@@ -2465,11 +2483,21 @@ async function driveCheckOnConnect(){
   driveStartPolling();
 }
 
+const DRIVE_MAX_IDLE_MS=10*60*1000;
+document.addEventListener('mousemove',()=>{_driveLastActiveTime=Date.now();},{passive:true});
+document.addEventListener('touchstart',()=>{_driveLastActiveTime=Date.now();},{passive:true});
+document.addEventListener('keydown',()=>{_driveLastActiveTime=Date.now();},{passive:true});
 function driveStartPolling(){
   driveStopPolling();
-  _drivePollTimer=setInterval(()=>{if(document.visibilityState==='visible'&&driveAccessToken)driveFetchAndCompare();},15000);
+  _driveLastActiveTime=Date.now();
+  _drivePollTimer=setInterval(()=>{
+    if(document.visibilityState!=='visible'||!driveAccessToken)return;
+    if(Date.now()-_driveLastActiveTime>DRIVE_MAX_IDLE_MS){_dbg('driveStartPolling: pause inactivité');return;}
+    driveFetchAndCompare();
+  },15000);
 }
 function driveStopPolling(){if(_drivePollTimer){clearInterval(_drivePollTimer);_drivePollTimer=null;}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){_driveLastActiveTime=Date.now();if(driveAccessToken)driveFetchAndCompare();}});
 
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&driveAccessToken)driveFetchAndCompare();
