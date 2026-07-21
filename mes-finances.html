@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.6.4</title>
-    <!-- v2.6.4 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.6.5</title>
+    <!-- v2.6.5 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -283,7 +283,7 @@
 }
 
 
-/* v2.6.4 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.6.5 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -321,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.6.4 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.6.5 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -451,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.6.4 — Responsive Quittances (mobile) */
+/* v2.6.5 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -466,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.6.4 — Améliorations UX iPhone supplémentaires */
+/* v2.6.5 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -806,7 +806,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.6.4
+         GRAPHIQUES VIEW  — v2.6.5
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1051,7 +1051,7 @@
                 </div>
 
                 <div class="summary-card" style="flex:2 1 380px;min-width:300px;margin-top:0;">
-                    <h3 style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">✍️ Signature & mise en forme
+                    <h3 style="margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">✍️ Signature
                         <select id="qCopySignatureFrom" class="input-text" style="width:auto;font-size:0.8em;" onchange="window.copySignatureFromBien(this.value); this.value='';">
                             <option value="">↩️ Récupérer depuis...</option>
                         </select>
@@ -1059,6 +1059,7 @@
                     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
                         <input type="text" id="qFaitA" class="input-text" placeholder="Fait à..." style="flex:1;min-width:150px;" onchange="window.saveQuittanceField()">
                         <input type="text" id="qSignatureTexte" class="input-text" placeholder="Texte de signature (ex: nom du bailleur)" style="flex:1;min-width:180px;" onchange="window.saveQuittanceField()">
+                        <label style="font-size:0.85em;display:flex;align-items:center;gap:6px;">Date <input type="date" id="qSignatureDate" class="input-text" style="width:auto;" onchange="window.saveQuittanceField()"></label>
                         <button class="btn btn-outline" onclick="$('qLogoInput').click()">🖼️ Logo</button>
                         <input type="file" id="qLogoInput" accept="image/*" style="display:none;" onchange="window.uploadQuittanceLogo(this)">
                         <img id="qLogoPreview" style="display:none;max-height:40px;border-radius:4px;">
@@ -1126,7 +1127,7 @@
                             <input type="hidden" id="qGenPeriodeFin">
                             <span id="qGenPeriodeAffichee" style="font-size:0.85em;color:var(--ink-soft);"></span>
                             <button class="btn btn-primary" onclick="window.generateQuittanceAffichage()">🧾 Générer la quittance de loyer</button>
-                            <button class="btn btn-outline" onclick="window.generateAppelLoyerAffichage()">📢 Générer appel au loyer</button>
+                            <button class="btn btn-outline" style="background:#9e9e9e;color:white;border-color:#9e9e9e;" onclick="window.generateAppelLoyerAffichage()">📢 Générer appel au loyer</button>
                         </div>
 
                         <div style="overflow-x:auto;margin-bottom:16px;">
@@ -1360,7 +1361,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.6.4';
+const APP_VERSION = '2.6.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1393,7 +1394,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.6.4 : Quittances ──────────────────────────────────────────────────────
+// ── v2.6.5 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1444,7 +1445,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.6.4 : séquence Google d'abord, MDP ensuite
+    // v2.6.5 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2235,7 +2236,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.6.4
+// QUICK CAT SEARCH — v2.6.5
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2435,7 +2436,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.6.4
+// CAT MODAL SEARCH — v2.6.5
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2488,7 +2489,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.6.4
+// GRAPHIQUES ENGINE  — v2.6.5
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3123,7 +3124,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.6.4
+// IDÉES AMÉLIORATION — v2.6.5
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3940,7 +3941,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.6.4
+// EXPORT / IMPORT BASE DE DONNÉES v2.6.5
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4073,7 +4074,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.6.4+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.6.5+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4325,7 +4326,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.6.4
+// QUITTANCES — v2.6.5
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4407,6 +4408,7 @@ window.saveQuittanceField = function() {
     bien.bailleur.tel = $('qBailleurTel').value;
     bien.faitA = $('qFaitA').value;
     bien.signatureTexte = $('qSignatureTexte').value;
+    bien.signatureDate = $('qSignatureDate').value || new Date().toISOString().slice(0,10);
     bien.commentaires = $('qCommentaires').value;
     let oldFolderId = bien.driveFolderId;
     bien.driveFolderId = ($('qDriveFolderId').value || '').trim();
@@ -4757,7 +4759,8 @@ window.renderQuittanceLignesBody = function() {
         let detailInput = isDatedLine
             ? `<input type="date" class="input-text" value="${l.detail||''}" onchange="window.updateQuittanceLigne(${idx},'detail',this.value)">`
             : `<input type="text" class="input-text" placeholder="détail optionnel" value="${(l.detail||'').replace(/"/g,'&quot;')}" onchange="window.updateQuittanceLigne(${idx},'detail',this.value)">`;
-        return `<tr>
+        let isHidden = !!l.hidden;
+        return `<tr style="${isHidden?'opacity:0.45;':''}">
             <td><input type="text" class="input-text" value="${(l.libelle||'').replace(/"/g,'&quot;')}" onchange="window.updateQuittanceLigne(${idx},'libelle',this.value)"></td>
             <td>${detailInput}</td>
             <td><input type="number" step="0.01" class="input-text" value="${l.debit||0}" onchange="window.updateQuittanceLigne(${idx},'debit',this.value)"></td>
@@ -4766,6 +4769,7 @@ window.renderQuittanceLignesBody = function() {
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Monter" onclick="window.moveQuittanceLigne(${idx},-1)" ${idx===0?'disabled':''}>↑</button>
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Descendre" onclick="window.moveQuittanceLigne(${idx},1)" ${idx===bien.lignesQuittance.length-1?'disabled':''}>↓</button>
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Insérer une ligne ici" onclick="window.insertQuittanceLigne(${idx})">➕</button>
+                <button class="btn btn-outline" style="padding:2px 6px;" title="${isHidden?'Afficher dans le PDF':'Masquer du PDF'}" onclick="window.toggleQuittanceLigneVisible(${idx})">${isHidden?'🙈':'👁️'}</button>
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Supprimer" onclick="window.removeQuittanceLigne(${idx})">🗑️</button>
             </td>
         </tr>`;
@@ -4786,7 +4790,8 @@ window.renderQuittanceCautionLignesBody = function() {
         let detailInput = isDatedLine
             ? `<input type="date" class="input-text" value="${l.detail||''}" onchange="window.updateQuittanceCautionLigne(${idx},'detail',this.value)">`
             : `<input type="text" class="input-text" placeholder="détail optionnel" value="${(l.detail||'').replace(/"/g,'&quot;')}" onchange="window.updateQuittanceCautionLigne(${idx},'detail',this.value)">`;
-        return `<tr>
+        let isHidden = !!l.hidden;
+        return `<tr style="${isHidden?'opacity:0.45;':''}">
             <td><input type="text" class="input-text" value="${(l.libelle||'').replace(/"/g,'&quot;')}" onchange="window.updateQuittanceCautionLigne(${idx},'libelle',this.value)"></td>
             <td>${detailInput}</td>
             <td><input type="number" step="0.01" class="input-text" value="${l.debit||0}" onchange="window.updateQuittanceCautionLigne(${idx},'debit',this.value)"></td>
@@ -4795,6 +4800,7 @@ window.renderQuittanceCautionLignesBody = function() {
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Monter" onclick="window.moveQuittanceCautionLigne(${idx},-1)" ${idx===0?'disabled':''}>↑</button>
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Descendre" onclick="window.moveQuittanceCautionLigne(${idx},1)" ${idx===bien.lignesCaution.length-1?'disabled':''}>↓</button>
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Insérer une ligne ici" onclick="window.insertQuittanceCautionLigne(${idx})">➕</button>
+                <button class="btn btn-outline" style="padding:2px 6px;" title="${isHidden?'Afficher dans le PDF':'Masquer du PDF'}" onclick="window.toggleQuittanceCautionLigneVisible(${idx})">${isHidden?'🙈':'👁️'}</button>
                 <button class="btn btn-outline" style="padding:2px 6px;" title="Supprimer" onclick="window.removeQuittanceCautionLigne(${idx})">🗑️</button>
             </td>
         </tr>`;
@@ -4803,6 +4809,13 @@ window.renderQuittanceCautionLignesBody = function() {
     let totalCredit = bien.lignesCaution.reduce((s,l) => s + (parseFloat(l.credit)||0), 0);
     $('qCautionTotalDebit').textContent = fmtEur(totalDebit) + ' €';
     $('qCautionTotalCredit').textContent = fmtEur(totalCredit) + ' €';
+};
+
+window.toggleQuittanceCautionLigneVisible = function(idx) {
+    let bien = getCurrentBien(); if (!bien) return;
+    bien.lignesCaution[idx].hidden = !bien.lignesCaution[idx].hidden;
+    saveQuittancesBiens();
+    window.renderQuittanceCautionLignesBody();
 };
 
 window.updateQuittanceCautionLigne = function(idx, field, value) {
@@ -4846,6 +4859,13 @@ window.moveQuittanceCautionLigne = function(idx, direction) {
     [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
     saveQuittancesBiens();
     window.renderQuittanceCautionLignesBody();
+};
+
+window.toggleQuittanceLigneVisible = function(idx) {
+    let bien = getCurrentBien(); if (!bien) return;
+    bien.lignesQuittance[idx].hidden = !bien.lignesQuittance[idx].hidden;
+    saveQuittancesBiens();
+    window.renderQuittanceLignesBody();
 };
 
 function qBienLignesLength() {
@@ -4901,6 +4921,7 @@ window.renderQuittancesView = function() {
     $('qBailleurTel').value = bien.bailleur.tel || '';
     $('qFaitA').value = bien.faitA || '';
     $('qSignatureTexte').value = bien.signatureTexte || '';
+    $('qSignatureDate').value = bien.signatureDate || new Date().toISOString().slice(0,10);
     $('qCommentaires').value = bien.commentaires || '';
     $('qDriveFolderId').value = bien.driveFolderId || '';
     window.updateQuittanceDriveLink();
@@ -4939,7 +4960,7 @@ window._generateQuittanceCore = function(type) {
 
     let periodeStart = debut ? new Date(debut) : null, periodeEnd = fin ? new Date(fin) : null;
 
-    let lignesSource = (type === 'caution') ? bien.lignesCaution : bien.lignesQuittance;
+    let lignesSource = ((type === 'caution') ? bien.lignesCaution : bien.lignesQuittance).filter(l => !l.hidden);
 
     let totalDebit = lignesSource.reduce((s,l) => s + (parseFloat(l.debit)||0), 0);
     let totalCredit = lignesSource.reduce((s,l) => s + (parseFloat(l.credit)||0), 0);
@@ -5005,7 +5026,7 @@ window._generateQuittanceCore = function(type) {
         <tbody>${lignesHtml}</tbody>
         <tfoot><tr style="font-weight:bold;border-top:0.6px solid #333;"><td style="padding:6px 8px;">TOTAL</td><td style="padding:6px 8px;text-align:right;">${fmtEur(totalDebit)}</td><td style="padding:6px 8px;text-align:right;">${fmtEur(totalCredit)}</td></tr></tfoot>
     </table>
-    <p style="text-align:right;margin:16px 0 3px;font-size:0.85em;">Fait à ${bien.faitA || ''}, le ${new Date().toLocaleDateString('fr-FR')}</p>
+    <p style="text-align:right;margin:16px 0 3px;font-size:0.85em;">Fait à ${bien.faitA || ''}, le ${fmtDate(bien.signatureDate) || new Date().toLocaleDateString('fr-FR')}</p>
     <p style="text-align:right;font-size:0.85em;">${bien.signatureTexte || ''}</p>
     <div style="text-align:right;">${logoHtml}</div>
     ${(bien.commentaires||'').trim() ? `<div style="margin-top:14px;font-size:0.8em;"><strong>Commentaires:</strong><br>${(bien.commentaires||'').replace(/\n/g,'<br>')}</div>` : ''}
@@ -5119,7 +5140,7 @@ window.buildQuittancePdfBlob = async function() {
     y = pdf.lastAutoTable.finalY + 10;
 
     pdf.setFontSize(9);
-    pdf.text('Fait à ' + (bien.faitA || '') + ', le ' + new Date().toLocaleDateString('fr-FR'), pageW - marginX, y, { align: 'right' });
+    pdf.text('Fait à ' + (bien.faitA || '') + ', le ' + (bien.signatureDate ? d.fmtDate(bien.signatureDate) : new Date().toLocaleDateString('fr-FR')), pageW - marginX, y, { align: 'right' });
     y += 5;
     if (bien.signatureTexte) { pdf.text(bien.signatureTexte, pageW - marginX, y, { align: 'right' }); y += 5; }
     if (bien.logoDataUrl) {
