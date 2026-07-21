@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.0.6</title>
+<title>Mes Tâches v1.1.0</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
+  --font-scale:1;
   --bg:#F5F2ED;--surface:#FDFCFA;--ink:#1A1714;--ink-soft:#6B6560;--ink-faint:#C5BFB8;
   --pro:#2D5BE3;--pro-soft:#EBF0FD;--perso:#D4622A;--perso-soft:#FDF0EA;
   --done:#5C8C5A;--urgent:#C23B3B;--overdue-soft:#FDE8E8;
   --today-c:#C27A2A;--today-soft:#FDF3E3;--someday:#6B8CA8;--someday-soft:#EBF2F8;
   --waiting:#8A6A2A;--waiting-soft:#FBF4E3;--planned:#5A6FCF;--planned-soft:#EAEFFD;--inprogress:#2D7A5B;--inprogress-soft:#E8F5EF;
-  --obj:#7B4FBF;--obj-soft:#F2EDFC;--undef:#9E6B3A;--undef-soft:#FDF4EB;
+  --obj:#7B4FBF;--obj-soft:#F2EDFC;--undef:#9E6B3A;--undef-soft:#FDF4EB;--service:#2A7A8C;--service-soft:#E6F3F6;
   --radius:14px;--shadow:0 2px 12px rgba(26,23,20,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);font-family:'Figtree',sans-serif;color:var(--ink);height:100dvh;overflow:hidden;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
+body{background:var(--bg);font-family:'Figtree',sans-serif;color:var(--ink);height:100dvh;overflow:hidden;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);font-size:calc(1em*var(--font-scale));}
 
 /* ── HEADER ── */
 header{background:var(--surface);border-bottom:1px solid var(--ink-faint);padding:18px 20px 0;flex-shrink:0;z-index:100;}
@@ -127,6 +128,7 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 .status-tag.en-attente-retour{background:var(--waiting-soft);color:var(--waiting);}
 .status-tag.planifie{background:var(--planned-soft);color:var(--planned);}
 .status-tag.un-jour{background:var(--someday-soft);color:var(--someday);}
+.status-tag.en-service{background:var(--service-soft);color:var(--service);}
 
 /* ── SOUS-ACTIONS ── */
 .subtask-section{margin-top:14px;}
@@ -171,8 +173,16 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 .bucket-pct.undef{color:var(--undef);}
 .bucket-body{display:none;padding:0 12px 12px;}
 .bucket-open .bucket-body{display:block;}
-.bucket-progress{height:3px;background:var(--bg);border-radius:2px;overflow:hidden;margin:0 4px 12px;}
-.bucket-progress-fill{height:100%;background:var(--obj);border-radius:2px;transition:width .4s;}
+.obj-divider-line{height:1px;background:var(--ink);opacity:.7;margin:0 4px 12px;}
+.olay-btn{flex:1;padding:5px;border-radius:8px;border:1.5px solid var(--ink-faint);background:transparent;font-size:14px;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+.olay-btn.sel{background:var(--ink);border-color:var(--ink);color:#fff;}
+.obj-scroll.layout-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;}
+.obj-scroll.layout-grid .obj-group-label{grid-column:1 / -1;}
+.obj-scroll.layout-right .obj-bucket{display:flex;align-items:stretch;}
+.obj-scroll.layout-right .bucket-head{flex-shrink:0;width:220px;border-right:1px solid var(--bg);}
+.obj-scroll.layout-right .bucket-body{display:block!important;flex:1;padding:12px;}
+.obj-scroll.layout-right .obj-bucket:not(.bucket-open) .bucket-body{display:none!important;}
+
 .bucket-add-btn{display:flex;align-items:center;gap:6px;width:100%;padding:8px 4px;margin-top:6px;background:none;border:1.5px dashed var(--ink-faint);border-radius:8px;font-family:'Figtree',sans-serif;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:all .15s;justify-content:center;}
 .bucket-add-btn:hover{border-color:var(--obj);color:var(--obj);background:var(--obj-soft);}
 .bucket-edit-btn{background:none;border:none;color:var(--ink-faint);font-size:14px;cursor:pointer;padding:3px 5px;border-radius:6px;transition:color .15s;}
@@ -270,6 +280,8 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 .recur-group{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;}
 .recur-pill{padding:5px 12px;border-radius:20px;border:1.5px solid var(--ink-faint);background:transparent;font-family:'Figtree',sans-serif;font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
 .recur-pill.sel{background:var(--obj);border-color:var(--obj);color:#fff;}
+.recur-mode-pill{padding:5px 12px;border-radius:20px;border:1.5px solid var(--ink-faint);background:transparent;font-family:'Figtree',sans-serif;font-size:12px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
+.recur-mode-pill.sel{background:var(--obj);border-color:var(--obj);color:#fff;}
 .recur-badge{display:inline-flex;align-items:center;gap:3px;font-family:'DM Mono',monospace;font-size:10px;padding:2px 7px;border-radius:20px;background:rgba(99,91,255,.1);color:var(--obj);border:1px solid rgba(99,91,255,.25);white-space:nowrap;}
 .sub-counter-btn{display:inline-flex;align-items:center;gap:4px;background:none;border:1.5px solid var(--ink-faint);border-radius:20px;padding:2px 8px;font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-soft);cursor:pointer;transition:all .15s;white-space:nowrap;}
 .sub-counter-btn:hover,.sub-counter-btn.open{border-color:var(--obj);color:var(--obj);background:var(--obj-soft);}
@@ -377,13 +389,14 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .ctx-btn{padding:10px;border-radius:10px;border:1.5px solid var(--ink-faint);background:transparent;font-family:'Figtree',sans-serif;font-size:14px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:all .15s;text-align:center;}
 .ctx-btn[data-v=pro].sel{background:var(--pro-soft);border-color:var(--pro);color:var(--pro);}
 .ctx-btn[data-v=perso].sel{background:var(--perso-soft);border-color:var(--perso);color:var(--perso);}
-.status-group{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.status-group{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
 .status-pill{padding:8px 4px;border-radius:10px;border:1.5px solid var(--ink-faint);background:transparent;font-family:'Figtree',sans-serif;font-size:11px;font-weight:500;color:var(--ink-soft);cursor:pointer;transition:all .15s;text-align:center;line-height:1.3;}
 .status-pill[data-s=a-faire].sel{background:var(--bg);border-color:var(--ink);color:var(--ink);}
 .status-pill[data-s=en-cours].sel{background:var(--inprogress-soft);border-color:var(--inprogress);color:var(--inprogress);}
 .status-pill[data-s=en-attente-retour].sel{background:var(--waiting-soft);border-color:var(--waiting);color:var(--waiting);}
 .status-pill[data-s=planifie].sel{background:var(--planned-soft);border-color:var(--planned);color:var(--planned);}
 .status-pill[data-s=un-jour].sel{background:var(--someday-soft);border-color:var(--someday);color:var(--someday);}
+.status-pill[data-s=en-service].sel{background:var(--service-soft);border-color:var(--service);color:var(--service);}
 .urgent-toggle{display:flex;align-items:center;gap:10px;cursor:pointer;}
 .toggle-track{width:42px;height:24px;border-radius:12px;background:var(--ink-faint);position:relative;transition:background .2s;flex-shrink:0;}
 .toggle-track.on{background:var(--urgent);}
@@ -421,8 +434,18 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
 <header>
   <div class="header-top">
-    <h1>Mes Tâches</h1>
+    <div style="display:flex;align-items:baseline;gap:8px;">
+      <span style="font-size:22px;line-height:1;">📋</span>
+      <h1>Mes Tâches</h1>
+      <span id="headerVersionTag" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-faint);font-weight:500;"></span>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div class="font-size-toggle" style="display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:2px;border:1.5px solid var(--ink-faint);">
+        <button id="fontDecBtn" title="Réduire la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A-</button>
+        <button id="fontIncBtn" title="Augmenter la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A+</button>
+      </div>
       <div class="date-label" id="dateLabel"></div>
+    </div>
   </div>
   <div id="versionMenu" style="display:none;position:fixed;background:var(--surface);border-radius:14px;box-shadow:0 4px 24px rgba(26,23,20,.15);border:1px solid var(--ink-faint);padding:8px;z-index:500;min-width:180px;flex-direction:column;gap:2px;">
       <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--ink-soft);padding:4px 8px 8px;border-bottom:1px solid var(--ink-faint);margin-bottom:4px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Menu</div>
@@ -464,6 +487,11 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <div class="page" id="pageObj">
       <div class="obj-page-wrap" id="objPageWrap">
+        <div class="obj-layout-toggle" id="objLayoutToggle" style="display:flex;gap:2px;padding:0 16px 8px;max-width:680px;margin:0 auto;width:100%;">
+          <button class="olay-btn sel" data-lay="down" title="Vers le bas">↓</button>
+          <button class="olay-btn" data-lay="grid" title="Mosaïque">▦</button>
+          <button class="olay-btn" data-lay="right" title="Vers la droite">→</button>
+        </div>
         <div class="obj-sticky" id="objSticky"></div>
         <div class="obj-scroll" id="objScroll"></div>
       </div>
@@ -505,6 +533,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         <button class="status-pill" data-s="en-attente-retour">Attente retour</button>
         <button class="status-pill" data-s="planifie">Planifié</button>
         <button class="status-pill" data-s="un-jour">Un jour</button>
+        <button class="status-pill" data-s="en-service">En service</button>
       </div>
     </div>
     <div class="subtask-section">
@@ -519,7 +548,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
     <div class="optional-fields" id="optFields">
       <div class="field"><label>Note</label><textarea id="inputNote" placeholder="Contexte, lien, détail…"></textarea></div>
       <div class="field"><label>Échéance</label><input type="date" id="inputDue"/></div>
-      <div class="field">
+      <div class="field" id="recurField" style="display:none;">
         <label>Récurrence</label>
         <div class="recur-group">
           <button class="recur-pill sel" data-r="">Aucune</button>
@@ -530,10 +559,20 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
           <button class="recur-pill" data-r="annual">Annuel</button>
           <button class="recur-pill" data-r="custom">Perso</button>
         </div>
-        <div id="recurCustomWrap" style="display:none;margin-top:8px;display:none;align-items:center;gap:8px;">
-          <span style="font-size:13px;color:var(--ink-soft);">Tous les</span>
-          <input type="number" id="recurCustomN" min="1" max="365" value="7" style="width:60px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--ink-faint);font-size:14px;font-family:'Figtree',sans-serif;background:var(--bg);color:var(--ink);text-align:center;">
-          <span style="font-size:13px;color:var(--ink-soft);">jours</span>
+        <div id="recurCustomWrap" style="display:none;margin-top:8px;flex-direction:column;gap:8px;">
+          <div class="recur-group">
+            <button class="recur-mode-pill sel" data-rmode="interval">Tous les XXX</button>
+            <button class="recur-mode-pill" data-rmode="fixed">À date fixe</button>
+          </div>
+          <div id="recurIntervalWrap" style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:13px;color:var(--ink-soft);">Tous les</span>
+            <input type="number" id="recurCustomN" min="1" max="365" value="7" style="width:60px;padding:6px 8px;border-radius:8px;border:1.5px solid var(--ink-faint);font-size:14px;font-family:'Figtree',sans-serif;background:var(--bg);color:var(--ink);text-align:center;">
+            <span style="font-size:13px;color:var(--ink-soft);">jours</span>
+          </div>
+          <div id="recurFixedWrap" style="display:none;align-items:center;gap:8px;">
+            <span style="font-size:13px;color:var(--ink-soft);">Chaque</span>
+            <input type="date" id="recurFixedDate" style="padding:6px 8px;border-radius:8px;border:1.5px solid var(--ink-faint);font-size:14px;font-family:'Figtree',sans-serif;background:var(--bg);color:var(--ink);">
+          </div>
         </div>
       </div>
       <div class="field"><label>Objectif lié</label>
@@ -686,7 +725,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 _dbg('Script start');
 
 // ── APP VERSION ────────────────────────────────────────────
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.1.0';
 
 // ── STORAGE ───────────────────────────────────────────────
 const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v2-ui';
@@ -699,6 +738,24 @@ function saveTasks(d){localStorage.setItem(TASKS_KEY,JSON.stringify(d));driveSav
 function saveObjs(d){localStorage.setItem(OBJS_KEY,JSON.stringify(d));driveSave();}
 function saveUI(d){localStorage.setItem(UI_KEY,JSON.stringify(d));}
 (()=>{const o=localStorage.getItem('mes-taches-v1');if(o&&!localStorage.getItem(TASKS_KEY)){try{saveTasks(normT(JSON.parse(o)));localStorage.removeItem('mes-taches-v1');}catch{}}const oldUi=localStorage.getItem('mes-taches-v6-ui');if(oldUi&&!localStorage.getItem(UI_KEY)){try{localStorage.setItem(UI_KEY,oldUi);localStorage.removeItem('mes-taches-v6-ui');}catch{}}})();
+// ── FONT SCALE (A+ / A-) ──────────────────────────────────
+let _fontScale=(()=>{try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};return ui.fontScale||1;}catch{return 1;}})();
+function applyFontScale(){document.documentElement.style.setProperty('--font-scale',_fontScale);}
+function saveFontScale(){try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};ui.fontScale=_fontScale;localStorage.setItem(UI_KEY,JSON.stringify(ui));}catch{}}
+applyFontScale();
+
+// ── OBJ LAYOUT (bas / mosaïque / droite) ──────────────────
+let _objLayout=(()=>{try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};return ui.objLayout||'down';}catch{return'down';}})();
+function saveObjLayout(){try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};ui.objLayout=_objLayout;localStorage.setItem(UI_KEY,JSON.stringify(ui));}catch{}}
+function applyObjLayout(){
+  const scroll=document.getElementById('objScroll');
+  const sticky=document.getElementById('objSticky');
+  [scroll,sticky].forEach(el=>{if(!el)return;el.classList.remove('layout-grid','layout-right');if(_objLayout==='grid')el.classList.add('layout-grid');else if(_objLayout==='right')el.classList.add('layout-right');});
+  document.querySelectorAll('.olay-btn').forEach(b=>b.classList.toggle('sel',b.dataset.lay===_objLayout));
+}
+document.querySelectorAll('.olay-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{_objLayout=btn.dataset.lay;saveObjLayout();applyObjLayout();});
+});
 
 let tasks=loadTasks(), objectives=loadObjs();
 if(tasks.some(t=>t.status==='en-attente')){tasks=tasks.map(t=>({...t,status:t.status==='en-attente'?'en-attente-retour':t.status}));saveTasks(tasks);}
@@ -716,6 +773,8 @@ let selSubtasks=[];
 let _selObjId=null;
 let selRecur=''; // '', 'daily', 'weekly', 'monthly', 'custom'
 let selRecurN=7;
+let selRecurMode='interval'; // 'interval' or 'fixed'
+let selRecurFixedDate=null;
 let editingTaskId=null, editingObjId=null, optOpen=false;
 let presetObjId=null; // used when adding task from a bucket
 
@@ -740,10 +799,12 @@ const _dateSpan=document.createElement('span');
 _dateSpan.textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'})+' · ';
 const _verBtn=document.createElement('button');
 _verBtn.id='versionMenuBtn';
-_verBtn.textContent='v'+APP_VERSION;
+_verBtn.textContent='Menu';
 _verBtn.style.cssText='font-family:inherit;font-size:inherit;background:none;border:none;cursor:pointer;padding:0;color:inherit;font-weight:600;text-decoration:underline dotted;';
 _dateLabelEl.appendChild(_dateSpan);
 _dateLabelEl.appendChild(_verBtn);
+const _headerVerTag=document.getElementById('headerVersionTag');
+if(_headerVerTag)_headerVerTag.textContent='v'+APP_VERSION;
 
 // ══════════════════════════════════════════════════════════
 // PAGE NAVIGATION
@@ -879,6 +940,8 @@ function openTaskModal(taskId,forceObjId){
   // ── Récurrence ──
   selRecur=t?.recur||'';
   selRecurN=t?.recurN||7;
+  selRecurMode=t?.recurMode||'interval';
+  selRecurFixedDate=t?.recurFixedDate||null;
   document.querySelectorAll('.recur-pill').forEach(b=>{
     b.classList.toggle('sel',b.dataset.r===selRecur);
   });
@@ -886,6 +949,13 @@ function openTaskModal(taskId,forceObjId){
   if(rcw)rcw.style.display=selRecur==='custom'?'flex':'none';
   const rcn=document.getElementById('recurCustomN');
   if(rcn)rcn.value=selRecurN;
+  document.querySelectorAll('.recur-mode-pill').forEach(b=>b.classList.toggle('sel',b.dataset.rmode===selRecurMode));
+  const riw=document.getElementById('recurIntervalWrap'), rfw=document.getElementById('recurFixedWrap');
+  if(riw)riw.style.display=selRecurMode==='fixed'?'none':'flex';
+  if(rfw)rfw.style.display=selRecurMode==='fixed'?'flex':'none';
+  const rfd=document.getElementById('recurFixedDate');
+  if(rfd)rfd.value=selRecurFixedDate||'';
+  updateRecurFieldVisibility();
 
   // ── Obj picker ──
   _selObjId=t&&t.objectiveId?t.objectiveId:(forceObjId??presetObjId??null);
@@ -951,9 +1021,20 @@ function openTaskModal(taskId,forceObjId){
 function closeTaskModal(){overlayTask.classList.remove('open');presetObjId=null;}
 overlayTask.addEventListener('click',e=>{if(e.target===overlayTask)closeTaskModal();});
 
+function updateRecurFieldVisibility(){
+  const rf=document.getElementById('recurField');
+  const allowed=selStatus==='planifie'||selStatus==='en-service';
+  if(rf)rf.style.display=allowed?'block':'none';
+  if(!allowed){
+    selRecur=null;
+    document.querySelectorAll('.recur-pill[data-r]').forEach(b=>b.classList.toggle('sel',b.dataset.r===''));
+    const wrap=document.getElementById('recurCustomWrap');if(wrap)wrap.style.display='none';
+  }
+}
 document.querySelectorAll('.status-pill').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('.status-pill').forEach(b=>b.classList.remove('sel'));
   btn.classList.add('sel');selStatus=btn.dataset.s;
+  updateRecurFieldVisibility();
 }));
 document.getElementById('urgentToggle').addEventListener('click',()=>{isUrgent=!isUrgent;document.getElementById('urgentTrack').classList.toggle('on',isUrgent);});
 document.getElementById('saveTaskBtn').addEventListener('click',saveTask);
@@ -1038,6 +1119,19 @@ document.querySelectorAll('.recur-pill').forEach(btn=>{
 document.getElementById('recurCustomN')?.addEventListener('input',function(){
   selRecurN=Math.max(1,Math.min(365,+this.value||7));
 });
+document.querySelectorAll('.recur-mode-pill').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.recur-mode-pill').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    selRecurMode=btn.dataset.rmode;
+    const riw=document.getElementById('recurIntervalWrap'), rfw=document.getElementById('recurFixedWrap');
+    if(riw)riw.style.display=selRecurMode==='fixed'?'none':'flex';
+    if(rfw)rfw.style.display=selRecurMode==='fixed'?'flex':'none';
+  });
+});
+document.getElementById('recurFixedDate')?.addEventListener('input',function(){
+  selRecurFixedDate=this.value||null;
+});
 
 function saveTask(){
   const title=document.getElementById('inputTitle').value.trim();
@@ -1046,10 +1140,10 @@ function saveTask(){
   const due=document.getElementById('inputDue').value||null;
   if(editingTaskId!==null){
     const t=tasks.find(t=>t.id===editingTaskId);
-    if(t){t.title=title;t.note=document.getElementById('inputNote').value.trim();t.urgent=isUrgent;t.status=selStatus;t.due=due;t.objectiveId=objVal?+objVal:null;t.subtasks=selSubtasks;t.recur=selRecur||null;t.recurN=selRecur==='custom'?selRecurN:null;t.updatedAt=new Date().toISOString();}
+    if(t){t.title=title;t.note=document.getElementById('inputNote').value.trim();t.urgent=isUrgent;t.status=selStatus;t.due=due;t.objectiveId=objVal?+objVal:null;t.subtasks=selSubtasks;t.recur=selRecur||null;t.recurN=selRecur==='custom'?selRecurN:null;t.recurMode=selRecur==='custom'?selRecurMode:null;t.recurFixedDate=(selRecur==='custom'&&selRecurMode==='fixed')?selRecurFixedDate:null;t.updatedAt=new Date().toISOString();}
     saveTasks(tasks);closeTaskModal();showToast('Tâche mise à jour ✓');
   }else{
-    tasks.unshift({id:Date.now(),title,note:document.getElementById('inputNote').value.trim(),objectiveId:objVal?+objVal:null,urgent:isUrgent,status:selStatus,due,done:false,subtasks:selSubtasks,recur:selRecur||null,recurN:selRecur==='custom'?selRecurN:null,createdAt:new Date().toISOString()});
+    tasks.unshift({id:Date.now(),title,note:document.getElementById('inputNote').value.trim(),objectiveId:objVal?+objVal:null,urgent:isUrgent,status:selStatus,due,done:false,subtasks:selSubtasks,recur:selRecur||null,recurN:selRecur==='custom'?selRecurN:null,recurMode:selRecur==='custom'?selRecurMode:null,recurFixedDate:(selRecur==='custom'&&selRecurMode==='fixed')?selRecurFixedDate:null,createdAt:new Date().toISOString()});
     saveTasks(tasks);closeTaskModal();showToast('Tâche ajoutée ✓');
   }
   render();
@@ -1132,6 +1226,9 @@ function saveObjective(){
 
 // ── CALCUL PROCHAINE DATE ─────────────────────────────────
 function nextRecurDate(t){
+  if(t.recur==='custom'&&t.recurMode==='fixed'&&t.recurFixedDate){
+    return t.recurFixedDate;
+  }
   // Partir d'aujourd'hui en heure locale (évite le bug UTC)
   const d=new Date();
   d.setHours(0,0,0,0);
@@ -1147,6 +1244,7 @@ function nextRecurDate(t){
   const day=String(d.getDate()).padStart(2,'0');
   return `${y}-${m}-${day}`;
 }
+function isRecurFixed(t){return t&&t.recur==='custom'&&t.recurMode==='fixed';}
 function recurLabel(t){
   if(!t.recur)return null;
   const map={daily:'🔄 Quotidien',weekly:'🔄 Hebdo',monthly:'🔄 Mensuel',quarterly:'🔄 Trimestriel',annual:'🔄 Annuel'};
@@ -1155,23 +1253,60 @@ function recurLabel(t){
   return '🔄';
 }
 
+function applyRecurAdvance(t,newDate){
+  t.due=newDate;
+  t.status='planifie';
+  if(t.subtasks)t.subtasks=t.subtasks.map(s=>({...s,done:false}));
+  t.done=false;
+  saveTasks(tasks);
+  showToast(`🔄 Prochaine occurrence : ${new Date(t.due+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`);
+  render();
+}
 function toggleDone(id){
   const t=tasks.find(t=>t.id===id);
   if(!t)return;
   if(t.recur){
-    // Tâche récurrente : disparaît puis réapparaît à la prochaine échéance en statut Planifié
-    t.due=nextRecurDate(t);
-    t.status='planifie';
-    if(t.subtasks)t.subtasks=t.subtasks.map(s=>({...s,done:false}));
-    t.done=false;
-    saveTasks(tasks);
-    showToast(`🔄 Prochaine occurrence : ${new Date(t.due+'T00:00:00').toLocaleDateString('fr-FR',{day:'numeric',month:'short'})}`);
-    render();
+    if(isRecurFixed(t)){
+      openRecurDatePopup(t.id);
+    }else{
+      applyRecurAdvance(t,nextRecurDate(t));
+    }
   }else{
     t.done=!t.done;
     if(t.done)t.doneAt=new Date().toISOString();
     saveTasks(tasks);render();
   }
+}
+function openRecurDatePopup(taskId){
+  const t=tasks.find(t=>t.id===taskId);
+  if(!t)return;
+  let overlay=document.getElementById('recurDateOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='recurDateOverlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(26,23,20,.45);z-index:700;display:flex;align-items:center;justify-content:center;';
+    overlay.innerHTML=`<div style="background:var(--surface);border-radius:20px;padding:24px;max-width:340px;width:90%;">
+      <div style="font-family:'Instrument Serif',serif;font-size:20px;margin-bottom:6px;">Prochaine échéance</div>
+      <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">Cette tâche récurrente est réalisée. Définissez la nouvelle date.</div>
+      <input type="date" id="recurDatePopupInput" style="width:100%;padding:10px 12px;border-radius:10px;border:1.5px solid var(--ink-faint);font-family:'Figtree',sans-serif;font-size:15px;background:var(--bg);color:var(--ink);margin-bottom:16px;">
+      <div style="display:flex;gap:8px;">
+        <button id="recurDatePopupCancel" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--ink-faint);background:transparent;font-family:'Figtree',sans-serif;font-size:14px;color:var(--ink-soft);cursor:pointer;">Annuler</button>
+        <button id="recurDatePopupOk" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--ink);color:#fff;font-family:'Figtree',sans-serif;font-size:14px;font-weight:600;cursor:pointer;">Valider</button>
+      </div>
+    </div>`;
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display='flex';
+  const input=document.getElementById('recurDatePopupInput');
+  input.value=t.recurFixedDate||t.due||'';
+  document.getElementById('recurDatePopupCancel').onclick=()=>{overlay.style.display='none';};
+  document.getElementById('recurDatePopupOk').onclick=()=>{
+    const nd=input.value;
+    if(!nd)return;
+    t.recurFixedDate=nd;
+    overlay.style.display='none';
+    applyRecurAdvance(t,nd);
+  };
 }
 
 // ══════════════════════════════════════════════════════════
@@ -1571,6 +1706,7 @@ function renderObjectives(){
       btn.addEventListener('click',e=>{e.stopPropagation();promoteSubtask(+btn.dataset.tid,+btn.dataset.si);});
     });
   });
+  applyObjLayout();
 }
 
 function renderBucket(objId,icon,title,subHtml,taskList,progress,isOpen,extraClass,doneN,totalN){
@@ -1592,12 +1728,12 @@ function renderBucket(objId,icon,title,subHtml,taskList,progress,isOpen,extraCla
         <div class="bucket-sub">${subHtml}</div>
       </div>
       <div class="bucket-badges">
-        ${pct!==null?`<span class="bucket-pct${isUndef?' undef':''}">${pct}%</span>`:`<span class="bucket-pct undef">${taskList.length}</span>`}
+        ${isUndef?`<span class="bucket-pct undef">${taskList.length}</span>`:''}
         ${!isUndef&&progress?`<button class="bucket-edit-btn" data-oid="${progress.editId}" title="Modifier">✎</button>`:''}
       </div>
     </div>
     <div class="bucket-body">
-      ${pct!==null&&totalN>0?`<div class="bucket-progress"><div class="bucket-progress-fill" style="width:${pct}%"></div></div>`:''}
+      ${!isUndef&&totalN>0?`<div class="obj-divider-line"></div>`:''}
       ${taskRows||`<div style="font-size:13px;color:var(--ink-faint);font-style:italic;padding:4px 4px 8px">${isUndef?'Toutes les tâches ont un objectif ✓':'Aucune tâche active'}</div>`}
       ${doneN>0?`<button class="show-done-btn" data-obj-id="${objId===null?'null':objId}">✓ ${doneN} action${doneN>1?'s':''} faite${doneN>1?'s':''}</button>`:''}
       <button class="bucket-add-btn" data-obj-id="${objId===null?'null':objId}">+ Ajouter une tâche</button>
@@ -2502,6 +2638,19 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'&&driveAccessToken)driveFetchAndCompare();
   else driveStopPolling();
+});
+
+// ── FONT SIZE CONTROLS (A+ / A-) ──────────────────────────
+const _fontDecBtn=document.getElementById('fontDecBtn');
+const _fontIncBtn=document.getElementById('fontIncBtn');
+const FONT_SCALE_MIN=0.8, FONT_SCALE_MAX=1.4, FONT_SCALE_STEP=0.1;
+if(_fontDecBtn)_fontDecBtn.addEventListener('click',()=>{
+  _fontScale=Math.max(FONT_SCALE_MIN,+(_fontScale-FONT_SCALE_STEP).toFixed(2));
+  applyFontScale();saveFontScale();
+});
+if(_fontIncBtn)_fontIncBtn.addEventListener('click',()=>{
+  _fontScale=Math.min(FONT_SCALE_MAX,+(_fontScale+FONT_SCALE_STEP).toFixed(2));
+  applyFontScale();saveFontScale();
 });
 
 // ── VERSION MENU ──────────────────────────────────────────
