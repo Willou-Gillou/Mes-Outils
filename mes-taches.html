@@ -3,11 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.1.1</title>
+<title>Mes Tâches v1.1.2</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
-  --font-scale:1;
   --bg:#F5F2ED;--surface:#FDFCFA;--ink:#1A1714;--ink-soft:#6B6560;--ink-faint:#C5BFB8;
   --pro:#2D5BE3;--pro-soft:#EBF0FD;--perso:#D4622A;--perso-soft:#FDF0EA;
   --done:#5C8C5A;--urgent:#C23B3B;--overdue-soft:#FDE8E8;
@@ -17,7 +16,7 @@
   --radius:14px;--shadow:0 2px 12px rgba(26,23,20,.08);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);font-family:'Figtree',sans-serif;color:var(--ink);height:100dvh;overflow:hidden;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);font-size:calc(1em*var(--font-scale));}
+body{background:var(--bg);font-family:'Figtree',sans-serif;color:var(--ink);height:100dvh;overflow:hidden;display:flex;flex-direction:column;padding-bottom:env(safe-area-inset-bottom);}
 
 /* ── HEADER ── */
 header{background:var(--surface);border-bottom:1px solid var(--ink-faint);padding:18px 20px 0;flex-shrink:0;z-index:100;}
@@ -174,14 +173,7 @@ main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0;}
 .bucket-body{display:none;padding:0 12px 12px;}
 .bucket-open .bucket-body{display:block;}
 .obj-divider-line{height:1px;background:var(--ink);opacity:.7;margin:0 4px 12px;}
-.olay-btn{flex:1;padding:5px;border-radius:8px;border:1.5px solid var(--ink-faint);background:transparent;font-size:14px;color:var(--ink-soft);cursor:pointer;transition:all .15s;}
-.olay-btn.sel{background:var(--ink);border-color:var(--ink);color:#fff;}
-.obj-scroll.layout-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px;align-items:start;}
-.obj-scroll.layout-grid .obj-group-label{grid-column:1 / -1;}
-.obj-scroll.layout-grid .obj-bucket{margin-bottom:0;}
-.obj-scroll.layout-right{display:flex;flex-direction:row;gap:10px;overflow-x:auto;overflow-y:hidden;align-items:flex-start;padding-bottom:12px;scrollbar-width:thin;}
-.obj-scroll.layout-right .obj-group-label{flex-shrink:0;writing-mode:vertical-rl;text-orientation:mixed;align-self:stretch;display:flex;align-items:center;margin:0;padding:6px 4px;border-top:none;}
-.obj-scroll.layout-right .obj-bucket{flex-shrink:0;width:280px;margin-bottom:0;}
+
 
 .bucket-add-btn{display:flex;align-items:center;gap:6px;width:100%;padding:8px 4px;margin-top:6px;background:none;border:1.5px dashed var(--ink-faint);border-radius:8px;font-family:'Figtree',sans-serif;font-size:13px;color:var(--ink-soft);cursor:pointer;transition:all .15s;justify-content:center;}
 .bucket-add-btn:hover{border-color:var(--obj);color:var(--obj);background:var(--obj-soft);}
@@ -435,17 +427,15 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 <header>
   <div class="header-top">
     <div style="display:flex;align-items:baseline;gap:8px;">
+      <div class="font-size-toggle" style="display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:2px;border:1.5px solid var(--ink-faint);">
+        <button id="fontDecBtn" type="button" title="Réduire la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A-</button>
+        <button id="fontIncBtn" type="button" title="Augmenter la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A+</button>
+      </div>
       <span style="font-size:22px;line-height:1;">📋</span>
       <h1>Mes Tâches</h1>
       <span id="headerVersionTag" style="font-family:'DM Mono',monospace;font-size:10px;color:var(--ink-faint);font-weight:500;"></span>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <div class="font-size-toggle" style="display:flex;gap:2px;background:var(--bg);border-radius:8px;padding:2px;border:1.5px solid var(--ink-faint);">
-        <button id="fontDecBtn" title="Réduire la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A-</button>
-        <button id="fontIncBtn" title="Augmenter la taille du texte" style="border:none;background:transparent;font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--ink-soft);cursor:pointer;padding:3px 7px;border-radius:6px;">A+</button>
-      </div>
-      <div class="date-label" id="dateLabel"></div>
-    </div>
+    <div class="date-label" id="dateLabel"></div>
   </div>
   <div id="versionMenu" style="display:none;position:fixed;background:var(--surface);border-radius:14px;box-shadow:0 4px 24px rgba(26,23,20,.15);border:1px solid var(--ink-faint);padding:8px;z-index:500;min-width:180px;flex-direction:column;gap:2px;">
       <div style="font-size:11px;font-family:'DM Mono',monospace;color:var(--ink-soft);padding:4px 8px 8px;border-bottom:1px solid var(--ink-faint);margin-bottom:4px;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Menu</div>
@@ -487,11 +477,6 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 
     <div class="page" id="pageObj">
       <div class="obj-page-wrap" id="objPageWrap">
-        <div class="obj-layout-toggle" id="objLayoutToggle" style="display:flex;gap:2px;padding:0 16px 8px;max-width:680px;margin:0 auto;width:100%;">
-          <button class="olay-btn sel" data-lay="down" title="Vers le bas">↓</button>
-          <button class="olay-btn" data-lay="grid" title="Mosaïque">▦</button>
-          <button class="olay-btn" data-lay="right" title="Vers la droite">→</button>
-        </div>
         <div class="obj-sticky" id="objSticky"></div>
         <div class="obj-scroll" id="objScroll"></div>
       </div>
@@ -725,7 +710,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 _dbg('Script start');
 
 // ── APP VERSION ────────────────────────────────────────────
-const APP_VERSION = '1.1.1';
+const APP_VERSION = '1.1.2';
 
 // ── STORAGE ───────────────────────────────────────────────
 const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v2-ui';
@@ -740,22 +725,9 @@ function saveUI(d){localStorage.setItem(UI_KEY,JSON.stringify(d));}
 (()=>{const o=localStorage.getItem('mes-taches-v1');if(o&&!localStorage.getItem(TASKS_KEY)){try{saveTasks(normT(JSON.parse(o)));localStorage.removeItem('mes-taches-v1');}catch{}}const oldUi=localStorage.getItem('mes-taches-v6-ui');if(oldUi&&!localStorage.getItem(UI_KEY)){try{localStorage.setItem(UI_KEY,oldUi);localStorage.removeItem('mes-taches-v6-ui');}catch{}}})();
 // ── FONT SCALE (A+ / A-) ──────────────────────────────────
 let _fontScale=(()=>{try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};return ui.fontScale||1;}catch{return 1;}})();
-function applyFontScale(){document.documentElement.style.setProperty('--font-scale',_fontScale);}
+function applyFontScale(){document.documentElement.style.zoom=_fontScale;}
 function saveFontScale(){try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};ui.fontScale=_fontScale;localStorage.setItem(UI_KEY,JSON.stringify(ui));}catch{}}
 applyFontScale();
-
-// ── OBJ LAYOUT (bas / mosaïque / droite) ──────────────────
-let _objLayout=(()=>{try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};return ui.objLayout||'down';}catch{return'down';}})();
-function saveObjLayout(){try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||{};ui.objLayout=_objLayout;localStorage.setItem(UI_KEY,JSON.stringify(ui));}catch{}}
-function applyObjLayout(){
-  const scroll=document.getElementById('objScroll');
-  const sticky=document.getElementById('objSticky');
-  [scroll,sticky].forEach(el=>{if(!el)return;el.classList.remove('layout-grid','layout-right');if(_objLayout==='grid')el.classList.add('layout-grid');else if(_objLayout==='right')el.classList.add('layout-right');});
-  document.querySelectorAll('.olay-btn').forEach(b=>b.classList.toggle('sel',b.dataset.lay===_objLayout));
-}
-document.querySelectorAll('.olay-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>{_objLayout=btn.dataset.lay;saveObjLayout();applyObjLayout();});
-});
 
 let tasks=loadTasks(), objectives=loadObjs();
 if(tasks.some(t=>t.status==='en-attente')){tasks=tasks.map(t=>({...t,status:t.status==='en-attente'?'en-attente-retour':t.status}));saveTasks(tasks);}
@@ -1706,7 +1678,6 @@ function renderObjectives(){
       btn.addEventListener('click',e=>{e.stopPropagation();promoteSubtask(+btn.dataset.tid,+btn.dataset.si);});
     });
   });
-  applyObjLayout();
 }
 
 function renderBucket(objId,icon,title,subHtml,taskList,progress,isOpen,extraClass,doneN,totalN){
