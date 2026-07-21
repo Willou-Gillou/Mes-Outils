@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Mes Tâches v1.1.3</title>
+<title>Mes Tâches v1.1.4</title>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -547,7 +547,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
         </div>
         <div id="recurCustomWrap" style="display:none;margin-top:8px;flex-direction:column;gap:8px;">
           <div class="recur-group">
-            <button class="recur-mode-pill sel" data-rmode="interval">Tous les XXX</button>
+            <button class="recur-mode-pill sel" data-rmode="interval">Tous les</button>
             <button class="recur-mode-pill" data-rmode="fixed">À date fixe</button>
           </div>
           <div id="recurIntervalWrap" style="display:flex;align-items:center;gap:8px;">
@@ -556,7 +556,7 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
             <span style="font-size:13px;color:var(--ink-soft);">jours</span>
           </div>
           <div id="recurFixedWrap" style="display:none;align-items:center;gap:8px;">
-            <span style="font-size:13px;color:var(--ink-soft);">Chaque</span>
+            <span style="font-size:13px;color:var(--ink-soft);">le</span>
             <input type="date" id="recurFixedDate" style="padding:6px 8px;border-radius:8px;border:1.5px solid var(--ink-faint);font-size:14px;font-family:'Figtree',sans-serif;background:var(--bg);color:var(--ink);">
           </div>
         </div>
@@ -711,7 +711,7 @@ document.addEventListener('DOMContentLoaded',()=>{
 _dbg('Script start');
 
 // ── APP VERSION ────────────────────────────────────────────
-const APP_VERSION = '1.1.3';
+const APP_VERSION = '1.1.4';
 
 // ── STORAGE ───────────────────────────────────────────────
 const TASKS_KEY='mes-taches-v2-tasks',OBJS_KEY='mes-taches-v2-objs',UI_KEY='mes-taches-v2-ui';
@@ -731,6 +731,7 @@ function saveFontScale(){try{const ui=JSON.parse(localStorage.getItem(UI_KEY))||
 applyFontScale();
 
 let tasks=loadTasks(), objectives=loadObjs();
+tasks.forEach(t=>{if(t.status==='en-service'&&t.recur){t.recur=null;t.recurN=null;t.recurMode=null;t.recurFixedDate=null;}});
 if(tasks.some(t=>t.status==='en-attente')){tasks=tasks.map(t=>({...t,status:t.status==='en-attente'?'en-attente-retour':t.status}));saveTasks(tasks);}
 const uiState=loadUI();
 
@@ -996,7 +997,7 @@ overlayTask.addEventListener('click',e=>{if(e.target===overlayTask)closeTaskModa
 
 function updateRecurFieldVisibility(){
   const rf=document.getElementById('recurField');
-  const allowed=selStatus==='planifie'||selStatus==='en-service';
+  const allowed=selStatus==='planifie';
   if(rf)rf.style.display=allowed?'block':'none';
   if(!allowed){
     selRecur=null;
@@ -2108,9 +2109,7 @@ function renderKanban(wrap){
 
     // ── Checkbox done ──
     card.querySelector('.kcard-check')?.addEventListener('change', function(){
-      const t=tasks.find(t=>t.id===tid);
-      if(t){t.done=this.checked;t.doneAt=this.checked?new Date().toISOString():null;saveTasks(tasks);}
-      renderActions();
+      toggleDone(tid);
     });
 
     // ── Bouton modifier ──
