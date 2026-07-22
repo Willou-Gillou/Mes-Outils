@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.9.5</title>
-    <!-- v2.9.5 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.9.6</title>
+    <!-- v2.9.6 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -283,7 +283,7 @@
 }
 
 
-/* v2.9.5 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.9.6 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -321,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.9.5 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.9.6 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -451,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.9.5 — Responsive Quittances (mobile) */
+/* v2.9.6 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -466,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.9.5 — Améliorations UX iPhone supplémentaires */
+/* v2.9.6 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -531,36 +531,49 @@
 .budget-table { margin: 0 auto; width: 100%; table-layout: fixed; border-collapse: collapse; }
 #budgetGrid { display: block; width: 100%; overflow-x: auto; }
 .budget-table .tcd-col-axis { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; line-height:1.3; font-size: 1.1em; position: sticky; left: 0; z-index: 5; }
-.budget-table td.tcd-cell { white-space: normal !important; overflow: visible !important; text-overflow: unset !important; position: relative; min-width: 0; width: auto; height: 0; padding: 0px 3px !important; }
+.budget-table td.tcd-cell { white-space: normal !important; overflow: visible !important; text-overflow: unset !important; position: relative; min-width: 0; width: auto; height: 0; padding: 3px 4px !important; }
 .budget-table .tcd-row-main { white-space: nowrap; }
 .budget-table .tcd-row-sub { white-space: nowrap; }
 .budget-table th.tcd-th-month, .budget-table th.tcd-th-grand { font-size: 1.1em; white-space: nowrap; overflow: hidden; }
 .budget-table thead th { position: sticky; top: 0; z-index: 6; background: var(--tcd-header-color, #2d3748); color: #fff; }
 .budget-table thead th.tcd-col-axis { z-index: 7; }
 .budget-table .tcd-row-main, .budget-table .tcd-row-sub { font-size: 1em; }
-.budget-editable-cell { text-align: center; }
-.budget-agg-cell { text-align: center; }
 .budget-table .tcd-row-main-tr td:not(.tcd-col-axis),
 .budget-table .tcd-row-main-tr td.tcd-col-axis { background: var(--ink-faint) !important; }
-.budget-cell-stack { position: relative; display: flex; flex-direction: column; align-items: stretch; justify-content: center; height: 100%; }
-.budget-cell-top { text-align: center; padding-bottom: 1px; border-bottom: 1px dotted var(--ink-faint); }
-.budget-cell-bottom { text-align: center; padding-top: 1px; min-height: 1em; }
+
+.prog-cell { text-align: center; }
+.prog-inner { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 2px 0; }
 .budget-val {
     display: inline-block; min-width: 16px; outline: none; cursor: text;
     background: transparent; border: 1px solid transparent; border-radius: 4px;
-    padding: 1px 6px; font-size: 1.1em; font-weight: 700; color: var(--ink);
+    padding: 1px 6px; font-size: 0.98em; font-weight: 700; color: var(--ink);
     line-height: 1.2;
 }
 .budget-val:hover { border-color: var(--ink-faint); }
 .budget-val:focus { border-color: var(--pro,#3a6ea5); box-shadow: 0 0 0 2px var(--pro-soft); background: #ffffff; }
-.budget-val-ro { display:inline-block; font-size: 1.1em; font-weight: 800; color: var(--ink); line-height: 1.2; }
-.budget-real-badge {
-    display: inline-block;
-    font-size: 1.1em; font-style: italic; font-weight: 700; color: #2563eb;
-    line-height: 1.2;
-}
+.budget-val-ro { display:inline-block; font-size: 0.98em; font-weight: 800; color: var(--ink); line-height: 1.2; }
 .budget-table .tcd-row-main-cell .budget-val-ro { font-weight: 800; }
 .budget-table .tcd-total-row-cell .budget-val-ro { font-weight: 800; }
+
+.prog-bar-track { width: 78%; height: 5px; background: var(--ink-faint); border-radius: 3px; overflow: hidden; }
+.prog-bar-empty { background: transparent; }
+.prog-bar-fill { height: 100%; border-radius: 3px; }
+.fill-good { background: var(--good, #16a34a); }
+.fill-warn { background: var(--warn, #d97706); }
+.fill-over { background: var(--urgent, #dc2626); }
+
+.prog-cell:hover .tooltip { display: block; }
+.tooltip {
+    display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: #1a1a1a; color: #fff; padding: 5px 9px; border-radius: 6px; font-size: 0.74em;
+    white-space: nowrap; z-index: 30; margin-bottom: 6px; box-shadow: var(--shadow);
+    pointer-events: none;
+}
+.tooltip:after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: #1a1a1a; }
+
+.budget-legend { display:flex; gap:16px; font-size:0.78em; color:var(--ink-muted); margin-top:10px; align-items:center; flex-wrap:wrap; }
+.budget-legend .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
+
 </style>
     <!-- Tabulator -->
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
@@ -857,7 +870,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.9.5
+         GRAPHIQUES VIEW  — v2.9.6
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1021,10 +1034,11 @@
                 <select id="budgetExerciceSelect" class="input-text" style="width:auto;" onchange="window.renderBudget()">
                 </select>
             </div>
-            <span style="font-size:0.8em;color:var(--ink-soft);margin-left:12px;">
-                <span style="display:inline-block;width:10px;height:10px;background:var(--ink);margin-right:4px;vertical-align:middle;"></span>Budget (en haut, éditable)
-                &nbsp;&nbsp;
-                <span style="display:inline-block;width:10px;height:10px;background:#2563eb;margin-right:4px;vertical-align:middle;"></span>Réel (en bas, bleu italique)
+            <span class="budget-legend">
+                <span><span class="dot" style="background:var(--good)"></span>≤ 90% du budget</span>
+                <span><span class="dot" style="background:var(--warn)"></span>90–110%</span>
+                <span><span class="dot" style="background:var(--urgent)"></span>&gt; 110%</span>
+                <span style="color:var(--ink-muted);">💡 Survolez une barre pour voir le montant réel exact</span>
             </span>
         </div>
         <div id="budgetGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
@@ -1452,7 +1466,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.9.5';
+const APP_VERSION = '2.9.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1485,12 +1499,12 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), fiscalYearsOp: new Set(), fiscalYearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.9.5 : Quittances ──────────────────────────────────────────────────────
+// ── v2.9.6 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; 
-// ── v2.9.5 : Exercice fiscal (par compte) ──────────────────────────────────────
+// ── v2.9.6 : Exercice fiscal (par compte) ──────────────────────────────────────
 var fiscalStartMonth = 1; // 1=Janvier (par défaut), 1-12
-// ── v2.9.5 : Budget / Projection (par compte) ──────────────────────────────────
+// ── v2.9.6 : Budget / Projection (par compte) ──────────────────────────────────
 var budgetEnabled = false;
 var budgetData = {}; // { [fiscalYearLabel]: { [cat1]: { [cat2]: { [month01..12]: montant } } } }// [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1541,7 +1555,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.9.5 : séquence Google d'abord, MDP ensuite
+    // v2.9.6 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1958,7 +1972,7 @@ function enrichTxTimeFields(t) {
     let dexp = t.dateExpense || t.dateOp; t.yearExpense = dexp.length >= 4 ? dexp.substring(0,4) : ''; t.monthExpense = dexp.length >= 7 ? dexp.substring(0,7) : ''; 
 }
 
-// ── v2.9.5 : Utilitaires exercice fiscal ────────────────────────────────────
+// ── v2.9.6 : Utilitaires exercice fiscal ────────────────────────────────────
 function getFiscalYearLabel(y, m, startMonth) {
     // y: année civile (string 4 chiffres), m: mois "01".."12", startMonth: 1-12
     if (!y || y === 'vide' || !m || m === 'vide') return 'vide';
@@ -1986,7 +2000,7 @@ window.setFiscalStartMonth = function(v) {
     showToast('Exercice fiscal mis à jour ✓');
 };
 
-// ── v2.9.5 : Budget / Projection — logique ──────────────────────────────────
+// ── v2.9.6 : Budget / Projection — logique ──────────────────────────────────
 window.populateBudgetExerciceSelect = function() {
     let sel = $('budgetExerciceSelect');
     if (!sel) return;
@@ -2033,7 +2047,6 @@ window.renderBudget = function() {
     let ex = sel.value;
     if (!ex) return;
 
-    // Déterminer les 12 mois de l'exercice, dans l'ordre fiscal
     let months = [];
     for (let i = 0; i < 12; i++) {
         let mi = ((fiscalStartMonth - 1 + i) % 12) + 1;
@@ -2041,10 +2054,7 @@ window.renderBudget = function() {
     }
     const monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
 
-    // Transactions réelles appartenant à cet exercice (basé sur dateExpense)
-    let realByC1C2Month = {}; // c1::c2::month -> sum
-    let realByC1Month = {};   // c1::month -> sum
-    let realTotalMonth = {};  // month -> sum
+    let realByC1C2Month = {}, realByC1Month = {}, realTotalMonth = {};
     transactions.forEach(t => {
         if (t.amount === 0) return;
         let dStr = String(t.dateExpense || t.dateOp || '');
@@ -2060,8 +2070,7 @@ window.renderBudget = function() {
         realTotalMonth[m] = (realTotalMonth[m]||0) + amt;
     });
 
-    // Catégories à afficher: toutes les cat1/cat2 existantes + celles déjà budgétées pour cet exercice
-    let allCats = {}; // c1 -> Set(c2)
+    let allCats = {};
     Object.keys(categories).forEach(c1 => { allCats[c1] = new Set(categories[c1] || []); });
     if (budgetData[ex]) {
         Object.keys(budgetData[ex]).forEach(c1 => {
@@ -2073,33 +2082,44 @@ window.renderBudget = function() {
 
     const getBudget = (c1, c2, m) => (budgetData[ex] && budgetData[ex][c1] && budgetData[ex][c1][c2] && budgetData[ex][c1][c2][m]) || 0;
 
-    // Cellule éditable (sous-catégorie) : budget centré + réel en petit bas-droite
-    const editableCell = (c1, c2, m) => {
+    const pctClass = (pct) => pct <= 90 ? 'fill-good' : (pct <= 110 ? 'fill-warn' : 'fill-over');
+
+    // Cellule éditable (sous-catégorie) : budget + barre de progression + tooltip réel
+    const progEditableCell = (c1, c2, m) => {
         let bVal = getBudget(c1, c2, m);
         let rVal = realByC1C2Month[`${c1}::${c2}::${m}`] || 0;
-        let realTxt = rVal !== 0 ? `<span class="budget-real-badge">${formatCurrency(rVal)}</span>` : '';
-        return `<td class="tcd-cell budget-editable-cell">
-            <div class="budget-cell-stack">
-                <div class="budget-cell-top"><span class="budget-val" contenteditable="true" data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}"
+        let pct = bVal ? Math.round(rVal / bVal * 100) : (rVal ? 999 : 0);
+        let barWidth = bVal ? Math.min(pct, 130) : (rVal ? 100 : 0);
+        let hasBar = bVal !== 0 || rVal !== 0;
+        let bar = hasBar ? `<div class="prog-bar-track"><div class="prog-bar-fill ${pctClass(pct)}" style="width:${barWidth}%"></div></div>` : '<div class="prog-bar-track prog-bar-empty"></div>';
+        let tooltip = (bVal !== 0 || rVal !== 0) ? `<div class="tooltip">Réel : ${formatCurrency(rVal)}${bVal ? ' (' + pct + '%)' : ''}</div>` : '';
+        return `<td class="tcd-cell prog-cell">
+            <div class="prog-inner">
+                <span class="budget-val" contenteditable="true" data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}"
                     onfocus="window.onBudgetCellFocus(this)"
                     onblur="window.setBudgetCell('${escapeHtml(ex)}','${escapeHtml(c1)}','${escapeHtml(c2)}','${m}',this.textContent)"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${bVal ? formatCurrency(bVal) : ''}</span></div>
-                <div class="budget-cell-bottom">${realTxt}</div>
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${bVal ? formatCurrency(bVal) : ''}</span>
+                ${bar}
+                ${tooltip}
             </div>
         </td>`;
     };
-    // Cellule agrégée (totaux cat1, TOTAL GLOBAL, colonnes TOTAL) : lecture seule, budget en haut + réel en bas
-    const aggCell = (bVal, rVal, extraClass, forceShowBudget) => {
-        let realTxt = rVal !== 0 ? `<span class="budget-real-badge">${formatCurrency(rVal)}</span>` : '';
+    // Cellule agrégée (totaux) : lecture seule, même logique de barre
+    const progAggCell = (bVal, rVal, extraClass, forceShowBudget) => {
+        let pct = bVal ? Math.round(rVal / bVal * 100) : (rVal ? 999 : 0);
+        let barWidth = bVal ? Math.min(pct, 130) : (rVal ? 100 : 0);
+        let hasBar = bVal !== 0 || rVal !== 0;
+        let bar = hasBar ? `<div class="prog-bar-track"><div class="prog-bar-fill ${pctClass(pct)}" style="width:${barWidth}%"></div></div>` : '<div class="prog-bar-track prog-bar-empty"></div>';
+        let tooltip = (bVal !== 0 || rVal !== 0) ? `<div class="tooltip">Réel : ${formatCurrency(rVal)}${bVal ? ' (' + pct + '%)' : ''}</div>` : '';
         let budgetTxt = (bVal || forceShowBudget) ? formatCurrency(bVal) : '';
-        return `<td class="tcd-cell budget-agg-cell${extraClass?(' '+extraClass):''}">
-            <div class="budget-cell-stack">
-                <div class="budget-cell-top"><span class="budget-val-ro">${budgetTxt}</span></div>
-                <div class="budget-cell-bottom">${realTxt}</div>
+        return `<td class="tcd-cell prog-cell${extraClass?(' '+extraClass):''}">
+            <div class="prog-inner">
+                <span class="budget-val-ro">${budgetTxt}</span>
+                ${bar}
+                ${tooltip}
             </div>
         </td>`;
-    }
-;
+    };
 
     let html = '<table class="tcd-native budget-table" cellspacing="0" cellpadding="0">';
     html += '<colgroup><col style="width:240px;">' + months.map(()=>'<col>').join('') + '<col style="width:110px;"></colgroup>';
@@ -2121,12 +2141,12 @@ window.renderBudget = function() {
             c1BudgetByMonth[m] = bSum; c1RealByMonth[m] = rSum;
             grandBudgetByMonth[m] = (grandBudgetByMonth[m]||0) + bSum;
             grandRealByMonth[m] = (grandRealByMonth[m]||0) + rSum;
-            html += aggCell(bSum, rSum, 'tcd-row-main-cell', c2List.length > 0);
+            html += progAggCell(bSum, rSum, 'tcd-row-main-cell', c2List.length > 0);
         });
         let c1BudgetTotal = Object.values(c1BudgetByMonth).reduce((a,b)=>a+b,0);
         let c1RealTotal = Object.values(c1RealByMonth).reduce((a,b)=>a+b,0);
         grandBudgetTotal += c1BudgetTotal; grandRealTotal += c1RealTotal;
-        html += aggCell(c1BudgetTotal, c1RealTotal, 'tcd-total-col tcd-grand tcd-row-main-cell', c2List.length > 0);
+        html += progAggCell(c1BudgetTotal, c1RealTotal, 'tcd-total-col tcd-grand tcd-row-main-cell', c2List.length > 0);
         html += '</tr>';
 
         c2List.forEach(c2 => {
@@ -2136,24 +2156,24 @@ window.renderBudget = function() {
                 let bVal = getBudget(c1, c2, m);
                 let rVal = realByC1C2Month[`${c1}::${c2}::${m}`] || 0;
                 c2BudgetTotal += bVal; c2RealTotal += rVal;
-                html += editableCell(c1, c2, m);
+                html += progEditableCell(c1, c2, m);
             });
-            html += aggCell(c2BudgetTotal, c2RealTotal, 'tcd-total-col tcd-grand');
+            html += progAggCell(c2BudgetTotal, c2RealTotal, 'tcd-total-col tcd-grand');
             html += '</tr>';
         });
     });
 
-    // Ligne TOTAL GLOBAL
     html += '<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL GLOBAL</div></td>';
     months.forEach(m => {
-        html += aggCell(grandBudgetByMonth[m]||0, grandRealByMonth[m]||0, 'tcd-total-row-cell');
+        html += progAggCell(grandBudgetByMonth[m]||0, grandRealByMonth[m]||0, 'tcd-total-row-cell', true);
     });
-    html += aggCell(grandBudgetTotal, grandRealTotal, 'tcd-total-col tcd-grand tcd-total-row-cell');
+    html += progAggCell(grandBudgetTotal, grandRealTotal, 'tcd-total-col tcd-grand tcd-total-row-cell', true);
     html += '</tr>';
 
     html += '</tbody></table>';
     container.innerHTML = html;
 };
+
 
 window.onBudgetCellFocus = function(el) {
     // Sélectionne le texte existant pour faciliter la saisie
@@ -2553,7 +2573,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.9.5
+// QUICK CAT SEARCH — v2.9.6
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2753,7 +2773,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.9.5
+// CAT MODAL SEARCH — v2.9.6
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2806,7 +2826,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.9.5
+// GRAPHIQUES ENGINE  — v2.9.6
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3441,7 +3461,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.9.5
+// IDÉES AMÉLIORATION — v2.9.6
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3991,7 +4011,7 @@ window.renderCategories = function() {
     let c=$('categoriesContainer'); c.innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<div class="summary-card cat1-dropzone" data-c1="${escapeHtml(c1)}" ondragover="window.onCat1DragOver(event,this)" ondragleave="window.onCat1DragLeave(event,this)" ondrop="window.onCat1Drop(event,'${escapeHtml(c1)}')"><div style="display:flex;justify-content:space-between;font-weight:600;align-items:center;"><span class="cat1-editable" data-c1="${escapeHtml(c1)}" title="Cliquer pour renommer" style="cursor:pointer;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor='var(--ink-faint)'" onmouseout="this.style.borderBottomColor='transparent'" onclick="window.startRenameCat1(this,'${escapeHtml(c1)}')">${escapeHtml(c1)}</span> <button class="btn btn-outline" style="padding:2px 6px;color:var(--urgent)" onclick="window.deleteCategory1('${escapeHtml(c1)}')">X</button></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;">${categories[c1].sort(customSortCmp).map(c2=>`<div class="cat2-chip" draggable="true" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" ondragstart="window.onCat2DragStart(event,'${escapeHtml(c1)}','${escapeHtml(c2)}')" ondragend="window.onCat2DragEnd(event)" style="background:var(--bg);border:1px solid var(--ink-faint);padding:2px 6px 2px 2px;border-radius:12px;font-size:0.85em;display:flex;gap:4px;align-items:center;"><span class="cat2-drag-handle" title="Glisser pour déplacer" style="cursor:grab;color:var(--ink-faint);font-size:1em;line-height:1;padding:0 2px;user-select:none;">⠿</span><span class="cat2-editable" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" title="Cliquer pour renommer" style="cursor:pointer;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor='var(--ink-faint)'" onmouseout="this.style.borderBottomColor='transparent'" onclick="window.startRenameCat2(this,'${escapeHtml(c1)}','${escapeHtml(c2)}')">${escapeHtml(c2)}</span> <button style="background:none;border:none;color:var(--urgent);cursor:pointer;font-size:1.1em;" onclick="window.deleteCategory2('${escapeHtml(c1)}','${escapeHtml(c2)}')">×</button></div>`).join('')}</div><div style="display:flex;gap:4px;"><input type="text" class="input-text" placeholder="Ajouter sous-cat..." onkeypress="if(event.key==='Enter'){if(this.value.trim()){categories['${escapeHtml(c1)}'].push(this.value.trim());categories['${escapeHtml(c1)}'].sort(customSortCmp);triggerSave();window.renderCategories();}}"></div></div>`).join('');
 };
 
-// ── v2.9.5 : Drag & drop des catégories 2 vers une autre catégorie 1 ───────
+// ── v2.9.6 : Drag & drop des catégories 2 vers une autre catégorie 1 ───────
 window._draggedCat2 = null;
 window.onCat2DragStart = function(ev, c1, c2) {
     window._draggedCat2 = { c1, c2 };
@@ -4036,7 +4056,7 @@ window.moveCategory2 = function(sourceC1, c2, targetC1) {
 };
 
 
-// ── v2.9.5 : Renommage inline des catégories ────────────────────────────────
+// ── v2.9.6 : Renommage inline des catégories ────────────────────────────────
 window.startRenameCat1 = function(el, oldName) {
     let input = document.createElement('input');
     input.type = 'text'; input.value = oldName; input.className = 'input-text';
@@ -4096,7 +4116,7 @@ window.renameCategory2 = function(c1, oldName, newName) {
     showToast('✅ Sous-catégorie renommée');
 };
 
-// ── v2.9.5 : Suppression de catégories avec impact base de données ─────────
+// ── v2.9.6 : Suppression de catégories avec impact base de données ─────────
 window.deleteCategory1 = function(c1) {
     if (!confirm(`⚠️ Supprimer la catégorie "${c1}" et toutes ses sous-catégories ?\n\nLes transactions et règles utilisant cette catégorie perdront leur catégorisation (à redéfinir plus tard).`)) return;
     delete categories[c1];
@@ -4408,7 +4428,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.9.5
+// EXPORT / IMPORT BASE DE DONNÉES v2.9.6
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4541,7 +4561,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.9.5+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.9.6+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4797,7 +4817,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.9.5
+// QUITTANCES — v2.9.6
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4819,7 +4839,7 @@ function applyQuittancesOptionState() {
     if (cb) cb.checked = enabled;
 }
 
-// ── v2.9.5 : Budget / Projection ────────────────────────────────────────────
+// ── v2.9.6 : Budget / Projection ────────────────────────────────────────────
 window.toggleBudgetOption = function(checked) {
     budgetEnabled = checked;
     localStorage.setItem('f_budget_enabled_' + currentAccountId, checked ? '1' : '0');
