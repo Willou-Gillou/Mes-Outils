@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.7.8</title>
-    <!-- v2.7.8 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.7.9</title>
+    <!-- v2.7.9 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -283,7 +283,7 @@
 }
 
 
-/* v2.7.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.7.9 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -321,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.7.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.7.9 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -451,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.7.8 — Responsive Quittances (mobile) */
+/* v2.7.9 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -466,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.7.8 — Améliorations UX iPhone supplémentaires */
+/* v2.7.9 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -806,7 +806,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.7.8
+         GRAPHIQUES VIEW  — v2.7.9
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -986,6 +986,24 @@
                 Quittances (générer des quittances de loyer en PDF)
             </label>
             <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié pour créer et gérer les quittances de loyer par bien/locataire.</p>
+        </div>
+        <div class="summary-card" style="margin-top:24px;max-width:480px;">
+            <h3 style="margin-bottom:12px;">📅 Exercice fiscal (Tableau de bord)</h3>
+            <p style="color:var(--ink-soft);margin-bottom:12px;font-size:0.85em;">Définit le mois de début de l'exercice pour ce compte. Impacte le regroupement par période dans l'onglet Tableau de bord.</p>
+            <select id="fiscalStartMonthSelect" class="input-text" style="width:auto;" onchange="window.setFiscalStartMonth(this.value)">
+                <option value="1">Janvier - Décembre</option>
+                <option value="2">Février - Janvier</option>
+                <option value="3">Mars - Février</option>
+                <option value="4">Avril - Mars</option>
+                <option value="5">Mai - Avril</option>
+                <option value="6">Juin - Mai</option>
+                <option value="7">Juillet - Juin</option>
+                <option value="8">Août - Juillet</option>
+                <option value="9">Septembre - Août</option>
+                <option value="10">Octobre - Septembre</option>
+                <option value="11">Novembre - Octobre</option>
+                <option value="12">Décembre - Novembre</option>
+            </select>
         </div>
         <div class="summary-card" style="margin-top:24px;">
             <h3 style="margin-bottom:12px;">🛠️ Administration Drive</h3>
@@ -1362,7 +1380,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.7.8';
+const APP_VERSION = '2.7.9';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1395,9 +1413,11 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.7.8 : Quittances ──────────────────────────────────────────────────────
+// ── v2.7.9 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
-var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
+var quittancesBiens = []; 
+// ── v2.7.9 : Exercice fiscal (par compte) ──────────────────────────────────────
+var fiscalStartMonth = 1; // 1=Janvier (par défaut), 1-12// [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
 let _lastR1Keys = [];
 let selectedUncatTxId = null;
@@ -1446,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.7.8 : séquence Google d'abord, MDP ensuite
+    // v2.7.9 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -1857,6 +1877,34 @@ function enrichTxTimeFields(t) {
     let dexp = t.dateExpense || t.dateOp; t.yearExpense = dexp.length >= 4 ? dexp.substring(0,4) : ''; t.monthExpense = dexp.length >= 7 ? dexp.substring(0,7) : ''; 
 }
 
+// ── v2.7.9 : Utilitaires exercice fiscal ────────────────────────────────────
+function getFiscalYearLabel(y, m, startMonth) {
+    // y: année civile (string 4 chiffres), m: mois "01".."12", startMonth: 1-12
+    if (!y || y === 'vide' || !m || m === 'vide') return 'vide';
+    let yi = parseInt(y, 10), mi = parseInt(m, 10);
+    if (startMonth === 1) return String(yi);
+    // Exercice décalé: si le mois est avant le mois de début, il appartient à l'exercice qui a commencé l'année précédente
+    let fiscalStartYear = (mi >= startMonth) ? yi : (yi - 1);
+    return `${fiscalStartYear}-${fiscalStartYear + 1}`;
+}
+function getFiscalMonthOrder(m, startMonth) {
+    // Renvoie un rang 0-11 pour trier les mois dans l'ordre de l'exercice fiscal
+    let mi = parseInt(m, 10);
+    if (isNaN(mi)) return 99;
+    return (mi - startMonth + 12) % 12;
+}
+function loadFiscalStartMonth() {
+    let v = localStorage.getItem('f_fiscal_start_' + currentAccountId);
+    fiscalStartMonth = v ? parseInt(v, 10) : 1;
+    if (isNaN(fiscalStartMonth) || fiscalStartMonth < 1 || fiscalStartMonth > 12) fiscalStartMonth = 1;
+}
+window.setFiscalStartMonth = function(v) {
+    fiscalStartMonth = parseInt(v, 10) || 1;
+    localStorage.setItem('f_fiscal_start_' + currentAccountId, String(fiscalStartMonth));
+    window.renderSummary();
+    showToast('Exercice fiscal mis à jour ✓');
+};
+
 window.renderSummary = function(force=false) {
     const r1F = $('pivotRows').value, r2F = $('pivotRows2').value, tAxe = $('timeAxe').value;
     localStorage.setItem('f_pivot_v2', JSON.stringify({r1:r1F, r2:r2F, axe:tAxe}));
@@ -1883,8 +1931,9 @@ window.renderSummary = function(force=false) {
 
     validTx.forEach(t => {
         let dStr = String(t[tAxe] || t.dateOp || '');
-        let y = dStr.length >= 4 ? dStr.substring(0,4) : 'vide';
+        let yRaw = dStr.length >= 4 ? dStr.substring(0,4) : 'vide';
         let m = dStr.length >= 7 ? dStr.substring(5,7) : 'vide';
+        let y = getFiscalYearLabel(yRaw, m, fiscalStartMonth);
         let cat1 = t.cat1 || '_SANS_CATEGORIE', cat2 = t.cat2 || '_SANS_CATEGORIE';
         let map = {cat1, cat2, paymentMethod: t.paymentMethod, label: t.label};
         let r1 = String(map[r1F] || 'vide');
@@ -1942,7 +1991,7 @@ window.renderSummary = function(force=false) {
         let yearToggleLabel = '<span class="tcd-toggle-year" data-y="' + y + '" style="cursor:pointer;display:block;text-align:center;font-weight:700;letter-spacing:1px;" title="Cliquer pour réduire/développer">' + y + '</span>';
         let subCols = [];
         if (!isCol) {
-            Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                 let padM = m.toString().padStart(2,'0');
                 let monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
                 subCols.push({ title: monthNames[parseInt(m)] || padM, field: y+'_'+padM, width:80, hozAlign:"right", formatter:"html", headerSort:false });
@@ -1974,7 +2023,7 @@ window.renderSummary = function(force=false) {
         yearsSorted.forEach(y => {
             let isCol = collapsedYears.has(y);
             if (!isCol) {
-                Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+                Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                     let padM = m.toString().padStart(2,'0');
                     rowObj[`${y}_${padM}`] = cellFmt(tree[r1].cells[`${r1}::*::${y}::${m}`]||0, `${r1}::*::${y}::${m}`);
                 });
@@ -1993,7 +2042,7 @@ window.renderSummary = function(force=false) {
                 yearsSorted.forEach(y => {
                     let isCol = collapsedYears.has(y);
                     if (!isCol) {
-                        Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+                        Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                             let padM = m.toString().padStart(2,'0');
                             subObj[`${y}_${padM}`] = cellFmt(tree[r1].sub[r2].cells[`${r1}::${r2}::${y}::${m}`]||0, `${r1}::${r2}::${y}::${m}`, true);
                         });
@@ -2012,7 +2061,7 @@ window.renderSummary = function(force=false) {
         let isCol = collapsedYears.has(y);
         let yTotal = colTotals[`${y}::ALL`]||0;
         if (!isCol) {
-            Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                 let padM = m.toString().padStart(2,'0');
                 totalObj[`${y}_${padM}`] = cellFmt(colTotals[`${y}::${m}`]||0, `MONTH_TOTAL::${y}::${padM}`);
             });
@@ -2062,7 +2111,7 @@ window.renderSummary = function(force=false) {
             html += '<th class="tcd-th-month tcd-total-col' + (isCol ? '' : ' tcd-year-total-hidden') + '"><b>TOTAL</b></th>';
         } else {
             let monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-            Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                 html += '<th class="tcd-th-month">' + (monthNames[parseInt(m)] || m) + '</th>';
             });
             // TOTAL colonne cachée quand développé
@@ -2082,7 +2131,7 @@ window.renderSummary = function(force=false) {
         yearsSorted.forEach(y => {
             let isCol = collapsedYears.has(y);
             if (!isCol) {
-                Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+                Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                     let padM = m.toString().padStart(2,'0');
                     html += cellFmt2(tree[r1].cells[`${r1}::*::${y}::${m}`]||0, `${r1}::*::${y}::${m}`);
                 });
@@ -2101,7 +2150,7 @@ window.renderSummary = function(force=false) {
                 yearsSorted.forEach(y => {
                     let isCol = collapsedYears.has(y);
                     if (!isCol) {
-                        Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+                        Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                             let padM = m.toString().padStart(2,'0');
                             html += cellFmt2(tree[r1].sub[r2].cells[`${r1}::${r2}::${y}::${m}`]||0, `${r1}::${r2}::${y}::${m}`, true);
                         });
@@ -2125,7 +2174,7 @@ window.renderSummary = function(force=false) {
     yearsSorted.forEach(y => {
         let isCol = collapsedYears.has(y);
         if (!isCol) {
-            Array.from(yearsMap[y]).sort((a,b)=>Number(a)-Number(b)).forEach(m => {
+            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
                 let padM = m.toString().padStart(2,'0');
                 let v = colTotals[`${y}::${m}`]||0;
                 html += '<td class="tcd-cell">' + (v ? '<span class="tcd-clickable" data-k="MONTH_TOTAL::' + y + '::' + padM + '">' + formatCurrency(v) + '</span>' : '') + '</td>';
@@ -2237,7 +2286,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.7.8
+// QUICK CAT SEARCH — v2.7.9
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2437,7 +2486,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.7.8
+// CAT MODAL SEARCH — v2.7.9
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2490,7 +2539,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.7.8
+// GRAPHIQUES ENGINE  — v2.7.9
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3125,7 +3174,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.7.8
+// IDÉES AMÉLIORATION — v2.7.9
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3965,7 +4014,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.7.8
+// EXPORT / IMPORT BASE DE DONNÉES v2.7.9
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4098,7 +4147,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.7.8+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.7.9+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4256,6 +4305,7 @@ window.switchAccount = async function(newId) {
     localStorage.setItem('f_current_account', newId);
     transactions = []; rules = []; categories = {}; savedCharts = [];
     quittancesBiens = []; currentQuittanceBienId = null;
+    loadFiscalStartMonth(); applyFiscalStartMonthState();
     if (window.appState) window.appState.tcdRedCells = window.appState.tcdRedCells || {};
     driveFileId = null;
     window.renderAccountUI();
@@ -4350,7 +4400,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.7.8
+// QUITTANCES — v2.7.9
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -4370,6 +4420,11 @@ function applyQuittancesOptionState() {
     $('tabQuittances').style.display = enabled ? '' : 'none';
     let cb = $('optQuittancesCb');
     if (cb) cb.checked = enabled;
+}
+
+function applyFiscalStartMonthState() {
+    let sel = $('fiscalStartMonthSelect');
+    if (sel) sel.value = String(fiscalStartMonth);
 }
 
 function saveQuittancesBiens() {
@@ -5463,6 +5518,8 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             quittancesEnabled = localStorage.getItem('f_quittances_enabled_' + currentAccountId) === '1';
             applyQuittancesOptionState();
+            loadFiscalStartMonth();
+            applyFiscalStartMonthState();
         } catch(e) {}
     }, 300);
 });
