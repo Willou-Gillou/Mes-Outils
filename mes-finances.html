@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v2.7.7</title>
-    <!-- v2.7.7 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v2.7.8</title>
+    <!-- v2.7.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -283,7 +283,7 @@
 }
 
 
-/* v2.7.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v2.7.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -321,7 +321,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v2.7.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v2.7.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -451,7 +451,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v2.7.7 — Responsive Quittances (mobile) */
+/* v2.7.8 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -466,7 +466,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v2.7.7 — Améliorations UX iPhone supplémentaires */
+/* v2.7.8 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -806,7 +806,7 @@
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v2.7.7
+         GRAPHIQUES VIEW  — v2.7.8
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1327,6 +1327,7 @@
             <select id="bankSelectImport" class="input-text">
                 <option value="FORTUNEO">Fortuneo</option>
                 <option value="SOGE">SOGE</option>
+                <option value="CE">Caisse d'Épargne</option>
             </select>
         </div>
         <div style="margin-bottom:24px;">
@@ -1361,7 +1362,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '2.7.7';
+const APP_VERSION = '2.7.8';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1394,7 +1395,7 @@ let uncatSortDir = parseInt(localStorage.getItem('uncatSortDir') || '-1');
 let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
-// ── v2.7.7 : Quittances ──────────────────────────────────────────────────────
+// ── v2.7.8 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; // [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1445,7 +1446,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v2.7.7 : séquence Google d'abord, MDP ensuite
+    // v2.7.8 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2236,7 +2237,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v2.7.7
+// QUICK CAT SEARCH — v2.7.8
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -2436,7 +2437,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v2.7.7
+// CAT MODAL SEARCH — v2.7.8
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -2489,7 +2490,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v2.7.7
+// GRAPHIQUES ENGINE  — v2.7.8
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3124,7 +3125,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v2.7.7
+// IDÉES AMÉLIORATION — v2.7.8
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -3774,7 +3775,7 @@ $('deleteAllBtn').addEventListener('click', async () => {
 $('importBtnUI').addEventListener('click',()=>$('importOverlay').classList.add('open'));
 $('triggerFileBtn').addEventListener('click',()=>{
     selectedBankForImport = $('bankSelectImport').value;
-    let isCsvOnly = (selectedBankForImport==='SOGE'||selectedBankForImport==='FORTUNEO');
+    let isCsvOnly = (selectedBankForImport==='SOGE'||selectedBankForImport==='FORTUNEO'||selectedBankForImport==='CE');
     $('bankFileInput').accept = isCsvOnly ? '.csv' : '.csv,.xls,.xlsx';
     $('bankFileInput').click();
 });
@@ -3786,13 +3787,13 @@ $('bankFileInput').addEventListener('change',e=>{
     if(!driveDataLoaded){ alert('⚠️ Les données ne sont pas encore chargées depuis Drive.\nVeuillez patienter que la synchronisation soit terminée avant d\'importer.'); e.target.value=''; return; }
     $('importOverlay').classList.remove('open'); let r=new FileReader(); r.onload=ev=>{
         try {
-            let rows, bankType = selectedBankForImport==='SOGE'?'SOGE':selectedBankForImport==='FORTUNEO'?'FORT':'GEN';
+            let rows, bankType = selectedBankForImport==='SOGE'?'SOGE':selectedBankForImport==='FORTUNEO'?'FORT':selectedBankForImport==='CE'?'CE':'GEN';
             let rawRows;
             if (f.name.match(/\.xlsx?$/i)) {
                 let wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array', raw:true});
                 let ws = wb.Sheets[wb.SheetNames[0]];
                 rawRows = XLSX.utils.sheet_to_json(ws, {header:1, defval:'', raw:true});
-                rows = bankType==='SOGE' ? rawRows.slice(3) : rawRows;
+                rows = bankType==='SOGE' ? rawRows.slice(3) : (bankType==='CE' ? rawRows.slice(1) : rawRows);
             } else {
                 rawRows = ev.target.result.split(/\r?\n/).map(l=>l.split(';').map(x=>x.replace(/(^"|"$)/g,'').trim()));
                 rows = rawRows;
@@ -3800,6 +3801,8 @@ $('bankFileInput').addEventListener('change',e=>{
                 if (bankType==='SOGE') rows = rawRows.slice(3);
                 // Pour FORTUNEO CSV: première ligne = entête
                 if (bankType==='FORT') rows = rawRows.slice(1);
+                // Pour Caisse d'Épargne CSV: première ligne = entête
+                if (bankType==='CE') rows = rawRows.slice(1);
             }
             let res = parseBankData(rows, bankType, selectedBankForImport);
             if(res.add>0){
@@ -3874,6 +3877,27 @@ function parseBankData(rows, type, bName) {
             } else { skippedIdx.push(rowIdx); }
             return;
         }
+        if(type==='CE'){
+            // Col 0=Date comptable, Col 1=Libellé simplifié, Col 2=Référence, Col 3=Informations complémentaires,
+            // Col 4=Type opération (skip), Col 5=Débit, Col 6=Crédit, Col 7=Date opération (skip), Col 8=Date de valeur (skip), Col 9=Pointage (skip)
+            dop = excelDateToISO(r[0]);
+            if (!dop) return;
+            let libSimp = String(r[1]||'').trim();
+            let refer = String(r[2]||'').trim();
+            det = [libSimp, refer].filter(Boolean).join(' ');
+            let note = String(r[3]||'').trim();
+            let debitStr = String(r[5]||'').trim();
+            let creditStr = String(r[6]||'').trim();
+            let debit = debitStr ? parseAmount(debitStr) : NaN;
+            let credit = creditStr ? parseAmount(creditStr) : NaN;
+            a = !isNaN(credit) && credit!==0 ? Math.abs(credit) : (!isNaN(debit) && debit!==0 ? -Math.abs(debit) : NaN);
+            if (isNaN(a) || a===0) return;
+            if (!isDuplicate(dop, a, det, 'CE')){
+                transactions.push({id:String(Date.now()+add)+String(Math.random()).slice(2),dateOp:dop,dateExpense:dop,label:'CE',details:det,note:note,amount:a,paymentMethod:'',cat1:'',cat2:''});
+                add++; importedIdx.push(rowIdx);
+            } else { skippedIdx.push(rowIdx); }
+            return;
+        }
         // For other types: use old date detection
         let c0=String(c0raw).trim();
         if(c0.match(/^\d{2}\/\d{2}\/\d{4}$/)){
@@ -3941,7 +3965,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v2.7.7
+// EXPORT / IMPORT BASE DE DONNÉES v2.7.8
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4074,7 +4098,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v2.7.7+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v2.7.8+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -4326,7 +4350,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v2.7.7
+// QUITTANCES — v2.7.8
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
