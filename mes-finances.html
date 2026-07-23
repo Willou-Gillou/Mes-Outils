@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.0.7</title>
-    <!-- v3.0.7 - Ajout ligne manuelle BDD, version unifiée -->
+    <title>Mes finances - v3.0.8</title>
+    <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -302,7 +302,7 @@
 }
 
 
-/* v3.0.7 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v3.0.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
 .tcd-col-axis {
   position: sticky !important;
   left: 0 !important;
@@ -340,7 +340,7 @@
 
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   v3.0.7 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
+   v3.0.8 — RESPONSIVE MOBILE (iPhone / écrans < 768px)
    Ce bloc n'affecte JAMAIS l'affichage desktop/tablette (>768px) grâce
    à la media query. Aucune règle desktop existante n'est modifiée.
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -470,7 +470,7 @@
     .tcd-native { font-size: 0.65em; }
 }
 
-/* v3.0.7 — Responsive Quittances (mobile) */
+/* v3.0.8 — Responsive Quittances (mobile) */
 @media (max-width: 768px) {
     #qGenColLeft, #qGenColRight { flex: 1 1 100% !important; min-width: 0 !important; }
     #view-quittances .summary-card { flex: 1 1 100% !important; min-width: 0 !important; }
@@ -485,7 +485,7 @@
     #qGenColLeft { order: 1; }
 }
 
-/* v3.0.7 — Améliorations UX iPhone supplémentaires */
+/* v3.0.8 — Améliorations UX iPhone supplémentaires */
 @media (max-width: 768px) {
     /* Support des zones sûres (encoche / Dynamic Island / home indicator) */
     body {
@@ -914,7 +914,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 
 
     <!-- ══════════════════════════════════════════════
-         GRAPHIQUES VIEW  — v3.0.7
+         GRAPHIQUES VIEW  — v3.0.8
     ══════════════════════════════════════════════ -->
     <div id="view-charts" class="view">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
@@ -1081,12 +1081,18 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             
             <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateBudget()">✅ Valider budget</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelBudgetValidation()">↩️ Annuler budget</button>
+            <button id="btnCloturerExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerBtnClick(event)">🔒 Clôturer exercice</button>
             <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
             <span style="font-size:0.82em;font-weight:600;color:var(--ink-soft);">Taille éléments tableau :</span>
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(1)">+</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(-1)">−</button>
         </div>
         <div id="budgetValidatedBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--pro-soft);border-radius:8px;color:var(--pro);"></div>
+        <div id="budgetCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--good-soft, #dcfce7);border-radius:8px;color:var(--good, #16a34a);"></div>
+        <div id="budgetCloseNotesWrap" style="display:none;margin:0 16px 8px 16px;">
+            <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Notes :</label>
+            <textarea id="budgetCloseNotes" class="input-text" style="width:100%;min-height:60px;font-size:0.85em;" onblur="window.onBudgetCloseNotesBlur()"></textarea>
+        </div>
         <div id="budgetGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
     </div>
 
@@ -1512,7 +1518,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.0.7';
+const APP_VERSION = '3.0.8';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1546,12 +1552,12 @@ let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), fiscalYearsOp: new Set(), fiscalYearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
 var budgetFilter = { cat1: new Set(), cat2: new Set() }; // sets = éléments EXCLUS (filtre onglet Budget)
-// ── v3.0.7 : Quittances ──────────────────────────────────────────────────────
+// ── v3.0.8 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; 
-// ── v3.0.7 : Exercice fiscal (par compte) ──────────────────────────────────────
+// ── v3.0.8 : Exercice fiscal (par compte) ──────────────────────────────────────
 var fiscalStartMonth = 1; // 1=Janvier (par défaut), 1-12
-// ── v3.0.7 : Budget / Projection (par compte) ──────────────────────────────────
+// ── v3.0.8 : Budget / Projection (par compte) ──────────────────────────────────
 var budgetEnabled = false;
 var budgetData = {}; // { [fiscalYearLabel]: { [cat1]: { [cat2]: { [month01..12]: montant } } } }// [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -1602,7 +1608,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if(conf.axe) $('timeAxe').value = conf.axe;
         } catch(e){}
     }
-    // v3.0.7 : séquence Google d'abord, MDP ensuite
+    // v3.0.8 : séquence Google d'abord, MDP ensuite
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -2019,7 +2025,7 @@ function enrichTxTimeFields(t) {
     let dexp = t.dateExpense || t.dateOp; t.yearExpense = dexp.length >= 4 ? dexp.substring(0,4) : ''; t.monthExpense = dexp.length >= 7 ? dexp.substring(0,7) : ''; 
 }
 
-// ── v3.0.7 : Utilitaires exercice fiscal ────────────────────────────────────
+// ── v3.0.8 : Utilitaires exercice fiscal ────────────────────────────────────
 function getFiscalYearLabel(y, m, startMonth) {
     // y: année civile (string 4 chiffres), m: mois "01".."12", startMonth: 1-12
     if (!y || y === 'vide' || !m || m === 'vide') return 'vide';
@@ -2047,7 +2053,7 @@ window.setFiscalStartMonth = function(v) {
     showToast('Exercice fiscal mis à jour ✓');
 };
 
-// ── v3.0.7 : Budget / Projection — logique ──────────────────────────────────
+// ── v3.0.8 : Budget / Projection — logique ──────────────────────────────────
 window.populateBudgetExerciceSelect = function() {
     let sel = $('budgetExerciceSelect');
     if (!sel) return;
@@ -2073,6 +2079,7 @@ window.populateBudgetExerciceSelect = function() {
 };
 
 window.setBudgetCell = function(ex, c1, c2, month, val) {
+    if (budgetData[ex] && budgetData[ex].__closed) { window.renderBudget(); return; }
     // Nettoyer le texte (peut contenir le symbole monétaire, espaces insécables, etc.)
     let cleaned = String(val||'').replace(/[\s\u00A0\u202F€a-zA-Z]/g,'').replace(',', '.').trim();
     let n = parseFloat(cleaned);
@@ -2091,6 +2098,7 @@ window.onIndicatorTripleClick = function(event, el) {
     event.preventDefault();
     event.stopPropagation();
     let ex = el.getAttribute('data-ex');
+    if (budgetData[ex] && budgetData[ex].__closed) return;
     let c1 = el.getAttribute('data-c1');
     let c2 = el.getAttribute('data-c2');
     let m = el.getAttribute('data-m');
@@ -2215,9 +2223,13 @@ window.renderBudget = function() {
         if (bEmpty && !rEmpty) return `<span class="budget-indicator ind-dot-red" ${dataAttrs} onclick="window.onIndicatorTripleClick(event, this)"></span>`;
         return '<span class="budget-indicator ind-check">✔︎</span>';
     };
+    let budgetLocked = !!(budgetData[ex] && budgetData[ex].__closed);
     const budgetEditableCell = (c1, c2, m) => {
         let bVal = getBudget(c1, c2, m);
         let rVal = realByC1C2Month[`${c1}::${c2}::${m}`] || 0;
+        if (budgetLocked) {
+            return `<td class="tcd-cell budget-editable-cell"><span class="budget-val">${bVal ? formatCurrency(bVal) : ''}</span>${indicatorHtml(bVal, rVal, c1, c2, m)}</td>`;
+        }
         return `<td class="tcd-cell budget-editable-cell">
             <span class="budget-val" contenteditable="true" data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}"
                 onfocus="window.onBudgetCellFocus(this)"
@@ -2331,6 +2343,24 @@ window.renderBudget = function() {
         banner.style.display = 'none';
     }
 
+    let isClosed = !!(budgetData[ex] && budgetData[ex].__closed);
+    let closeBanner = $('budgetCloseBanner');
+    let notesWrap = $('budgetCloseNotesWrap');
+    let notesTa = $('budgetCloseNotes');
+    let closeBtn = $('btnCloturerExercice');
+    if (isClosed) {
+        let cl = budgetData[ex].__closed;
+        closeBanner.style.display = 'block';
+        closeBanner.innerHTML = `🔒 Bilan de l'exercice clos : Recettes: ${formatCurrency(cl.revenue||0)}, Charges: ${formatCurrency(cl.cost||0)}`;
+        notesWrap.style.display = 'block';
+        if (notesTa) notesTa.value = cl.notes || '';
+        if (closeBtn) closeBtn.textContent = '🔓 Rouvrir Exercice';
+    } else {
+        closeBanner.style.display = 'none';
+        notesWrap.style.display = 'none';
+        if (closeBtn) closeBtn.textContent = '🔒 Clôturer exercice';
+    }
+
     container.innerHTML = `
         <div class="budget-block-title">💰 Budget / Projection <span class="budget-badge badge-budget">Éditable</span></div>
         <div class="budget-mirror-wrap">${htmlBudget}</div>
@@ -2427,6 +2457,7 @@ window.validateBudget = function() {
     let ex = sel.value;
     if (!ex) return;
     if (!budgetData[ex]) budgetData[ex] = {};
+    if (budgetData[ex].__closed) { alert(`L'exercice ${ex} est clos. Rouvrez-le (Maj+clic sur le bouton Clôturer) pour modifier le budget.`); return; }
     let alreadyValidated = !!budgetData[ex].__validated;
     const doValidate = () => {
         budgetData[ex].__validated = JSON.parse(JSON.stringify(
@@ -2448,11 +2479,62 @@ window.cancelBudgetValidation = function() {
     if (!sel) return;
     let ex = sel.value;
     if (!ex || !budgetData[ex] || !budgetData[ex].__validated) return;
+    if (budgetData[ex].__closed) { alert(`L'exercice ${ex} est clos. Rouvrez-le (Maj+clic sur le bouton Clôturer) pour modifier le budget.`); return; }
     if (confirm(`Voulez-vous vraiment annuler la validation du budget pour l'exercice ${ex} ? Cette action est irréversible.`)) {
         delete budgetData[ex].__validated;
         triggerSave(true);
         window.renderBudget();
     }
+};
+window.onCloturerBtnClick = function(event) {
+    let sel = $('budgetExerciceSelect');
+    if (!sel) return;
+    let ex = sel.value;
+    if (!ex) return;
+    if (!budgetData[ex]) budgetData[ex] = {};
+    let isClosed = !!budgetData[ex].__closed;
+    if (event && event.shiftKey && isClosed) {
+        if (confirm(`Voulez-vous rouvrir l'exercice ${ex} ? Le bilan de clôture sera supprimé.`)) {
+            delete budgetData[ex].__closed;
+            triggerSave(true);
+            window.renderBudget();
+        }
+        return;
+    }
+    if (isClosed) return; // déjà clos, il faut Maj+clic pour rouvrir
+    if (confirm(`Voulez-vous clôturer l'exercice ${ex} ? Les tableaux Budget et Réel ne seront plus modifiables.`)) {
+        // Recalcul du bilan réel (par catégorie 2, totaux de ligne, regroupés recettes/charges)
+        let c2Totals = {};
+        transactions.forEach(t => {
+            if (t.amount === 0) return;
+            let dRealStr = String(t.dateExpense || t.dateOp || '');
+            if (dRealStr.length < 7) return;
+            let yReal = dRealStr.substring(0,4), mReal = dRealStr.substring(5,7);
+            if (getFiscalYearLabel(yReal, mReal, fiscalStartMonth) !== ex) return;
+            let c1 = t.cat1 || '_SANS_CATEGORIE', c2 = t.cat2 || '_SANS_CATEGORIE';
+            if (budgetFilter.cat1.has(c1) || budgetFilter.cat2.has(c2)) return;
+            let k = `${c1}::${c2}`;
+            c2Totals[k] = (c2Totals[k] || 0) + (Number(t.amount) || 0);
+        });
+        let realRevenueTotal = 0, realCostTotal = 0;
+        Object.values(c2Totals).forEach(tot => {
+            if (tot < 0) realCostTotal += tot;
+            else if (tot > 0) realRevenueTotal += tot;
+        });
+        budgetData[ex].__closed = { revenue: realRevenueTotal, cost: realCostTotal, notes: (budgetData[ex].__closed && budgetData[ex].__closed.notes) || '' };
+        triggerSave(true);
+        window.renderBudget();
+    }
+};
+window.onBudgetCloseNotesBlur = function() {
+    let sel = $('budgetExerciceSelect');
+    if (!sel) return;
+    let ex = sel.value;
+    if (!ex || !budgetData[ex] || !budgetData[ex].__closed) return;
+    let ta = $('budgetCloseNotes');
+    if (!ta) return;
+    budgetData[ex].__closed.notes = ta.value;
+    triggerSave(true);
 };
 
 
@@ -2845,7 +2927,7 @@ window.openTcdDetails = function(txs) {
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
-// QUICK CAT SEARCH — v3.0.7
+// QUICK CAT SEARCH — v3.0.8
 // ════════════════════════════════════════════════════
 var _qcResults = [], _qcIdx = -1;
 var _lastChosenCat = { c1: null, c2: null }; // derniere cat choisie par clic utilisateur
@@ -3045,7 +3127,7 @@ window.applySuggPill = function(id, c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// CAT MODAL SEARCH — v3.0.7
+// CAT MODAL SEARCH — v3.0.8
 // ════════════════════════════════════════════════════
 window.onCatModalSearch = function() {
     var q = ($('catModalSearchInput').value || '').trim().toLowerCase();
@@ -3098,7 +3180,7 @@ window.catModalSearchApply = function(c1, c2) {
 
 
 // ════════════════════════════════════════════════════
-// GRAPHIQUES ENGINE  — v3.0.7
+// GRAPHIQUES ENGINE  — v3.0.8
 // ════════════════════════════════════════════════════
 var savedCharts = [];            // [{id, config, comment}]
 var _cbEditId   = null;          // id du graphique en cours d'édition
@@ -3733,7 +3815,7 @@ window.openDrillDown = function(parentCfg, clickedLabel, clickedSeries) {
 
 
 // ════════════════════════════════════════════════════
-// IDÉES AMÉLIORATION — v3.0.7
+// IDÉES AMÉLIORATION — v3.0.8
 // ════════════════════════════════════════════════════
 var _ideasFileId = null;
 var _ideasFileName = 'appsysdata_ideas_' + (currentAccountId || 'default') + '.dat';
@@ -4283,7 +4365,7 @@ window.renderCategories = function() {
     let c=$('categoriesContainer'); c.innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<div class="summary-card cat1-dropzone" data-c1="${escapeHtml(c1)}" ondragover="window.onCat1DragOver(event,this)" ondragleave="window.onCat1DragLeave(event,this)" ondrop="window.onCat1Drop(event,'${escapeHtml(c1)}')"><div style="display:flex;justify-content:space-between;font-weight:600;align-items:center;"><span class="cat1-editable" data-c1="${escapeHtml(c1)}" title="Cliquer pour renommer" style="cursor:pointer;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor='var(--ink-faint)'" onmouseout="this.style.borderBottomColor='transparent'" onclick="window.startRenameCat1(this,'${escapeHtml(c1)}')">${escapeHtml(c1)}</span> <button class="btn btn-outline" style="padding:2px 6px;color:var(--urgent)" onclick="window.deleteCategory1('${escapeHtml(c1)}')">X</button></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;">${categories[c1].sort(customSortCmp).map(c2=>`<div class="cat2-chip" draggable="true" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" ondragstart="window.onCat2DragStart(event,'${escapeHtml(c1)}','${escapeHtml(c2)}')" ondragend="window.onCat2DragEnd(event)" style="background:var(--bg);border:1px solid var(--ink-faint);padding:2px 6px 2px 2px;border-radius:12px;font-size:0.85em;display:flex;gap:4px;align-items:center;"><span class="cat2-drag-handle" title="Glisser pour déplacer" style="cursor:grab;color:var(--ink-faint);font-size:1em;line-height:1;padding:0 2px;user-select:none;">⠿</span><span class="cat2-editable" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" title="Cliquer pour renommer" style="cursor:pointer;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor='var(--ink-faint)'" onmouseout="this.style.borderBottomColor='transparent'" onclick="window.startRenameCat2(this,'${escapeHtml(c1)}','${escapeHtml(c2)}')">${escapeHtml(c2)}</span> <button style="background:none;border:none;color:var(--urgent);cursor:pointer;font-size:1.1em;" onclick="window.deleteCategory2('${escapeHtml(c1)}','${escapeHtml(c2)}')">×</button></div>`).join('')}</div><div style="display:flex;gap:4px;"><input type="text" class="input-text" placeholder="Ajouter sous-cat..." onkeypress="if(event.key==='Enter'){if(this.value.trim()){categories['${escapeHtml(c1)}'].push(this.value.trim());categories['${escapeHtml(c1)}'].sort(customSortCmp);triggerSave();window.renderCategories();}}"></div></div>`).join('');
 };
 
-// ── v3.0.7 : Drag & drop des catégories 2 vers une autre catégorie 1 ───────
+// ── v3.0.8 : Drag & drop des catégories 2 vers une autre catégorie 1 ───────
 window._draggedCat2 = null;
 window.onCat2DragStart = function(ev, c1, c2) {
     window._draggedCat2 = { c1, c2 };
@@ -4328,7 +4410,7 @@ window.moveCategory2 = function(sourceC1, c2, targetC1) {
 };
 
 
-// ── v3.0.7 : Renommage inline des catégories ────────────────────────────────
+// ── v3.0.8 : Renommage inline des catégories ────────────────────────────────
 window.startRenameCat1 = function(el, oldName) {
     let input = document.createElement('input');
     input.type = 'text'; input.value = oldName; input.className = 'input-text';
@@ -4388,7 +4470,7 @@ window.renameCategory2 = function(c1, oldName, newName) {
     showToast('✅ Sous-catégorie renommée');
 };
 
-// ── v3.0.7 : Suppression de catégories avec impact base de données ─────────
+// ── v3.0.8 : Suppression de catégories avec impact base de données ─────────
 window.deleteCategory1 = function(c1) {
     if (!confirm(`⚠️ Supprimer la catégorie "${c1}" et toutes ses sous-catégories ?\n\nLes transactions et règles utilisant cette catégorie perdront leur catégorisation (à redéfinir plus tard).`)) return;
     delete categories[c1];
@@ -4700,7 +4782,7 @@ $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').inn
 $('catModalEditCatBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; $('catModalStep3').style.display='none'; });
 
 // ═══════════════════════════════════════════════════════════════
-// EXPORT / IMPORT BASE DE DONNÉES v3.0.7
+// EXPORT / IMPORT BASE DE DONNÉES v3.0.8
 // Colonnes : Date de l'opération | Date OP | Banque | Libellé
 //            | Détail de l'écriture | Montant de l'opération | CAT1 | CAT2
 // Export : XLSX chiffré AES (feuille DATA lisible + feuille ENCRYPTED)
@@ -4833,7 +4915,7 @@ $('dbFileInput').addEventListener('change', e => {
       const isJson = f.name.toLowerCase().endsWith('.json');
       const isCsv  = f.name.toLowerCase().endsWith('.csv');
 
-      // ── Fichier JSON chiffré (nouveau format v3.0.7+) ─────────────────────
+      // ── Fichier JSON chiffré (nouveau format v3.0.8+) ─────────────────────
       if (isJson) {
         const txt = typeof ev.target.result === 'string' ? ev.target.result : new TextDecoder().decode(ev.target.result);
         const obj = JSON.parse(txt);
@@ -5102,7 +5184,7 @@ window.addAccount = async function() {
 
 
 // ══════════════════════════════════════════════════════════════════════════
-// QUITTANCES — v3.0.7
+// QUITTANCES — v3.0.8
 // ══════════════════════════════════════════════════════════════════════════
 window.toggleQuittancesOption = function(checked) {
     quittancesEnabled = checked;
@@ -5124,7 +5206,7 @@ function applyQuittancesOptionState() {
     if (cb) cb.checked = enabled;
 }
 
-// ── v3.0.7 : Budget / Projection ────────────────────────────────────────────
+// ── v3.0.8 : Budget / Projection ────────────────────────────────────────────
 window.toggleBudgetOption = function(checked) {
     budgetEnabled = checked;
     localStorage.setItem('f_budget_enabled_' + currentAccountId, checked ? '1' : '0');
