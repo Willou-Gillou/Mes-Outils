@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.0.9</title>
+    <title>Mes finances - v3.0.10</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -131,7 +131,7 @@
         .tcd-native thead th { background: var(--tcd-header-color, #2d3748); color: #fff; text-align: center; position: sticky; top: 0; z-index: 2; }
         .tcd-native thead tr:first-child th { top: 0; }
         .tcd-native thead tr:nth-child(2) th { top: 2em; }
-        .tcd-col-axis { position: sticky; left: 0; background: var(--surface) !important; z-index: 3; min-width: 200px; max-width: 280px; }
+        .tcd-col-axis { position: sticky; left: -1px !important; background: var(--surface) !important; background-clip: padding-box !important; border-left: 1px solid var(--surface) !important; z-index: 3; min-width: 200px; max-width: 280px; }
         .tcd-native thead .tcd-col-axis { background: var(--tcd-header-color, #2d3748) !important; z-index: 4; color: #fff; }
         .tcd-native .tcd-row-main-tr:hover td:not(.tcd-col-axis), .tcd-native .tcd-row-sub-tr:hover td:not(.tcd-col-axis) { background: var(--hover); }
         .tcd-native .tcd-total-row td { background: var(--ink-faint); font-weight: 700; }
@@ -302,15 +302,17 @@
 }
 
 
-/* v3.0.8 - tcd-col-axis TOUJOURS opaque, aucune surbrillance ne transparaît */
+/* v3.0.10 - tcd-col-axis TOUJOURS opaque, background-clip pour éviter le bleeding de border-collapse */
 .tcd-col-axis {
   position: sticky !important;
-  left: 0 !important;
+  left: -1px !important;
   background: #ffffff !important;
+  background-clip: padding-box !important;
   z-index: 10 !important;
   min-width: 200px;
   max-width: 280px;
   isolation: isolate;
+  border-left: 1px solid #ffffff !important;
 }
 .tcd-native thead .tcd-col-axis {
   background: var(--tcd-header-color, #2d3748) !important;
@@ -1518,7 +1520,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.0.9';
+const APP_VERSION = '3.0.10';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6680,10 +6682,17 @@ function tcdRestoreScroll() {
         let w = document.getElementById('tcdScrollWrapper');
         if (!w) return;
         if (!window._isFirstTcdScrollRestored) {
-            w.scrollLeft = w.scrollWidth;
+            let maxScroll = Math.max(0, w.scrollWidth - w.clientWidth);
+            w.scrollLeft = maxScroll;
             w.scrollTop = sy;
             window._isFirstTcdScrollRestored = true;
-            setTimeout(() => { if (w) { w.scrollLeft = w.scrollWidth; w.scrollTop = sy; } }, 80);
+            setTimeout(() => {
+                if (w) {
+                    let maxS = Math.max(0, w.scrollWidth - w.clientWidth);
+                    w.scrollLeft = maxS;
+                    w.scrollTop = sy;
+                }
+            }, 100);
         } else {
             if (!sx && !sy) return; // rien à restaurer
             w.scrollLeft = sx;
