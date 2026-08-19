@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.0.10</title>
+    <title>Mes finances - v3.0.11</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -686,7 +686,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustTcdFont(1)">+</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustTcdFont(-1)">−</button>
         </div>
-        <div id="tcdScrollWrapper" style="display:flex;justify-content:center;overflow:auto;max-height:calc(100vh - 180px);"><div id="summaryGrid" style="position:relative;"></div></div>
+        <div id="tcdScrollWrapper" style="overflow:auto;max-height:calc(100vh - 180px);"><div id="summaryGrid" style="position:relative;width:max-content;margin:0 auto;"></div></div>
     </div>
 
     <!-- TCD Filtre Popup -->
@@ -1520,7 +1520,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.0.10';
+const APP_VERSION = '3.0.11';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1715,6 +1715,10 @@ $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     $$('.view').forEach(v => v.classList.remove('active'));
     btn.classList.add('active');
     $(btn.dataset.target).classList.add('active');
+    if(btn.dataset.target === 'view-quittances' && typeof currentQuittanceBienId !== 'undefined' && currentQuittanceBienId) {
+        let bien = quittancesBiens.find(b => b.id === currentQuittanceBienId);
+        if(bien) bien.signatureDate = new Date().toISOString().slice(0,10);
+    }
     window.renderViewsSafe();
 }));
 
@@ -2352,8 +2356,11 @@ window.renderBudget = function() {
     let closeBtn = $('btnCloturerExercice');
     if (isClosed) {
         let cl = budgetData[ex].__closed;
+        let bal = cl.balance !== undefined ? cl.balance : ((cl.revenue||0) + (cl.cost||0));
+        let delta = cl.planned !== undefined ? (bal - cl.planned) : 0;
+        let deltaStr = cl.planned !== undefined ? ` &middot; Delta planifié : <span class="${delta>=0?'budget-delta delta-pos':'budget-delta delta-neg'}" style="font-size:1em;">${delta>0?'+':''}${formatCurrency(delta)}</span>` : '';
         closeBanner.style.display = 'block';
-        closeBanner.innerHTML = `🔒 Bilan de l'exercice clos : Recettes: ${formatCurrency(cl.revenue||0)}, Charges: ${formatCurrency(cl.cost||0)}`;
+        closeBanner.innerHTML = `🔒 Bilan de l'exercice clos : Recettes: ${formatCurrency(cl.revenue||0)} &middot; Charges: ${formatCurrency(cl.cost||0)} &middot; Balance: <strong>${formatCurrency(bal)}</strong>${deltaStr}`;
         notesWrap.style.display = 'block';
         if (notesTa) notesTa.value = cl.notes || '';
         if (closeBtn) closeBtn.textContent = '🔓 Rouvrir Exercice';
@@ -2523,7 +2530,23 @@ window.onCloturerBtnClick = function(event) {
             if (tot < 0) realCostTotal += tot;
             else if (tot > 0) realRevenueTotal += tot;
         });
-        budgetData[ex].__closed = { revenue: realRevenueTotal, cost: realCostTotal, notes: (budgetData[ex].__closed && budgetData[ex].__closed.notes) || '' };
+        let plannedTotal = 0;
+        let vRoot = budgetData[ex].__validated || {};
+        Object.keys(vRoot).forEach(c1k => {
+            if (c1k === '__validated') return;
+            Object.keys(vRoot[c1k] || {}).forEach(c2k => {
+                Object.keys(vRoot[c1k][c2k] || {}).forEach(mk => {
+                    plannedTotal += Number(vRoot[c1k][c2k][mk]) || 0;
+                });
+            });
+        });
+        budgetData[ex].__closed = { 
+            revenue: realRevenueTotal, 
+            cost: realCostTotal, 
+            balance: realRevenueTotal + realCostTotal,
+            planned: plannedTotal,
+            notes: (budgetData[ex].__closed && budgetData[ex].__closed.notes) || '' 
+        };
         triggerSave(true);
         window.renderBudget();
     }
@@ -6676,30 +6699,30 @@ function tcdSaveScroll() {
 }
 
 function tcdRestoreScroll() {
-    let sx = parseFloat(localStorage.getItem('tcd_sx') || '0');
+    let sx = parseFloat(localStorage.getItem('tcd_sx'));
     let sy = parseFloat(localStorage.getItem('tcd_sy') || '0');
     requestAnimationFrame(() => requestAnimationFrame(() => {
         let w = document.getElementById('tcdScrollWrapper');
         if (!w) return;
         if (!window._isFirstTcdScrollRestored) {
-            let maxScroll = Math.max(0, w.scrollWidth - w.clientWidth);
-            w.scrollLeft = maxScroll;
-            w.scrollTop = sy;
             window._isFirstTcdScrollRestored = true;
-            setTimeout(() => {
-                if (w) {
-                    let maxS = Math.max(0, w.scrollWidth - w.clientWidth);
-                    w.scrollLeft = maxS;
-                    w.scrollTop = sy;
+            let attempts = 0;
+            let iv = setInterval(() => {
+                if (w && w.scrollWidth > 0) {
+                    w.scrollLeft = w.scrollWidth;
+                    w.scrollTop = sy || 0;
                 }
-            }, 100);
+                if (attempts++ > 15) clearInterval(iv);
+            }, 50);
         } else {
-            if (!sx && !sy) return; // rien à restaurer
-            w.scrollLeft = sx;
+            if (isNaN(sx) && !sy) return;
+            w.scrollLeft = isNaN(sx) ? w.scrollWidth : sx;
             w.scrollTop  = sy;
             setTimeout(() => {
-                if (Math.abs(w.scrollLeft - sx) > 2) w.scrollLeft = sx;
-                if (Math.abs(w.scrollTop  - sy) > 2) w.scrollTop  = sy;
+                if (w) {
+                    if (!isNaN(sx) && Math.abs(w.scrollLeft - sx) > 2) w.scrollLeft = sx;
+                    if (Math.abs(w.scrollTop  - sy) > 2) w.scrollTop  = sy;
+                }
             }, 80);
         }
     }));
