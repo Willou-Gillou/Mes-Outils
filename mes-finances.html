@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.0.11</title>
+    <title>Mes finances - v3.0.12</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -153,7 +153,7 @@
         .tcd-th-year { font-weight: 700; letter-spacing: 1px; }
         .tcd-th-month { font-size: 0.85em; opacity: 0.9; }
         #tcdScrollWrapper { scroll-behavior: auto; overflow: auto; max-height: calc(100vh - 180px); }
-        #summaryGrid { margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); background: var(--surface); border: 1px solid var(--ink-faint); font-family: system-ui, -apple-system, sans-serif; }
+        #summaryGrid { margin-bottom: 24px; border-radius: var(--radius); overflow: visible !important; box-shadow: var(--shadow); background: var(--surface); border: 1px solid var(--ink-faint); font-family: system-ui, -apple-system, sans-serif; }
         .tabulator { font-size: var(--tcd-font-size, 13px); background-color: var(--surface); }
         .tabulator .tabulator-row { font-size: var(--tcd-font-size, 13px) !important; }
         .tabulator .tabulator-cell { font-size: var(--tcd-font-size, 13px) !important; }
@@ -218,7 +218,7 @@
         
         
         /* TCD — colonne gauche figée */
-        #summaryGrid { overflow-x: auto; overflow-y: auto; max-height: calc(100vh - 210px); }
+        /* overflow removed from summaryGrid for sticky to work */
         .tcd-table td:first-child { position: sticky; left: 0; z-index: 2; background: inherit; }
         .tcd-table thead th:first-child { position: sticky; left: 0; z-index: 6; }
         .tcd-table tfoot td:first-child { position: sticky; left: 0; z-index: 2; background: #111827; }
@@ -595,7 +595,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 .budget-badge { font-size:0.7em; padding:2px 8px; border-radius:10px; font-weight:600; }
 .badge-budget { background: var(--pro-soft); color: var(--pro); }
 .badge-real { background: #e8f5e9; color: var(--good, #16a34a); }
-.budget-mirror-wrap { background: var(--surface,#fff); border-radius: 8px; box-shadow: var(--shadow,0 2px 8px rgba(0,0,0,0.06)); padding: 8px; overflow-x: auto; }
+.budget-mirror-wrap { background: var(--surface,#fff); border-radius: 8px; box-shadow: var(--shadow,0 2px 8px rgba(0,0,0,0.06)); padding: 8px; overflow: visible !important; }
 
 .budget-legend { display:flex; gap:16px; font-size:0.78em; color:var(--ink-muted); margin-top:10px; align-items:center; flex-wrap:wrap; }
 .budget-legend .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
@@ -686,7 +686,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustTcdFont(1)">+</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustTcdFont(-1)">−</button>
         </div>
-        <div id="tcdScrollWrapper" style="overflow:auto;max-height:calc(100vh - 180px);"><div id="summaryGrid" style="position:relative;width:max-content;margin:0 auto;"></div></div>
+        <div id="tcdScrollWrapper" style="overflow:auto;max-height:calc(100vh - 180px);"><div id="summaryGrid" style="position:relative;width:max-content;"></div></div>
     </div>
 
     <!-- TCD Filtre Popup -->
@@ -1520,7 +1520,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.0.11';
+const APP_VERSION = '3.0.12';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
