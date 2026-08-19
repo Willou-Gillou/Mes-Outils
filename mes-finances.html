@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.0.21</title>
+    <title>Mes finances - v3.1.0</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1520,7 +1520,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.0.21';
+const APP_VERSION = '3.1.0';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -2103,11 +2103,39 @@ window.onIndicatorTripleClick = function(event, el) {
     event.stopPropagation();
     let ex = el.getAttribute('data-ex');
     if (budgetData[ex] && budgetData[ex].__closed) return;
-    let c1 = el.getAttribute('data-c1');
-    let c2 = el.getAttribute('data-c2');
-    let m = el.getAttribute('data-m');
-    let realVal = el.getAttribute('data-real');
-    window.setBudgetCell(ex, c1, c2, m, realVal);
+
+    if (event.shiftKey) {
+        let indicators = document.querySelectorAll('.budget-indicator[data-real]');
+        let updated = false;
+        indicators.forEach(ind => {
+            let tex = ind.getAttribute('data-ex');
+            if (tex !== ex) return;
+            let tc1 = ind.getAttribute('data-c1');
+            let tc2 = ind.getAttribute('data-c2');
+            let tm = ind.getAttribute('data-m');
+            let trv = ind.getAttribute('data-real');
+            let cleaned = String(trv||'').replace(/[\s  €a-zA-Z]/g,'').replace(',', '.').trim();
+            let n = parseFloat(cleaned);
+            if (isNaN(n)) n = 0;
+            if (!budgetData[tex]) budgetData[tex] = {};
+            if (!budgetData[tex][tc1]) budgetData[tex][tc1] = {};
+            if (!budgetData[tex][tc1][tc2]) budgetData[tex][tc1][tc2] = {};
+            if (n === 0) delete budgetData[tex][tc1][tc2][tm];
+            else budgetData[tex][tc1][tc2][tm] = n;
+            updated = true;
+        });
+        if (updated) {
+            triggerSave(true);
+            window.renderBudget();
+            showToast("Toutes les valeurs réelles ont été copiées ✓");
+        }
+    } else {
+        let c1 = el.getAttribute('data-c1');
+        let c2 = el.getAttribute('data-c2');
+        let m = el.getAttribute('data-m');
+        let realVal = el.getAttribute('data-real');
+        window.setBudgetCell(ex, c1, c2, m, realVal);
+    }
 };
 
 
