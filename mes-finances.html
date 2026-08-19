@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.0.17</title>
+    <title>Mes finances - v3.0.18</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1090,7 +1090,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(-1)">−</button>
         </div>
         <div id="budgetValidatedBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--pro-soft);border-radius:8px;color:var(--pro);"></div>
-        <div id="budgetCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--good-soft, #dcfce7);border-radius:8px;color:var(--good, #16a34a);"></div>
+        <div id="budgetCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;color:var(--ink);"></div>
         <div id="budgetCloseNotesWrap" style="display:none;margin:0 16px 8px 16px;">
             <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Notes :</label>
             <textarea id="budgetCloseNotes" class="input-text" style="width:100%;min-height:60px;font-size:0.85em;" onblur="window.onBudgetCloseNotesBlur()"></textarea>
@@ -1520,7 +1520,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.0.17';
+const APP_VERSION = '3.0.18';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
