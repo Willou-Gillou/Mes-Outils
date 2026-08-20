@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.4</title>
+    <title>Mes finances - v3.1.5</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1529,7 +1529,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.4';
+const APP_VERSION = '3.1.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -3165,19 +3165,23 @@ window.bulkQcApply = function(i) {
 
 // Auto-focus saisie rapide catégorie
 document.addEventListener('keydown', function(e) {
-    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1
-        && document.activeElement.tagName !== 'INPUT'
-        && document.activeElement.tagName !== 'TEXTAREA'
-        && document.activeElement.tagName !== 'SELECT') {
-        var v1 = $('view-categorize');
-        if (v1 && v1.classList.contains('active') && selectedUncatIds.size > 0) {
-            var inp = $('quickCatInput');
-            if (inp) { inp.focus(); }
-        }
-        var v2 = $('view-data');
-        if (v2 && v2.classList.contains('active') && $$('.row-cb:checked').length > 0) {
-            var inp2 = $('bulkQuickCatInput');
-            if (inp2) { inp2.focus(); }
+    if (!e.ctrlKey && !e.metaKey && !e.altKey && e.key.length === 1) {
+        var act = document.activeElement;
+        var isTypingField = (act.tagName === 'INPUT' && ['text', 'number', 'date', 'email', 'password', 'search', 'month'].includes(act.type))
+                         || act.tagName === 'TEXTAREA'
+                         || act.tagName === 'SELECT'
+                         || act.isContentEditable;
+        if (!isTypingField) {
+            var v1 = $('view-categorize');
+            if (v1 && v1.classList.contains('active') && selectedUncatIds.size > 0) {
+                var inp = $('quickCatInput');
+                if (inp) { inp.focus(); }
+            }
+            var v2 = $('view-data');
+            if (v2 && v2.classList.contains('active') && $$('.row-cb:checked').length > 0) {
+                var inp2 = $('bulkQuickCatInput');
+                if (inp2) { inp2.focus(); }
+            }
         }
     }
 });
