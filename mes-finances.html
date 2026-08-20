@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.11</title>
+    <title>Mes finances - v3.1.12</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -602,6 +602,15 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 .budget-legend { display:flex; gap:16px; font-size:0.78em; color:var(--ink-muted); margin-top:10px; align-items:center; flex-wrap:wrap; }
 .budget-legend .dot { width:9px; height:9px; border-radius:50%; display:inline-block; margin-right:5px; }
 
+
+.regul-table { background-color: #FFFFFF !important; }
+.regul-table th, .regul-table td { background-color: #FFFFFF; border: 1px solid var(--ink-faint); }
+.regul-table thead th { background-color: var(--tcd-header-color, #2d3748) !important; color: #fff !important; }
+.regul-table .tcd-row-main-tr td { background-color: #FFFFFF !important; }
+.regul-table .tcd-col-axis { background-color: #FFFFFF !important; }
+.regul-table .tcd-total-row td, .regul-table .tcd-total-row th, .regul-table .tcd-total-row .tcd-col-axis { background-color: #111827 !important; color: #FFFFFF !important; font-weight: 700; border-color: #333; }
+.regul-table .tcd-total-row .budget-val-ro { color: #FFFFFF !important; }
+
 </style>
     <!-- Tabulator -->
     <link href="https://unpkg.com/tabulator-tables@5.5.2/dist/css/tabulator.min.css" rel="stylesheet">
@@ -1134,13 +1143,12 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustRegulFont(-1)">−</button>
         </div>
         <div id="regulEmptyState" style="display:none;text-align:center;padding:40px;color:var(--ink-soft);">
-            <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien n'est configuré. Allez dans l'onglet Quittances pour créer un bien en premier.</p>
+            <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien n'est configuré. Allez dans l'onglet Quittances pour en créer un.</p>
         </div>
         <div id="regulValidatedBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--pro-soft);border-radius:8px;color:var(--pro);"></div>
         <div id="regulCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;color:var(--ink);"></div>
         <div id="regulGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
     </div>
-
     <div id="view-settings" class="view">
         <h2 style="margin-bottom:24px;">Paramètres</h2>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
@@ -1180,6 +1188,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
                 </select>
             </div>
         </div>
+        
         <div class="summary-card" style="margin-top:24px;max-width:480px;">
             <h3 style="margin-bottom:12px;">📅 Exercice fiscal (Tableau de bord)</h3>
             <p style="color:var(--ink-soft);margin-bottom:12px;font-size:0.85em;">Définit le mois de début de l'exercice pour ce compte. Impacte le regroupement par période dans l'onglet Tableau de bord.</p>
@@ -1453,7 +1462,6 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             </div>
         </div>
     </div>
-
 </main>
 
 <input type="file" id="bankFileInput" accept=".csv" style="display:none">
@@ -1590,7 +1598,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.11';
+const APP_VERSION = '3.1.12';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1906,6 +1914,8 @@ function decryptPayload(remoteData) {
             localStorage.setItem('f_budget_enabled_' + currentAccountId, budgetEnabled ? '1' : '0');
         }
         if (typeof applyBudgetOptionState === 'function') applyBudgetOptionState();
+    regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
+    applyRegulOptionState();
         if (typeof p.regulEnabled === 'boolean') {
             regulEnabled = p.regulEnabled;
             localStorage.setItem('f_regul_enabled_' + currentAccountId, regulEnabled ? '1' : '0');
@@ -2104,10 +2114,9 @@ function triggerSave(reRenderDbView = false) {
 
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
-    try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState(); if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget();
+    try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
     regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
-    applyRegulOptionState();
-    if (regulEnabled && typeof window.renderRegul === 'function') window.renderRegul(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
+    applyRegulOptionState(); if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget(); if (regulEnabled && typeof window.renderRegul === 'function') window.renderRegul(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
 };
 
 window.toggleGroup = function(r1) { tcdSaveScroll(); if(collapsedGroups.has(r1)) collapsedGroups.delete(r1); else collapsedGroups.add(r1); tcdSaveCollapsed(); window.renderSummary(); };
@@ -5385,10 +5394,12 @@ window.switchAccount = async function(newId) {
     transactions = []; rules = []; categories = {}; savedCharts = [];
     quittancesBiens = []; currentQuittanceBienId = null;
     budgetData = {};
-    loadFiscalStartMonth(); applyFiscalStartMonthState();
-    loadFiscalStartMonthSyndic();
+    loadFiscalStartMonth();
+    loadFiscalStartMonthSyndic(); applyFiscalStartMonthState();
     budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
     applyBudgetOptionState();
+    regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
+    applyRegulOptionState();
     if (window.appState) window.appState.tcdRedCells = window.appState.tcdRedCells || {};
     driveFileId = null;
     window.renderAccountUI();
@@ -6739,7 +6750,9 @@ window.selectRegulBien = function(id) {
 window.renderRegulBiens = function() {
     let sel = $('regulBienSelect');
     if (!sel) return;
-    if (quittancesBiens.length > 0 && !currentRegulBienId) currentRegulBienId = quittancesBiens[0].id;
+    if (quittancesBiens.length > 0 && (!currentRegulBienId || !quittancesBiens.find(b => b.id === currentRegulBienId))) {
+        currentRegulBienId = quittancesBiens[0].id;
+    }
     sel.innerHTML = quittancesBiens.map(b => `<option value="${b.id}" ${b.id===currentRegulBienId?'selected':''}>${escapeHtml(b.nom)}</option>`).join('');
 };
 window.setRegulDateLocation = function(val) {
@@ -6811,6 +6824,27 @@ function getRegulMonthsForExercice(ex) {
     }
     return months;
 }
+
+function getProvisionFromEcheancier(bien, yyyy_mm) {
+    if(!bien || !bien.echeancier) return null;
+    let match = bien.echeancier.find(e => e.date && e.date.startsWith(yyyy_mm) && e.statut === 'Payé');
+    if(match) {
+        let parts = String(match.detail||'').split('+').map(s => parseFloat(s.trim().replace(',', '.'))).filter(n => !isNaN(n));
+        if(parts.length > 1) return parts.slice(1).reduce((a,b)=>a+b, 0);
+        return parseFloat(match.montant) || 0;
+    }
+    return null;
+}
+
+const regulIndicatorHtml = (val, provVal, mKey, cId) => {
+    if (provVal === null) return '';
+    let bEmpty = (val === null || val === undefined || val === '');
+    let dataAttrs = `data-mkey="${mKey}" data-cid="${cId}" data-real="${provVal}"`;
+    if (!bEmpty && val !== provVal) return `<span class="budget-indicator ind-warn" ${dataAttrs} onclick="window.onRegulIndicatorTripleClick(event, this)">⚠️</span>`;
+    if (bEmpty) return `<span class="budget-indicator ind-dot-red" ${dataAttrs} onclick="window.onRegulIndicatorTripleClick(event, this)"></span>`;
+    return '<span class="budget-indicator ind-check">✔︎</span>';
+};
+
 window.renderRegul = function() {
     let container = $('regulGrid');
     let bien = getRegulBien(currentRegulBienId);
@@ -6830,14 +6864,13 @@ window.renderRegul = function() {
     let months = getRegulMonthsForExercice(ex);
     let cols = bien.regulCols || [];
     
-    let html = '<table class="tcd-native budget-table" cellspacing="0" cellpadding="0" style="min-width:100%;">';
+    let html = '<table class="tcd-native regul-table" cellspacing="0" cellpadding="0" style="min-width:100%;">';
     html += '<thead><tr><th class="tcd-col-axis" style="text-align:left;">Dates</th>';
     cols.forEach(c => { html += `<th class="tcd-th-month">${escapeHtml(c.name)}</th>`; });
-    html += '<th class="tcd-th-month" style="background:var(--pro-soft);color:var(--ink);">Total Calculé</th></tr></thead><tbody>';
+    html += '</tr></thead><tbody>';
     
     let colTotals = {};
     cols.forEach(c => colTotals[c.id] = 0);
-    let grandTotal = 0;
     
     const monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
     
@@ -6845,37 +6878,43 @@ window.renderRegul = function() {
         let mKey = `${mo.y}-${mo.m}`;
         let rowLabel = `${monthNames[parseInt(mo.m, 10)]} ${mo.y}`;
         html += `<tr class="tcd-row-main-tr"><td class="tcd-col-axis">${rowLabel}</td>`;
-        let rowTotal = 0;
         if(!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
         
         cols.forEach(c => {
-            let val = bien.regulData[ex][mKey][c.id] || 0;
-            colTotals[c.id] += val;
-            rowTotal += val;
+            let val = bien.regulData[ex][mKey][c.id];
+            let isEmpty = (val === undefined || val === null || val === '');
+            let actualVal = isEmpty ? 0 : parseFloat(val);
+            colTotals[c.id] += actualVal;
+            
+            let provVal = null;
+            if (c.name.toLowerCase().includes('provision')) {
+                provVal = getProvisionFromEcheancier(bien, mKey);
+            }
+            let indHtml = provVal !== null ? regulIndicatorHtml(isEmpty ? null : actualVal, provVal, mKey, c.id) : '';
+
             if (isClosed) {
-                html += `<td class="tcd-cell"><span class="budget-val-ro">${val ? formatCurrency(val) : ''}</span></td>`;
+                html += `<td class="tcd-cell"><span class="budget-val-ro">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${indHtml}</td>`;
             } else {
                 html += `<td class="tcd-cell"><span class="budget-val" contenteditable="true" 
                     onfocus="window.onBudgetCellFocus(this)"
                     onblur="window.setRegulCell('${mKey}', '${c.id}', this.textContent)"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${val ? formatCurrency(val) : ''}</span></td>`;
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${indHtml}</td>`;
             }
         });
-        grandTotal += rowTotal;
-        html += `<td class="tcd-cell" style="font-weight:bold;background:var(--bg);">${formatCurrency(rowTotal)}</td></tr>`;
+        html += '</tr>';
     });
     
     html += '<tr class="tcd-total-row"><td class="tcd-col-axis">TOTAL</td>';
     cols.forEach(c => {
-        html += `<td class="tcd-cell">${formatCurrency(colTotals[c.id])}</td>`;
+        html += `<td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(colTotals[c.id])}</span></td>`;
     });
-    html += `<td class="tcd-cell" style="font-weight:bold;background:var(--ink-faint);">${formatCurrency(grandTotal)}</td></tr>`;
+    html += '</tr>';
     
     html += '</tbody></table>';
     container.innerHTML = html;
     
     let bannerV = $('regulValidatedBanner');
-    if (isValidated) { bannerV.style.display='block'; bannerV.innerHTML=`✅ Validé (Total : ${formatCurrency(grandTotal)})`; }
+    if (isValidated) { bannerV.style.display='block'; bannerV.innerHTML=`✅ Validé`; }
     else { bannerV.style.display='none'; }
     
     let bannerC = $('regulCloseBanner');
@@ -6893,19 +6932,51 @@ window.renderRegul = function() {
         el.style.fontSize = fs + 'px';
     });
 };
-window.setRegulCell = function(mKey, colId, text) {
+window.setRegulCellSilent = function(mKey, colId, text) {
     let bien = getRegulBien(currentRegulBienId);
-    if (!bien) return;
     let ex = $('regulExerciceSelect').value;
     if (!bien.regulData[ex]) bien.regulData[ex] = {};
     if (!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
-    
     let cleaned = String(text||'').replace(/[\s\u00A0\u202F€a-zA-Z]/g,'').replace(',', '.').trim();
-    let n = parseFloat(cleaned);
-    if (isNaN(n)) n = 0;
-    
-    if(n === 0) delete bien.regulData[ex][mKey][colId];
-    else bien.regulData[ex][mKey][colId] = n;
+    if (cleaned === '') delete bien.regulData[ex][mKey][colId];
+    else {
+        let n = parseFloat(cleaned);
+        if (!isNaN(n)) bien.regulData[ex][mKey][colId] = n;
+    }
+};
+window.onRegulIndicatorTripleClick = function(event, el) {
+    if (event.detail < 3) return;
+    event.preventDefault();
+    event.stopPropagation();
+    let mKey = el.getAttribute('data-mkey');
+    let cId = el.getAttribute('data-cid');
+    let realVal = el.getAttribute('data-real');
+    let ex = $('regulExerciceSelect').value;
+    let bien = getRegulBien(currentRegulBienId);
+    if (bien.regulClosed && bien.regulClosed[ex]) return;
+
+    if (event.shiftKey) {
+        let indicators = document.querySelectorAll('#regulGrid .budget-indicator[data-cid="'+cId+'"]');
+        let updated = false;
+        indicators.forEach(ind => {
+            let tm = ind.getAttribute('data-mkey');
+            let trv = ind.getAttribute('data-real');
+            window.setRegulCellSilent(tm, cId, trv);
+            updated = true;
+        });
+        if (updated) {
+            triggerSave(true);
+            window.renderRegul();
+            showToast("Toutes les provisions ont été copiées ✓");
+        }
+    } else {
+        window.setRegulCell(mKey, cId, realVal);
+    }
+};
+window.setRegulCell = function(mKey, colId, text) {
+    let bien = getRegulBien(currentRegulBienId);
+    if (!bien) return;
+    window.setRegulCellSilent(mKey, colId, text);
     triggerSave(true);
     window.renderRegul();
 };
@@ -7003,6 +7074,7 @@ window.adjustRegulFont = function(dir) {
         el.style.fontSize = px;
     });
 };
+// ──────────────────────────────
 
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', function() {
@@ -7011,9 +7083,12 @@ document.addEventListener('DOMContentLoaded', function() {
             quittancesEnabled = localStorage.getItem('f_quittances_enabled_' + currentAccountId) === '1';
             applyQuittancesOptionState();
             loadFiscalStartMonth();
+    loadFiscalStartMonthSyndic();
             applyFiscalStartMonthState();
             budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
             applyBudgetOptionState();
+    regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
+    applyRegulOptionState();
         } catch(e) {}
     }, 300);
 });
