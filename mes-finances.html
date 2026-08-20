@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.5</title>
+    <title>Mes finances - v3.1.6</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1529,7 +1529,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.5';
+const APP_VERSION = '3.1.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1648,7 +1648,20 @@ document.addEventListener('keydown', e => {
         let overlayOpen = false;
         $$('.overlay').forEach(o => { if(o.classList.contains('open') && o.id !== 'authOverlay') { o.classList.remove('open'); overlayOpen = true; } });
         if(!overlayOpen && $('view-data').classList.contains('active')) {
-            if(duplicateFilterActive) {
+            let hasSelection = $$('.row-cb:checked').length > 0;
+            let quickInput = $('bulkQuickCatInput');
+            let hasQuickSearch = quickInput && quickInput.value !== '';
+            
+            if (hasSelection || hasQuickSearch) {
+                if (quickInput) quickInput.value = '';
+                let dd = $('bulkQuickCatDropdown');
+                if (dd) dd.style.display = 'none';
+                let allCb = $('selectAllCb');
+                if (allCb) allCb.checked = false;
+                $$('.row-cb').forEach(c => c.checked = false);
+                window.updateBulkActions();
+                window.renderDataTable();
+            } else if(duplicateFilterActive) {
                 window.toggleDuplicateFilter();
             } else if(fltNoteNotEmpty) {
                 window.toggleFltNoteNotEmpty();
@@ -1659,12 +1672,19 @@ document.addEventListener('keydown', e => {
             }
         }
         if(!overlayOpen && $('view-categorize').classList.contains('active')) {
-            // Echap: effacer filtres si l'un est actif, sinon déselectionner
+            let quickInput = $('quickCatInput');
+            let hasQuickSearch = quickInput && quickInput.value !== '';
             let anyFilter = ['ufDateOp','ufDateExpense','ufDetails','ufCat','ufNote','ufAmount'].some(id => { let el=$(id); return el && el.value !== ''; });
-            if(anyFilter || uncatColFilters.catNotEmpty) {
-                window.resetUncatFilters();
-            } else {
+            
+            if (hasQuickSearch) {
+                quickInput.value = '';
+                let dd = $('quickCatDropdown');
+                if (dd) dd.style.display = 'none';
                 selectedUncatTxId = null; selectedUncatIds.clear(); window.renderUncategorized();
+            } else if (selectedUncatIds.size > 0) {
+                selectedUncatTxId = null; selectedUncatIds.clear(); window.renderUncategorized();
+            } else if(anyFilter || uncatColFilters.catNotEmpty) {
+                window.resetUncatFilters();
             }
         }
     }
@@ -4207,6 +4227,8 @@ window.sortUncat = function(col) {
     window.renderUncategorized();
 };
 window.renderUncategorized = function() {
+    let _wrap = $('view-categorize').querySelector('.table-wrap');
+    let _savedScroll = _wrap ? _wrap.scrollTop : 0;
     let uncat = transactions.filter(t => {
         if (!(!t.cat1 || !t.cat2 || t.cat1==="_SANS_CATEGORIE" || t.cat2==="_SANS_CATEGORIE")) return false;
         let f = uncatColFilters;
@@ -4272,6 +4294,7 @@ window.renderUncategorized = function() {
     let allCb = $('selectAllUncatCb');
     if (allCb) allCb.checked = uncat.length > 0 && uncat.every(t => selectedUncatIds.has(String(t.id)));
     let wrap = $('quickCatSearchWrap'); if(wrap) wrap.style.display = selectedUncatIds.size > 0 ? 'flex' : 'none';
+    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 
 window.toggleUncatCb = function(cb, event) {
@@ -4290,6 +4313,7 @@ window.toggleUncatCb = function(cb, event) {
     }
     selectedUncatTxId = selectedUncatIds.size > 0 ? Array.from(selectedUncatIds)[0] : null;
     let wrap = $('quickCatSearchWrap'); if(wrap) wrap.style.display = selectedUncatIds.size > 0 ? 'flex' : 'none';
+    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 window.toggleSelectAllUncat = function() {
     let v = $('selectAllUncatCb').checked;
@@ -4307,6 +4331,7 @@ window.toggleSelectAllUncat = function() {
     });
     selectedUncatTxId = selectedUncatIds.size > 0 ? Array.from(selectedUncatIds)[0] : null;
     let wrap = $('quickCatSearchWrap'); if(wrap) wrap.style.display = selectedUncatIds.size > 0 ? 'flex' : 'none';
+    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 window.applyQuickPredictiveCat = function(c1, c2) {};;
 // Stub pour compatibilité (le reste de l'ancienne applyQuickPredictiveCat est remplacé)
@@ -4352,6 +4377,8 @@ window.toggleFltNoteNotEmpty = function() {
 };
 
 window.renderDataTable = function() {
+    let _wrap = $('view-data').querySelector('.table-wrap');
+    let _savedScroll = _wrap ? _wrap.scrollTop : 0;
     let tb=$('dataTable').querySelector('tbody'), flts={dateOp:$('fltDate').value.toLowerCase(),dateExpense:$('fltDateExpense').value.toLowerCase(),label:$('fltLabel').value.toLowerCase(),details:$('fltDetails').value.toLowerCase(),note:$('fltNote').value.toLowerCase(),amount:$('fltAmount').value.toLowerCase(),cat1:$('fltCat1').value.toLowerCase(),cat2:$('fltCat2').value.toLowerCase()};
     let flt = transactions.filter(t => {
         for(let k in flts) {
@@ -4390,6 +4417,7 @@ window.renderDataTable = function() {
     </tr>`).join('');
     tb.querySelectorAll('.inline-edit').forEach(inp => inp.addEventListener('change', window.handleInlineChange));
     window.updateBulkActions();
+    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 
 $$('.col-filter').forEach(inp=>inp.addEventListener('input', ()=>{ dbPage=0; window.renderDataTable(); }));
