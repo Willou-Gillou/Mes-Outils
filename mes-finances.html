@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.15a</title>
+    <title>Mes finances - v3.1.16</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1425,6 +1425,48 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
     </div>
 
 
+    
+    <div class="overlay" id="distributeWaterModal">
+        <div class="modal" style="max-width:500px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;">Charges individuelles (eau)</h2>
+                <button class="btn btn-outline" onclick="window.closeDistributeWaterModal()" style="padding:4px 10px;border-radius:20px;">✕</button>
+            </div>
+            
+            <div style="padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px; border:1px solid var(--ink-faint);">
+                <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;font-weight:600;margin-bottom:12px;">
+                    <label style="width:180px;">Montant total facture :</label>
+                    <input type="number" id="waterInputTotal" class="input-text" style="width:120px;" placeholder="Ex: 120.50"> €
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;margin-bottom:8px;">
+                    <label style="width:180px;">Indice eau début (m³) :</label>
+                    <input type="number" id="waterInputStart" class="input-text" style="width:120px;">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;margin-bottom:16px;">
+                    <label style="width:180px;">Indice eau fin (m³) :</label>
+                    <input type="number" id="waterInputEnd" class="input-text" style="width:120px;">
+                </div>
+                
+                <hr style="border:0; border-top:1px solid var(--ink-faint); margin: 12px 0;">
+                
+                <div style="font-size:0.85em; color:var(--ink-soft); margin-bottom:8px;">(Renseigner un seul des deux champs suivants si applicable)</div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;margin-bottom:8px;">
+                    <label style="width:180px;">Indice locataire entrée :</label>
+                    <input type="number" id="waterInputMoveIn" class="input-text" style="width:120px;" placeholder="Emménagement">
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;">
+                    <label style="width:180px;">Indice locataire sortie :</label>
+                    <input type="number" id="waterInputMoveOut" class="input-text" style="width:120px;" placeholder="Départ">
+                </div>
+            </div>
+            
+            <div style="text-align:right;">
+                <button class="btn btn-outline" onclick="window.closeDistributeWaterModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="window.applyDistributeWater()">Calculer & Appliquer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- ══════════ IDÉES AMÉLIORATION MODAL ══════════ -->
     <div class="overlay" id="ideasOverlay">
         <div class="modal" style="max-width:560px;width:96vw;">
@@ -1634,7 +1676,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.15a';
+const APP_VERSION = '3.1.16';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6770,7 +6812,7 @@ function getRegulBien(id) {
         b.regulCols = [
             {id: 'c1', name: 'Provisions reçues'},
             {id: 'c2', name: 'Charges communes'},
-            {id: 'c3', name: 'Charges individuelles'},
+            {id: 'c3', name: 'Charges individuelles (eau)'},
             {id: 'c4', name: 'Charges exceptionnelles'},
             {id: 'c5', name: 'Taxe d\'ordure ménagère'}
         ];
@@ -6904,7 +6946,16 @@ window.renderRegul = function() {
     html += '<thead><tr><th class="tcd-col-axis" style="text-align:left;">Dates</th>';
     cols.forEach(c => { 
         let isProv = c.name.toLowerCase().includes('provision');
-        let calcIcon = !isProv ? ` <span style="cursor:pointer;font-size:1.1em;" onclick="window.openDistributeCostsModal('${c.id}')" title="Distribution coûts">🪄</span>` : '';
+        let isExcept = c.name.toLowerCase().includes('exceptionnelle');
+        let isWater = c.name.toLowerCase().includes('eau') || c.name.toLowerCase().includes('individuelle');
+        let calcIcon = '';
+        if (!isProv && !isExcept) {
+            if (isWater) {
+                calcIcon = ` <span style="cursor:pointer;font-size:1.1em;" onclick="window.openWaterModal('${c.id}')" title="Distribution coûts (Eau)">🪄</span>`;
+            } else {
+                calcIcon = ` <span style="cursor:pointer;font-size:1.1em;" onclick="window.openDistributeCostsModal('${c.id}')" title="Distribution coûts">🪄</span>`;
+            }
+        }
         html += `<th class="tcd-th-month">${escapeHtml(c.name)}${calcIcon}</th>`; 
     });
     html += '</tr></thead><tbody>';
@@ -6968,6 +7019,35 @@ window.renderRegul = function() {
     });
     html += '</tr>';
     
+    // Calculate total prov vs total charges
+    let sumProv = 0;
+    let sumCharges = 0;
+    cols.forEach(c => {
+        let isProv = c.name.toLowerCase().includes('provision');
+        if (isProv) sumProv += colTotals[c.id];
+        else sumCharges += colTotals[c.id];
+    });
+    
+    html += '<tr class="tcd-total-row" style="background-color: #374151 !important; color: #fff !important;">';
+    html += '<td class="tcd-col-axis" style="background-color: #374151 !important; color: #fff !important; font-weight:700;">TOTAL (regroupé)</td>';
+    cols.forEach(c => {
+        let isProv = c.name.toLowerCase().includes('provision');
+        let val = isProv ? sumProv : (c.id === cols[cols.length-1].id ? sumCharges : '');
+        let valStr = val !== '' ? formatCurrency(val) : '';
+        html += `<td class="tcd-cell" style="background-color: #374151 !important; color: #fff !important; font-weight:700;"><span class="budget-val-ro" style="color:#fff !important;">${valStr}</span></td>`;
+    });
+    html += '</tr>';
+    
+    let diff = sumProv - sumCharges;
+    let diffStr = formatCurrency(Math.abs(diff));
+    let diffText = diff >= 0 ? `Trop perçu par le bailleur : ${diffStr} à rembourser au locataire` : `Déficit de paiement : ${diffStr} à réclamer au locataire`;
+    if (sumProv === 0 && sumCharges === 0) diffText = "-";
+    
+    html += '<tr class="tcd-total-row" style="background-color: #f3f4f6 !important; color: #111 !important;">';
+    html += `<td class="tcd-col-axis" style="background-color: #f3f4f6 !important; color: #111 !important; font-weight:700;">Différence Provisions / Réel</td>`;
+    html += `<td class="tcd-cell" colspan="${cols.length}" style="background-color: #f3f4f6 !important; color: #111 !important; font-weight:700; text-align:center;">${diffText}</td>`;
+    html += '</tr>';
+    
     html += '</tbody></table></div>';
     
     if (!bien.regulExplications) bien.regulExplications = {};
@@ -6975,8 +7055,8 @@ window.renderRegul = function() {
     
     html += `<div style="margin-top:20px; max-width: 800px; margin-left: auto; margin-right: auto; text-align: left;">
         <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Explications :</label>
-        <textarea class="input-text" style="width:100%; min-height:100px; font-size:0.85em;" 
-            onblur="window.saveRegulExplication('${ex}', this.value)">${escapeHtml(explication)}</textarea>
+        <div class="input-text" style="width:100%; min-height:100px; font-size:0.85em; overflow-y:auto; background:var(--surface);" contenteditable="true" 
+            onblur="window.saveRegulExplication('${ex}', this.innerHTML)">${explication}</div>
     </div>`;
     
     container.innerHTML = html;
@@ -7027,7 +7107,7 @@ window.saveRegulExplication = function(ex, text) {
     triggerSave(true);
 };
 
-window._dcState = { colId: null, isTOM: false, spansYears: false, y1: null, y2: null, prevSum: 0 };
+window._dcState = { colId: null, isTOM: false, spansYears: false, y1: null, y2: null, prevSum: 0, annualizedPrevSum: 0, wasIncomplete: false, prevDaysPresent: 0, prevDaysTotal: 0 };
 
 window.openDistributeCostsModal = function(colId) {
     let bien = getRegulBien(currentRegulBienId);
@@ -7066,9 +7146,38 @@ window.openDistributeCostsModal = function(colId) {
             if (v && !isNaN(v)) prevSum += parseFloat(v);
         });
     }
+    
+    let prevExMonths = getRegulMonthsForExercice(prevEx);
+    let parts = moveInDate.split('-');
+    let my = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), md = parseInt(parts[2], 10);
+    
+    let prevDaysTotal = 0;
+    let prevDaysPresent = 0;
+    
+    prevExMonths.forEach(mo => {
+        let moY = parseInt(mo.y, 10), moM = parseInt(mo.m, 10);
+        let daysInMonth = new Date(moY, moM, 0).getDate();
+        prevDaysTotal += daysInMonth;
+        
+        if (moY > my || (moY === my && moM > mm)) {
+            prevDaysPresent += daysInMonth;
+        } else if (moY === my && moM === mm) {
+            prevDaysPresent += (daysInMonth - md + 1);
+        }
+    });
+    
+    let annualizedPrevSum = prevSum;
+    let wasIncomplete = false;
+    if (prevDaysPresent > 0 && prevDaysPresent < prevDaysTotal) {
+        wasIncomplete = true;
+        annualizedPrevSum = prevSum * (prevDaysTotal / prevDaysPresent);
+    }
+    
     window._dcState.prevSum = prevSum;
-    $('dcPrevTotal').textContent = formatCurrency(prevSum);
-    $('dcPrevPct').value = "0";
+    window._dcState.annualizedPrevSum = annualizedPrevSum;
+    window._dcState.wasIncomplete = wasIncomplete;
+    window._dcState.prevDaysPresent = prevDaysPresent;
+    window._dcState.prevDaysTotal = prevDaysTotal;
     
     document.querySelector('input[name="dcType"][value="est"]').checked = true;
     
@@ -7084,16 +7193,31 @@ window.dcUpdateUI = function() {
     let type = document.querySelector('input[name="dcType"]:checked').value;
     let prevGrp = $('dcPrevGroup');
     let inpGrp = $('dcInputGroup');
+    let s = window._dcState;
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
     
     if (type === 'prev') {
         prevGrp.style.display = 'block';
         inpGrp.style.display = 'none';
+        
+        let html = '';
+        if (s.wasIncomplete) {
+            html += `<div style="font-size:0.95em; margin-bottom:8px;">Total réel exercice précédent : <strong>${fmtEur(s.prevSum)}</strong> (incomplet, ${s.prevDaysPresent}/${s.prevDaysTotal} jours)</div>`;
+            html += `<div style="font-size:0.95em; margin-bottom:8px;">Base annualisée estimée : <strong id="dcPrevTotal">${fmtEur(s.annualizedPrevSum)}</strong></div>`;
+        } else {
+            html += `<div style="font-size:0.95em; margin-bottom:8px;">Total de la colonne pour l'exercice précédent : <strong id="dcPrevTotal">${fmtEur(s.prevSum)}</strong></div>`;
+        }
+        html += `<div style="display:flex;align-items:center;gap:8px; font-size:0.95em;">
+            Augmentation (%) : <input type="number" id="dcPrevPct" class="input-text" style="width:80px;" value="0">
+        </div>`;
+        prevGrp.innerHTML = html;
+        
     } else {
         prevGrp.style.display = 'none';
         inpGrp.style.display = 'block';
         
         let html = '';
-        if (window._dcState.isTOM && window._dcState.spansYears) {
+        if (window._dcState.isTOM && window._dcState.spansYears && type !== 'prev') {
             html += `<div style="font-size:0.95em; margin-bottom:12px; color:var(--ink-soft);">Cette taxe étant souvent annuelle, veuillez renseigner le coût pour chaque année civile couverte par l'exercice :</div>`;
             html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                         <label style="width:100px;font-weight:600;">Année ${window._dcState.y1} :</label>
@@ -7119,10 +7243,12 @@ window.applyDistributeCosts = function() {
     
     let totalY1 = 0, totalY2 = 0, totalGlob = 0;
     let flag = (type === 'real') ? 'real' : 'est';
+    let pct = 0;
     
     if (type === 'prev') {
-        let pct = parseFloat($('dcPrevPct').value) || 0;
-        totalGlob = s.prevSum * (1 + pct / 100);
+        let pctInput = $('dcPrevPct');
+        pct = pctInput ? (parseFloat(pctInput.value) || 0) : 0;
+        totalGlob = s.annualizedPrevSum * (1 + pct / 100);
         totalY1 = totalGlob;
         totalY2 = totalGlob;
     } else {
@@ -7199,41 +7325,186 @@ window.applyDistributeCosts = function() {
     
     let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
     
-    let text = `Explications pour la colonne "${col.name}" :\n`;
-    text += `Locataires présents entre ${startLabel} et ${endLabel}.\n`;
+    let text = `<br><br><strong>${escapeHtml(col.name)}</strong><br>`;
+    text += `Locataires présents entre ${startLabel} et ${endLabel}.<br>`;
+    
+    if (type === 'prev') {
+        text += `Reprise de l'exercice précédent (${pct}% d'augmentation).<br>`;
+        if (s.wasIncomplete) {
+            text += `L'exercice précédent était incomplet (${s.prevDaysPresent} jours sur ${s.prevDaysTotal}). Le montant réel de ${fmtEur(s.prevSum)} a été annualisé à ${fmtEur(s.annualizedPrevSum)}.<br>`;
+        }
+    }
     
     if (s.isTOM && s.spansYears && type !== 'prev') {
-        text += `Montant global ${s.y1} = ${fmtEur(totalY1)}, Montant global ${s.y2} = ${fmtEur(totalY2)}\n`;
-        text += `1/12ème ${s.y1} = ${fmtEur(monthlyRoundedY1)}/mois, 1/12ème ${s.y2} = ${fmtEur(monthlyRoundedY2)}/mois\n`;
+        text += `Montant global ${s.y1} = ${fmtEur(totalY1)}, Montant global ${s.y2} = ${fmtEur(totalY2)}<br>`;
+        text += `1/12ème ${s.y1} = ${fmtEur(monthlyRoundedY1)}/mois, 1/12ème ${s.y2} = ${fmtEur(monthlyRoundedY2)}/mois<br>`;
     } else {
-        text += `Montant global = ${fmtEur(totalGlob)}\n`;
-        text += `1/12ème de ${fmtEur(totalGlob)} = ${fmtEur(monthlyRoundedY1)} par mois\n`;
+        text += `Montant global = ${fmtEur(totalGlob)}<br>`;
+        text += `1/12ème de ${fmtEur(totalGlob)} = ${fmtEur(monthlyRoundedY1)} par mois<br>`;
     }
     
     if (isFirstEverMonth) {
         let dateLocStr = `${String(md).padStart(2,'0')}/${String(mm).padStart(2,'0')}/${my}`;
         let baseForProrata = (my === parseInt(s.y1)) ? monthlyRoundedY1 : monthlyRoundedY2;
-        text += `Particularité pour le 1er mois le ${dateLocStr}. Prorata de ${firstMonthDaysPresent}/${firstMonthDaysTotal} (${firstMonthDaysPresent} jours présents / ${firstMonthDaysTotal} jours du mois) = ${fmtEur(baseForProrata)} x ${firstMonthDaysPresent} / ${firstMonthDaysTotal} = ${fmtEur(firstMonthProrata)}\n`;
+        text += `Particularité pour le 1er mois le ${dateLocStr}. Prorata de ${firstMonthDaysPresent}/${firstMonthDaysTotal} (${firstMonthDaysPresent} jours présents / ${firstMonthDaysTotal} jours du mois) = ${fmtEur(baseForProrata)} x ${firstMonthDaysPresent} / ${firstMonthDaysTotal} = ${fmtEur(firstMonthProrata)}<br>`;
     }
-    text += `\n`;
     
     if (!bien.regulExplications) bien.regulExplications = {};
     let oldText = bien.regulExplications[ex] || '';
+    if (oldText && oldText.includes('\n')) oldText = oldText.replace(/\n/g, '<br>');
     
     function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
     
-    let regex = new RegExp(`Explications pour la colonne "${escapeRegExp(col.name)}" :[\\s\\S]*?(?=(Explications pour la colonne|$))`);
+    let regex = new RegExp(`(?:<br>\\s*)*<strong>${escapeRegExp(escapeHtml(col.name))}</strong><br>[\\s\\S]*?(?=(?:<br>\\s*)*<strong>|$)`);
     if (regex.test(oldText)) {
         oldText = oldText.replace(regex, text);
     } else {
-        oldText = (oldText ? oldText + '\n' : '') + text;
+        oldText = oldText + text;
     }
     bien.regulExplications[ex] = oldText.trim();
+    if (bien.regulExplications[ex].startsWith('<br>')) {
+        bien.regulExplications[ex] = bien.regulExplications[ex].replace(/^(?:<br>\s*)+/, '');
+    }
     
     triggerSave(true);
     window.closeDistributeCostsModal();
     window.renderRegul();
     showToast('Distribution appliquée ✓');
+};
+
+window.openWaterModal = function(colId) {
+    let bien = getRegulBien(currentRegulBienId);
+    if (!bien) return;
+    let ex = $('regulExerciceSelect').value;
+    if (bien.regulClosed && bien.regulClosed[ex]) return alert('Exercice clos.');
+    
+    let moveInDate = bien.dateAnniversaire;
+    if (!moveInDate) return alert("La date d'emménagement n'est pas renseignée dans les quittances pour ce bien.");
+    
+    window._dcState.colId = colId;
+    
+    $('waterInputTotal').value = '';
+    $('waterInputStart').value = '';
+    $('waterInputEnd').value = '';
+    $('waterInputMoveIn').value = '';
+    $('waterInputMoveOut').value = '';
+    
+    $('distributeWaterModal').classList.add('open');
+};
+
+window.closeDistributeWaterModal = function() {
+    $('distributeWaterModal').classList.remove('open');
+};
+
+window.applyDistributeWater = function() {
+    let s = window._dcState;
+    let total = parseFloat($('waterInputTotal').value.replace(',', '.')) || 0;
+    let idxStart = parseFloat($('waterInputStart').value.replace(',', '.')) || 0;
+    let idxEnd = parseFloat($('waterInputEnd').value.replace(',', '.')) || 0;
+    
+    let idxMoveInStr = $('waterInputMoveIn').value;
+    let idxMoveOutStr = $('waterInputMoveOut').value;
+    let idxMoveIn = idxMoveInStr ? parseFloat(idxMoveInStr.replace(',', '.')) : null;
+    let idxMoveOut = idxMoveOutStr ? parseFloat(idxMoveOutStr.replace(',', '.')) : null;
+    
+    if (idxEnd <= idxStart) {
+        alert("L'indice de fin doit être supérieur à l'indice de début.");
+        return;
+    }
+    
+    let totalCons = idxEnd - idxStart;
+    let locCons = totalCons;
+    
+    if (idxMoveIn !== null && !isNaN(idxMoveIn)) {
+        locCons = idxEnd - idxMoveIn;
+    } else if (idxMoveOut !== null && !isNaN(idxMoveOut)) {
+        locCons = idxMoveOut - idxStart;
+    }
+    
+    if (locCons < 0) locCons = 0;
+    if (locCons > totalCons) locCons = totalCons;
+    
+    let amountLoc = (locCons / totalCons) * total;
+    
+    let bien = getRegulBien(currentRegulBienId);
+    let ex = $('regulExerciceSelect').value;
+    let col = bien.regulCols.find(c => c.id === s.colId);
+    
+    let months = getRegulMonthsForExercice(ex);
+    
+    let activeMonths = [];
+    let my=0, mm=0, md=0;
+    let moveInDate = bien.dateAnniversaire;
+    if (moveInDate) {
+        let parts = moveInDate.split('-');
+        my = parseInt(parts[0], 10); mm = parseInt(parts[1], 10); md = parseInt(parts[2], 10);
+    }
+    
+    months.forEach((mo) => {
+        let moY = parseInt(mo.y, 10), moM = parseInt(mo.m, 10);
+        let mKey = `${mo.y}-${mo.m}`;
+        let isGreyed = false;
+        if (moY < my || (moY === my && moM < mm)) isGreyed = true;
+        // Optionally, if moveOut Date exists, we could grey it out too, but user didn't ask for moveOut date in quittance, just index in modal.
+        if (!isGreyed) activeMonths.push({ mKey: mKey, moY, moM });
+    });
+    
+    if (activeMonths.length === 0) return alert("Aucun mois actif pour le locataire.");
+    
+    let monthlyRounded = Math.round((amountLoc / activeMonths.length) * 100) / 100;
+    
+    if (!bien.regulData) bien.regulData = {};
+    if (!bien.regulData[ex]) bien.regulData[ex] = {};
+    if (!bien.regulFlags) bien.regulFlags = {};
+    if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
+    
+    activeMonths.forEach((am) => {
+        if (!bien.regulData[ex][am.mKey]) bien.regulData[ex][am.mKey] = {};
+        if (!bien.regulFlags[ex][am.mKey]) bien.regulFlags[ex][am.mKey] = {};
+        bien.regulData[ex][am.mKey][s.colId] = monthlyRounded;
+        bien.regulFlags[ex][am.mKey][s.colId] = 'real';
+    });
+    
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
+    let fmtIdx = n => n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2});
+    
+    let text = `<br><br><strong>${escapeHtml(col.name)}</strong><br>`;
+    text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
+    text += `Consommation totale : ${fmtIdx(totalCons)} m³ (Indice fin ${fmtIdx(idxEnd)} - Indice début ${fmtIdx(idxStart)})<br>`;
+    
+    if (idxMoveIn !== null && !isNaN(idxMoveIn)) {
+        text += `Le locataire a emménagé en cours de période. Indice d'entrée : ${fmtIdx(idxMoveIn)} m³.<br>`;
+        text += `Consommation locataire : ${fmtIdx(idxEnd)} - ${fmtIdx(idxMoveIn)} = ${fmtIdx(locCons)} m³.<br>`;
+    } else if (idxMoveOut !== null && !isNaN(idxMoveOut)) {
+        text += `Le locataire a quitté les lieux. Indice de sortie : ${fmtIdx(idxMoveOut)} m³.<br>`;
+        text += `Consommation locataire : ${fmtIdx(idxMoveOut)} - ${fmtIdx(idxStart)} = ${fmtIdx(locCons)} m³.<br>`;
+    } else {
+        text += `Consommation locataire : ${fmtIdx(locCons)} m³.<br>`;
+    }
+    
+    text += `Coût locataire (règle de 3) : ${fmtEur(total)} x (${fmtIdx(locCons)} / ${fmtIdx(totalCons)}) = ${fmtEur(amountLoc)}<br>`;
+    text += `Réparti sur ${activeMonths.length} mois : ${fmtEur(monthlyRounded)} / mois.<br>`;
+    
+    if (!bien.regulExplications) bien.regulExplications = {};
+    let oldText = bien.regulExplications[ex] || '';
+    if (oldText && oldText.includes('\n')) oldText = oldText.replace(/\n/g, '<br>');
+    
+    function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    let regex = new RegExp(`(?:<br>\\s*)*<strong>${escapeRegExp(escapeHtml(col.name))}</strong><br>[\\s\\S]*?(?=(?:<br>\\s*)*<strong>|$)`);
+    if (regex.test(oldText)) {
+        oldText = oldText.replace(regex, text);
+    } else {
+        oldText = oldText + text;
+    }
+    bien.regulExplications[ex] = oldText.trim();
+    if (bien.regulExplications[ex].startsWith('<br>')) {
+        bien.regulExplications[ex] = bien.regulExplications[ex].replace(/^(?:<br>\s*)+/, '');
+    }
+    
+    triggerSave(true);
+    window.closeDistributeWaterModal();
+    window.renderRegul();
+    showToast('Distribution d\'eau appliquée ✓');
 };
 
 window.onRegulIndicatorTripleClick = function(event, el) {
@@ -7330,7 +7601,9 @@ window.renderRegulColsList = function() {
 window.addRegulCol = function() {
     let bien = getRegulBien(currentRegulBienId);
     let id = 'c' + Date.now();
-    bien.regulCols.push({ id: id, name: 'Nouvelle colonne' });
+    let choice = prompt("Nom de la colonne ?\nExemples suggérés : 'Charges communes', 'Charges individuelles (eau)', 'Taxe d'ordure ménagère', 'Charges exceptionnelles'.", "Nouvelle colonne");
+    if (!choice) return;
+    bien.regulCols.push({ id: id, name: choice });
     triggerSave(false);
     window.renderRegulColsList();
 };
