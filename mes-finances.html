@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.19</title>
+    <title>Mes finances - v3.1.19b</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1676,7 +1676,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.19';
+const APP_VERSION = '3.1.19b';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -7514,58 +7514,6 @@ window.applyDistributeWater = function() {
     
     function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
     let regex = new RegExp(`(?:<br>\\s*|\\n)*(?:<b>|<strong>)\\s*${escapeRegExp(escapeHtml(col.name))}\\s*(?:<\\/b>|<\\/strong>)(?:<br>|\\n)[\\s\\S]*?(?=(?:<br>|\\n|\\s)*(?:<b>|<strong>)|$)`, 'i');
-    if (regex.test(oldText)) {
-        oldText = oldText.replace(regex, text);
-    } else {
-        oldText = oldText + text;
-    }
-    bien.regulExplications[ex] = oldText.trim();
-    if (bien.regulExplications[ex].startsWith('<br>')) {
-        bien.regulExplications[ex] = bien.regulExplications[ex].replace(/^(?:<br>\s*)+/, '');
-    }
-    
-    triggerSave(true);
-    window.closeDistributeWaterModal();
-    window.renderRegul();
-    showToast('Distribution d\'eau appliquée ✓');
-};
-    if (!bien.regulData[ex]) bien.regulData[ex] = {};
-    if (!bien.regulFlags) bien.regulFlags = {};
-    if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
-    
-    activeMonths.forEach((am) => {
-        if (!bien.regulData[ex][am.mKey]) bien.regulData[ex][am.mKey] = {};
-        if (!bien.regulFlags[ex][am.mKey]) bien.regulFlags[ex][am.mKey] = {};
-        bien.regulData[ex][am.mKey][s.colId] = monthlyRounded;
-        bien.regulFlags[ex][am.mKey][s.colId] = 'real';
-    });
-    
-    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
-    let fmtIdx = n => n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2});
-    
-    let text = `<br><br><b>${escapeHtml(col.name)}</b><br>`;
-    text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
-    text += `Consommation totale : ${fmtIdx(totalCons)} m³ (Indice fin ${fmtIdx(idxEnd)} - Indice début ${fmtIdx(idxStart)})<br>`;
-    
-    if (idxMoveIn !== null && !isNaN(idxMoveIn)) {
-        text += `Le locataire a emménagé en cours de période. Indice d'entrée : ${fmtIdx(idxMoveIn)} m³.<br>`;
-        text += `Consommation locataire : ${fmtIdx(idxEnd)} - ${fmtIdx(idxMoveIn)} = ${fmtIdx(locCons)} m³.<br>`;
-    } else if (idxMoveOut !== null && !isNaN(idxMoveOut)) {
-        text += `Le locataire a quitté les lieux. Indice de sortie : ${fmtIdx(idxMoveOut)} m³.<br>`;
-        text += `Consommation locataire : ${fmtIdx(idxMoveOut)} - ${fmtIdx(idxStart)} = ${fmtIdx(locCons)} m³.<br>`;
-    } else {
-        text += `Consommation locataire : ${fmtIdx(locCons)} m³.<br>`;
-    }
-    
-    text += `Coût locataire (règle de 3) : ${fmtEur(total)} x (${fmtIdx(locCons)} / ${fmtIdx(totalCons)}) = ${fmtEur(amountLoc)}<br>`;
-    text += `Réparti sur ${activeMonths.length} mois : ${fmtEur(monthlyRounded)} / mois.<br>`;
-    
-    if (!bien.regulExplications) bien.regulExplications = {};
-    let oldText = bien.regulExplications[ex] || '';
-    if (oldText && oldText.includes('\n')) oldText = oldText.replace(/\n/g, '<br>');
-    
-    function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
-    let regex = new RegExp(`(?:<br>|\\n|\\s)*(?:<b>|<strong>)\\s*${escapeRegExp(escapeHtml(col.name))}\\s*(?:<\\/b>|<\\/strong>)(?:<br>|\\n)[\\s\\S]*?(?=(?:<br>|\\n|\\s)*(?:<b>|<strong>)|$)`, 'i');
     if (regex.test(oldText)) {
         oldText = oldText.replace(regex, text);
     } else {
