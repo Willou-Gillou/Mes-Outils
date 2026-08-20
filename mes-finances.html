@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.19b</title>
+    <title>Mes finances - v3.1.20</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1676,7 +1676,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.19b';
+const APP_VERSION = '3.1.20';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -7421,15 +7421,40 @@ window.applyDistributeWater = function() {
     let idxMoveIn = idxMoveInStr ? parseFloat(idxMoveInStr.replace(',', '.')) : null;
     let idxMoveOut = idxMoveOutStr ? parseFloat(idxMoveOutStr.replace(',', '.')) : null;
     
-    let amountLoc = 0;
-    let text = "";
     let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
     let fmtIdx = n => n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2});
     
+    let bien = getRegulBien(currentRegulBienId);
+    let ex = $('regulExerciceSelect').value;
+    let col = bien.regulCols.find(c => c.id === s.colId);
+    
+    let months = getRegulMonthsForExercice(ex);
+    let activeMonths = [];
+    let my=0, mm=0, md=0;
+    let moveInDate = bien.dateAnniversaire;
+    if (moveInDate) {
+        let parts = moveInDate.split('-');
+        my = parseInt(parts[0], 10); mm = parseInt(parts[1], 10); md = parseInt(parts[2], 10);
+    }
+    
+    months.forEach((mo) => {
+        let moY = parseInt(mo.y, 10), moM = parseInt(mo.m, 10);
+        let mKey = `${mo.y}-${mo.m}`;
+        let isGreyed = false;
+        if (moY < my || (moY === my && moM < mm)) isGreyed = true;
+        if (!isGreyed) activeMonths.push({ mKey: mKey, moY, moM });
+    });
+    
+    if (activeMonths.length === 0) return alert("Aucun mois actif pour le locataire.");
+    
+    let text = `<br><br><b>${escapeHtml(col.name)}</b><br>`;
+    
+    let monthlyBase = 0;
     if (isOnlyAmount) {
-        amountLoc = total;
+        monthlyBase = total / 12;
         text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
         text += `Distribution directe sans relevé d'index.<br>`;
+        text += `1/12ème de ${fmtEur(total)} = ${fmtEur(Math.round(monthlyBase * 100) / 100)} par mois<br>`;
     } else {
         let idxStart = parseFloat(startInput.replace(',', '.')) || 0;
         let idxEnd = parseFloat(endInput.replace(',', '.')) || 0;
@@ -7451,7 +7476,7 @@ window.applyDistributeWater = function() {
         if (locCons < 0) locCons = 0;
         if (locCons > totalCons) locCons = totalCons;
         
-        amountLoc = (locCons / totalCons) * total;
+        let amountLoc = (locCons / totalCons) * total;
         
         text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
         text += `Consommation totale : ${fmtIdx(totalCons)} m³ (Indice fin ${fmtIdx(idxEnd)} - Indice début ${fmtIdx(idxStart)})<br>`;
@@ -7465,34 +7490,22 @@ window.applyDistributeWater = function() {
             text += `Consommation locataire : ${fmtIdx(locCons)} m³.<br>`;
         }
         text += `Coût locataire (règle de 3) : ${fmtEur(total)} x (${fmtIdx(locCons)} / ${fmtIdx(totalCons)}) = ${fmtEur(amountLoc)}<br>`;
+        
+        let sumWeights = 0;
+        activeMonths.forEach(am => {
+            if (am.moY === my && am.moM === mm) {
+                let daysInMonth = new Date(am.moY, am.moM, 0).getDate();
+                sumWeights += (daysInMonth - md + 1) / daysInMonth;
+            } else {
+                sumWeights += 1;
+            }
+        });
+        monthlyBase = amountLoc / sumWeights;
     }
     
-    let bien = getRegulBien(currentRegulBienId);
-    let ex = $('regulExerciceSelect').value;
-    let col = bien.regulCols.find(c => c.id === s.colId);
-    
-    text = `<br><br><b>${escapeHtml(col.name)}</b><br>` + text;
-    
-    let months = getRegulMonthsForExercice(ex);
-    let activeMonths = [];
-    let my=0, mm=0, md=0;
-    let moveInDate = bien.dateAnniversaire;
-    if (moveInDate) {
-        let parts = moveInDate.split('-');
-        my = parseInt(parts[0], 10); mm = parseInt(parts[1], 10); md = parseInt(parts[2], 10);
-    }
-    
-    months.forEach((mo) => {
-        let moY = parseInt(mo.y, 10), moM = parseInt(mo.m, 10);
-        let mKey = `${mo.y}-${mo.m}`;
-        let isGreyed = false;
-        if (moY < my || (moY === my && moM < mm)) isGreyed = true;
-        if (!isGreyed) activeMonths.push({ mKey: mKey, moY, moM });
-    });
-    
-    if (activeMonths.length === 0) return alert("Aucun mois actif pour le locataire.");
-    
-    let monthlyRounded = Math.round((amountLoc / activeMonths.length) * 100) / 100;
+    let monthlyRounded = Math.round(monthlyBase * 100) / 100;
+    let isFirstEverMonth = false;
+    let firstMonthProrata = 0, firstMonthDaysPresent = 0, firstMonthDaysTotal = 0;
     
     if (!bien.regulData) bien.regulData = {};
     if (!bien.regulData[ex]) bien.regulData[ex] = {};
@@ -7500,13 +7513,27 @@ window.applyDistributeWater = function() {
     if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
     
     activeMonths.forEach((am) => {
-        if (!bien.regulData[ex][am.mKey]) bien.regulData[ex][am.mKey] = {};
-        if (!bien.regulFlags[ex][am.mKey]) bien.regulFlags[ex][am.mKey] = {};
-        bien.regulData[ex][am.mKey][s.colId] = monthlyRounded;
-        bien.regulFlags[ex][am.mKey][s.colId] = 'real';
+        let moY = am.moY, moM = am.moM, mKey = am.mKey;
+        if (!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
+        if (!bien.regulFlags[ex][mKey]) bien.regulFlags[ex][mKey] = {};
+        
+        if (moY === my && moM === mm) {
+            isFirstEverMonth = true;
+            firstMonthDaysTotal = new Date(moY, moM, 0).getDate();
+            firstMonthDaysPresent = firstMonthDaysTotal - md + 1;
+            firstMonthProrata = Math.round(monthlyBase * firstMonthDaysPresent / firstMonthDaysTotal * 100) / 100;
+            bien.regulData[ex][mKey][s.colId] = firstMonthProrata;
+            bien.regulFlags[ex][mKey][s.colId] = 'real';
+        } else {
+            bien.regulData[ex][mKey][s.colId] = monthlyRounded;
+            bien.regulFlags[ex][mKey][s.colId] = 'real';
+        }
     });
     
-    text += `Réparti sur ${activeMonths.length} mois : ${fmtEur(monthlyRounded)} / mois.<br>`;
+    if (isFirstEverMonth) {
+        let dateLocStr = `${String(md).padStart(2,'0')}/${String(mm).padStart(2,'0')}/${my}`;
+        text += `Particularité pour le 1er mois le ${dateLocStr}. Prorata de ${firstMonthDaysPresent}/${firstMonthDaysTotal} = ${fmtEur(monthlyRounded)} x ${firstMonthDaysPresent} / ${firstMonthDaysTotal} = ${fmtEur(firstMonthProrata)}<br>`;
+    }
     
     if (!bien.regulExplications) bien.regulExplications = {};
     let oldText = bien.regulExplications[ex] || '';
