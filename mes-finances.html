@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.13</title>
+    <title>Mes finances - v3.1.14</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1596,7 +1596,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.13';
+const APP_VERSION = '3.1.14';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6954,6 +6954,96 @@ window.renderRegul = function() {
         el.style.fontSize = fs + 'px';
     });
 };
+
+window.calcChargesCommunes = function(colId) {
+    let bien = getRegulBien(currentRegulBienId);
+    if (!bien) return;
+    let ex = $('regulExerciceSelect').value;
+    if (bien.regulClosed && bien.regulClosed[ex]) return alert('Exercice clos.');
+    
+    let totalStr = prompt("Montant total des charges communes pour l'exercice :");
+    if (!totalStr) return;
+    let total = parseFloat(totalStr.replace(',', '.').replace(/[^0-9.-]/g, ''));
+    if (isNaN(total)) return alert('Montant invalide.');
+    
+    let moveInDate = bien.dateAnniversaire;
+    if (!moveInDate) return alert("La date d'emménagement n'est pas renseignée dans les quittances pour ce bien.");
+    let parts = moveInDate.split('-');
+    let my = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), md = parseInt(parts[2], 10);
+    
+    let months = getRegulMonthsForExercice(ex);
+    
+    let monthlyBase = total / 12;
+    let monthlyRounded = Math.round(monthlyBase * 100) / 100;
+    
+    let firstMonthProrata = 0;
+    let firstMonthDaysPresent = 0;
+    let firstMonthDaysTotal = 0;
+    let activeMonthsCount = 0;
+    let startLabel = '';
+    let endLabel = '';
+    
+    if (!bien.regulData) bien.regulData = {};
+    if (!bien.regulData[ex]) bien.regulData[ex] = {};
+    
+    let isFirstEverMonth = false; 
+
+    const monthNames = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+    months.forEach((mo) => {
+        let moY = parseInt(mo.y, 10), moM = parseInt(mo.m, 10);
+        let mKey = `${mo.y}-${mo.m}`;
+        
+        let isGreyed = false;
+        if (moY < my || (moY === my && moM < mm)) isGreyed = true;
+        
+        if (!isGreyed) {
+            if (activeMonthsCount === 0) startLabel = `${monthNames[moM].toLowerCase().substring(0,3)} ${String(moY).substring(2)}`;
+            endLabel = `${monthNames[moM].toLowerCase().substring(0,3)} ${String(moY).substring(2)}`;
+            activeMonthsCount++;
+            
+            if (!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
+            
+            if (moY === my && moM === mm) {
+                isFirstEverMonth = true;
+                firstMonthDaysTotal = new Date(moY, moM, 0).getDate();
+                firstMonthDaysPresent = firstMonthDaysTotal - md + 1; 
+                firstMonthProrata = Math.round(monthlyBase * firstMonthDaysPresent / firstMonthDaysTotal * 100) / 100;
+                bien.regulData[ex][mKey][colId] = firstMonthProrata;
+            } else {
+                bien.regulData[ex][mKey][colId] = monthlyRounded;
+            }
+        } else {
+            if (bien.regulData[ex] && bien.regulData[ex][mKey]) delete bien.regulData[ex][mKey][colId];
+        }
+    });
+    
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
+    
+    let text = `Locataires présents entre ${startLabel} et ${endLabel}.\n`;
+    text += `Montant charges communes = ${fmtEur(total)}\n`;
+    text += `1/12eme de ${fmtEur(total)} = ${fmtEur(monthlyRounded)} par mois\n`;
+    if (isFirstEverMonth) {
+        let dateLocStr = `${String(md).padStart(2,'0')}/${String(mm).padStart(2,'0')}/${my}`;
+        text += `Particularité pour le 1er mois le ${dateLocStr}. Prorata de ${firstMonthDaysPresent}/${firstMonthDaysTotal} (${firstMonthDaysPresent} jours présents / ${firstMonthDaysTotal} jours du mois) = ${fmtEur(monthlyRounded)} x ${firstMonthDaysPresent} / ${firstMonthDaysTotal} = ${fmtEur(firstMonthProrata)}`;
+    }
+    
+    if (!bien.regulExplications) bien.regulExplications = {};
+    bien.regulExplications[ex] = text;
+    
+    triggerSave(true);
+    window.renderRegul();
+    showToast('Calcul appliqué ✓');
+};
+
+window.saveRegulExplication = function(ex, text) {
+    let bien = getRegulBien(currentRegulBienId);
+    if (!bien) return;
+    if (!bien.regulExplications) bien.regulExplications = {};
+    bien.regulExplications[ex] = text;
+    triggerSave(true);
+};
+
 window.setRegulCellSilent = function(mKey, colId, text) {
     let bien = getRegulBien(currentRegulBienId);
     let ex = $('regulExerciceSelect').value;
