@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.14</title>
+    <title>Mes finances - v3.1.15a</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1460,6 +1460,44 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             </div>
         </div>
     </div>
+
+    <div class="overlay" id="distributeCostsModal">
+        <div class="modal" style="max-width:500px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;">Distribution coûts : <span id="dcColName"></span></h2>
+                <button class="btn btn-outline" onclick="window.closeDistributeCostsModal()" style="padding:4px 10px;border-radius:20px;">✕</button>
+            </div>
+            
+            <div style="margin-bottom: 16px;">
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
+                    <input type="radio" name="dcType" value="prev" onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Reprise exercice précédent + %
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
+                    <input type="radio" name="dcType" value="est" checked onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Estimation globale
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="radio" name="dcType" value="real" onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Montant réel
+                </label>
+            </div>
+            
+            <div id="dcPrevGroup" style="display:none; padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px; border:1px solid var(--ink-faint);">
+                <div style="font-size:0.95em; margin-bottom:8px;">Total de la colonne pour l'exercice précédent : <strong id="dcPrevTotal">0.00€</strong></div>
+                <div style="display:flex;align-items:center;gap:8px; font-size:0.95em;">
+                    Augmentation (%) : <input type="number" id="dcPrevPct" class="input-text" style="width:80px;" value="0">
+                </div>
+            </div>
+            
+            <div id="dcInputGroup" style="padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px; border:1px solid var(--ink-faint);">
+                <!-- Dynamically populated -->
+            </div>
+            
+            <div style="text-align:right;">
+                <button class="btn btn-outline" onclick="window.closeDistributeCostsModal()">Annuler</button>
+                <button class="btn btn-primary" onclick="window.applyDistributeCosts()">Appliquer</button>
+            </div>
+        </div>
+    </div>
+
 </main>
 
 <input type="file" id="bankFileInput" accept=".csv" style="display:none">
@@ -1596,7 +1634,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.14';
+const APP_VERSION = '3.1.15a';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6865,7 +6903,8 @@ window.renderRegul = function() {
     let html = '<div style="text-align:center;"><table class="tcd-native regul-table" cellspacing="0" cellpadding="0">';
     html += '<thead><tr><th class="tcd-col-axis" style="text-align:left;">Dates</th>';
     cols.forEach(c => { 
-        let calcIcon = c.name.toLowerCase().includes('communes') ? ` <span style="cursor:pointer;font-size:1.1em;" onclick="window.calcChargesCommunes('${c.id}')" title="Prévision coûts">🪄</span>` : '';
+        let isProv = c.name.toLowerCase().includes('provision');
+        let calcIcon = !isProv ? ` <span style="cursor:pointer;font-size:1.1em;" onclick="window.openDistributeCostsModal('${c.id}')" title="Distribution coûts">🪄</span>` : '';
         html += `<th class="tcd-th-month">${escapeHtml(c.name)}${calcIcon}</th>`; 
     });
     html += '</tr></thead><tbody>';
@@ -6898,19 +6937,26 @@ window.renderRegul = function() {
             let actualVal = isEmpty ? 0 : parseFloat(val);
             if (!isGreyed) colTotals[c.id] += actualVal;
             
+            let isProv = c.name.toLowerCase().includes('provision');
             let provVal = null;
-            if (c.name.toLowerCase().includes('provision')) {
+            if (isProv) {
                 provVal = getProvisionFromEcheancier(bien, mKey);
             }
-            let indHtml = (!isGreyed && provVal !== null) ? regulIndicatorHtml(isEmpty ? null : actualVal, provVal, mKey, c.id) : '';
+            let indHtml = (!isGreyed && isProv && provVal !== null) ? regulIndicatorHtml(isEmpty ? null : actualVal, provVal, mKey, c.id) : '';
+
+            // Handle Flags
+            let flag = bien.regulFlags && bien.regulFlags[ex] && bien.regulFlags[ex][mKey] && bien.regulFlags[ex][mKey][c.id];
+            let flagHtml = '';
+            if (!isEmpty && !isProv && flag === 'est') flagHtml = ' <span style="color:var(--warn);font-weight:bold;font-size:1.1em;padding-left:2px;" title="Estimation globale ou reprise">~</span>';
+            if (!isEmpty && !isProv && flag === 'real') flagHtml = ' <span style="color:var(--done);font-weight:bold;font-size:1.1em;padding-left:2px;" title="Montant réel distribué">✔︎</span>';
 
             if (isClosed || isGreyed) {
-                html += `<td class="tcd-cell"><span class="budget-val-ro">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${indHtml}</td>`;
+                html += `<td class="tcd-cell"><span class="budget-val-ro">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
             } else {
                 html += `<td class="tcd-cell"><span class="budget-val" contenteditable="true" 
                     onfocus="window.onBudgetCellFocus(this)"
                     onblur="window.setRegulCell('${mKey}', '${c.id}', this.textContent)"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${indHtml}</td>`;
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
             }
         });
         html += '</tr>';
@@ -6955,40 +7001,166 @@ window.renderRegul = function() {
     });
 };
 
-window.calcChargesCommunes = function(colId) {
+window.setRegulCellSilent = function(mKey, colId, text) {
+    let bien = getRegulBien(currentRegulBienId);
+    let ex = $('regulExerciceSelect').value;
+    if (!bien.regulData[ex]) bien.regulData[ex] = {};
+    if (!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
+    let cleaned = String(text||'').replace(/[\s\u00A0\u202F€a-zA-Z~✔︎]/g,'').replace(',', '.').trim();
+    if (cleaned === '') {
+        delete bien.regulData[ex][mKey][colId];
+        if (bien.regulFlags && bien.regulFlags[ex] && bien.regulFlags[ex][mKey]) delete bien.regulFlags[ex][mKey][colId];
+    } else {
+        let n = parseFloat(cleaned);
+        if (!isNaN(n)) {
+            bien.regulData[ex][mKey][colId] = n;
+            if (bien.regulFlags && bien.regulFlags[ex] && bien.regulFlags[ex][mKey]) delete bien.regulFlags[ex][mKey][colId];
+        }
+    }
+};
+
+window.saveRegulExplication = function(ex, text) {
+    let bien = getRegulBien(currentRegulBienId);
+    if (!bien) return;
+    if (!bien.regulExplications) bien.regulExplications = {};
+    bien.regulExplications[ex] = text;
+    triggerSave(true);
+};
+
+window._dcState = { colId: null, isTOM: false, spansYears: false, y1: null, y2: null, prevSum: 0 };
+
+window.openDistributeCostsModal = function(colId) {
     let bien = getRegulBien(currentRegulBienId);
     if (!bien) return;
     let ex = $('regulExerciceSelect').value;
     if (bien.regulClosed && bien.regulClosed[ex]) return alert('Exercice clos.');
     
-    let totalStr = prompt("Montant total des charges communes pour l'exercice :");
-    if (!totalStr) return;
-    let total = parseFloat(totalStr.replace(',', '.').replace(/[^0-9.-]/g, ''));
-    if (isNaN(total)) return alert('Montant invalide.');
-    
     let moveInDate = bien.dateAnniversaire;
     if (!moveInDate) return alert("La date d'emménagement n'est pas renseignée dans les quittances pour ce bien.");
+    
+    let col = bien.regulCols.find(c => c.id === colId);
+    if (!col) return;
+    
+    $('dcColName').textContent = col.name;
+    
+    window._dcState.colId = colId;
+    window._dcState.isTOM = col.name.toLowerCase().includes('taxe') || col.name.toLowerCase().includes('ordure');
+    
+    let months = getRegulMonthsForExercice(ex);
+    window._dcState.y1 = months[0].y;
+    window._dcState.y2 = months[11].y;
+    window._dcState.spansYears = (window._dcState.y1 !== window._dcState.y2);
+    
+    let exParts = ex.split('-');
+    let prevEx = '';
+    if (exParts.length === 1) {
+        prevEx = String(parseInt(exParts[0]) - 1);
+    } else {
+        prevEx = String(parseInt(exParts[0]) - 1) + '-' + String(parseInt(exParts[1]) - 1);
+    }
+    
+    let prevSum = 0;
+    if (bien.regulData && bien.regulData[prevEx]) {
+        Object.keys(bien.regulData[prevEx]).forEach(mK => {
+            let v = bien.regulData[prevEx][mK][colId];
+            if (v && !isNaN(v)) prevSum += parseFloat(v);
+        });
+    }
+    window._dcState.prevSum = prevSum;
+    $('dcPrevTotal').textContent = formatCurrency(prevSum);
+    $('dcPrevPct').value = "0";
+    
+    document.querySelector('input[name="dcType"][value="est"]').checked = true;
+    
+    window.dcUpdateUI();
+    $('distributeCostsModal').classList.add('open');
+};
+
+window.closeDistributeCostsModal = function() {
+    $('distributeCostsModal').classList.remove('open');
+};
+
+window.dcUpdateUI = function() {
+    let type = document.querySelector('input[name="dcType"]:checked').value;
+    let prevGrp = $('dcPrevGroup');
+    let inpGrp = $('dcInputGroup');
+    
+    if (type === 'prev') {
+        prevGrp.style.display = 'block';
+        inpGrp.style.display = 'none';
+    } else {
+        prevGrp.style.display = 'none';
+        inpGrp.style.display = 'block';
+        
+        let html = '';
+        if (window._dcState.isTOM && window._dcState.spansYears) {
+            html += `<div style="font-size:0.95em; margin-bottom:12px; color:var(--ink-soft);">Cette taxe étant souvent annuelle, veuillez renseigner le coût pour chaque année civile couverte par l'exercice :</div>`;
+            html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                        <label style="width:100px;font-weight:600;">Année ${window._dcState.y1} :</label>
+                        <input type="number" id="dcInputY1" class="input-text" style="width:120px;" placeholder="Ex: 250"> €
+                     </div>`;
+            html += `<div style="display:flex;align-items:center;gap:8px;">
+                        <label style="width:100px;font-weight:600;">Année ${window._dcState.y2} :</label>
+                        <input type="number" id="dcInputY2" class="input-text" style="width:120px;" placeholder="Ex: 260"> €
+                     </div>`;
+        } else {
+            html += `<div style="display:flex;align-items:center;gap:8px;font-size:0.95em;font-weight:600;">
+                        <label>Montant total :</label>
+                        <input type="number" id="dcInputTotal" class="input-text" style="width:120px;" placeholder="Ex: 500"> €
+                     </div>`;
+        }
+        inpGrp.innerHTML = html;
+    }
+};
+
+window.applyDistributeCosts = function() {
+    let type = document.querySelector('input[name="dcType"]:checked').value;
+    let s = window._dcState;
+    
+    let totalY1 = 0, totalY2 = 0, totalGlob = 0;
+    let flag = (type === 'real') ? 'real' : 'est';
+    
+    if (type === 'prev') {
+        let pct = parseFloat($('dcPrevPct').value) || 0;
+        totalGlob = s.prevSum * (1 + pct / 100);
+        totalY1 = totalGlob;
+        totalY2 = totalGlob;
+    } else {
+        if (s.isTOM && s.spansYears) {
+            let el1 = $('dcInputY1'), el2 = $('dcInputY2');
+            totalY1 = el1 ? parseFloat(el1.value.replace(',','.')) || 0 : 0;
+            totalY2 = el2 ? parseFloat(el2.value.replace(',','.')) || 0 : 0;
+        } else {
+            let el = $('dcInputTotal');
+            totalGlob = el ? parseFloat(el.value.replace(',','.')) || 0 : 0;
+            totalY1 = totalGlob;
+            totalY2 = totalGlob;
+        }
+    }
+    
+    let bien = getRegulBien(currentRegulBienId);
+    let ex = $('regulExerciceSelect').value;
+    let col = bien.regulCols.find(c => c.id === s.colId);
+    let moveInDate = bien.dateAnniversaire;
     let parts = moveInDate.split('-');
     let my = parseInt(parts[0], 10), mm = parseInt(parts[1], 10), md = parseInt(parts[2], 10);
     
     let months = getRegulMonthsForExercice(ex);
     
-    let monthlyBase = total / 12;
-    let monthlyRounded = Math.round(monthlyBase * 100) / 100;
+    if (!bien.regulData) bien.regulData = {};
+    if (!bien.regulData[ex]) bien.regulData[ex] = {};
+    if (!bien.regulFlags) bien.regulFlags = {};
+    if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
     
-    let firstMonthProrata = 0;
-    let firstMonthDaysPresent = 0;
-    let firstMonthDaysTotal = 0;
+    let isFirstEverMonth = false; 
     let activeMonthsCount = 0;
     let startLabel = '';
     let endLabel = '';
-    
-    if (!bien.regulData) bien.regulData = {};
-    if (!bien.regulData[ex]) bien.regulData[ex] = {};
-    
-    let isFirstEverMonth = false; 
-
     const monthNames = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+    let firstMonthProrata = 0, firstMonthDaysPresent = 0, firstMonthDaysTotal = 0;
+    let monthlyRoundedY1 = Math.round((totalY1 / 12) * 100) / 100;
+    let monthlyRoundedY2 = Math.round((totalY2 / 12) * 100) / 100;
 
     months.forEach((mo) => {
         let moY = parseInt(mo.y, 10), moM = parseInt(mo.m, 10);
@@ -7003,59 +7175,67 @@ window.calcChargesCommunes = function(colId) {
             activeMonthsCount++;
             
             if (!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
+            if (!bien.regulFlags[ex][mKey]) bien.regulFlags[ex][mKey] = {};
+            
+            let monthlyBase = (mo.y === s.y1) ? (totalY1 / 12) : (totalY2 / 12);
+            let monthlyRounded = (mo.y === s.y1) ? monthlyRoundedY1 : monthlyRoundedY2;
             
             if (moY === my && moM === mm) {
                 isFirstEverMonth = true;
                 firstMonthDaysTotal = new Date(moY, moM, 0).getDate();
                 firstMonthDaysPresent = firstMonthDaysTotal - md + 1; 
                 firstMonthProrata = Math.round(monthlyBase * firstMonthDaysPresent / firstMonthDaysTotal * 100) / 100;
-                bien.regulData[ex][mKey][colId] = firstMonthProrata;
+                bien.regulData[ex][mKey][s.colId] = firstMonthProrata;
+                bien.regulFlags[ex][mKey][s.colId] = flag;
             } else {
-                bien.regulData[ex][mKey][colId] = monthlyRounded;
+                bien.regulData[ex][mKey][s.colId] = monthlyRounded;
+                bien.regulFlags[ex][mKey][s.colId] = flag;
             }
         } else {
-            if (bien.regulData[ex] && bien.regulData[ex][mKey]) delete bien.regulData[ex][mKey][colId];
+            if (bien.regulData[ex] && bien.regulData[ex][mKey]) delete bien.regulData[ex][mKey][s.colId];
+            if (bien.regulFlags[ex] && bien.regulFlags[ex][mKey]) delete bien.regulFlags[ex][mKey][s.colId];
         }
     });
     
     let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
     
-    let text = `Locataires présents entre ${startLabel} et ${endLabel}.\n`;
-    text += `Montant charges communes = ${fmtEur(total)}\n`;
-    text += `1/12eme de ${fmtEur(total)} = ${fmtEur(monthlyRounded)} par mois\n`;
+    let text = `Explications pour la colonne "${col.name}" :\n`;
+    text += `Locataires présents entre ${startLabel} et ${endLabel}.\n`;
+    
+    if (s.isTOM && s.spansYears && type !== 'prev') {
+        text += `Montant global ${s.y1} = ${fmtEur(totalY1)}, Montant global ${s.y2} = ${fmtEur(totalY2)}\n`;
+        text += `1/12ème ${s.y1} = ${fmtEur(monthlyRoundedY1)}/mois, 1/12ème ${s.y2} = ${fmtEur(monthlyRoundedY2)}/mois\n`;
+    } else {
+        text += `Montant global = ${fmtEur(totalGlob)}\n`;
+        text += `1/12ème de ${fmtEur(totalGlob)} = ${fmtEur(monthlyRoundedY1)} par mois\n`;
+    }
+    
     if (isFirstEverMonth) {
         let dateLocStr = `${String(md).padStart(2,'0')}/${String(mm).padStart(2,'0')}/${my}`;
-        text += `Particularité pour le 1er mois le ${dateLocStr}. Prorata de ${firstMonthDaysPresent}/${firstMonthDaysTotal} (${firstMonthDaysPresent} jours présents / ${firstMonthDaysTotal} jours du mois) = ${fmtEur(monthlyRounded)} x ${firstMonthDaysPresent} / ${firstMonthDaysTotal} = ${fmtEur(firstMonthProrata)}`;
+        let baseForProrata = (my === parseInt(s.y1)) ? monthlyRoundedY1 : monthlyRoundedY2;
+        text += `Particularité pour le 1er mois le ${dateLocStr}. Prorata de ${firstMonthDaysPresent}/${firstMonthDaysTotal} (${firstMonthDaysPresent} jours présents / ${firstMonthDaysTotal} jours du mois) = ${fmtEur(baseForProrata)} x ${firstMonthDaysPresent} / ${firstMonthDaysTotal} = ${fmtEur(firstMonthProrata)}\n`;
     }
+    text += `\n`;
     
     if (!bien.regulExplications) bien.regulExplications = {};
-    bien.regulExplications[ex] = text;
+    let oldText = bien.regulExplications[ex] || '';
+    
+    function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    
+    let regex = new RegExp(`Explications pour la colonne "${escapeRegExp(col.name)}" :[\\s\\S]*?(?=(Explications pour la colonne|$))`);
+    if (regex.test(oldText)) {
+        oldText = oldText.replace(regex, text);
+    } else {
+        oldText = (oldText ? oldText + '\n' : '') + text;
+    }
+    bien.regulExplications[ex] = oldText.trim();
     
     triggerSave(true);
+    window.closeDistributeCostsModal();
     window.renderRegul();
-    showToast('Calcul appliqué ✓');
+    showToast('Distribution appliquée ✓');
 };
 
-window.saveRegulExplication = function(ex, text) {
-    let bien = getRegulBien(currentRegulBienId);
-    if (!bien) return;
-    if (!bien.regulExplications) bien.regulExplications = {};
-    bien.regulExplications[ex] = text;
-    triggerSave(true);
-};
-
-window.setRegulCellSilent = function(mKey, colId, text) {
-    let bien = getRegulBien(currentRegulBienId);
-    let ex = $('regulExerciceSelect').value;
-    if (!bien.regulData[ex]) bien.regulData[ex] = {};
-    if (!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
-    let cleaned = String(text||'').replace(/[\s\u00A0\u202F€a-zA-Z]/g,'').replace(',', '.').trim();
-    if (cleaned === '') delete bien.regulData[ex][mKey][colId];
-    else {
-        let n = parseFloat(cleaned);
-        if (!isNaN(n)) bien.regulData[ex][mKey][colId] = n;
-    }
-};
 window.onRegulIndicatorTripleClick = function(event, el) {
     if (event.detail < 3) return;
     event.preventDefault();
