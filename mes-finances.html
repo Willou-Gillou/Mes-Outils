@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.17</title>
+    <title>Mes finances - v3.1.19</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1676,7 +1676,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.17';
+const APP_VERSION = '3.1.19';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -7409,40 +7409,71 @@ window.closeDistributeWaterModal = function() {
 
 window.applyDistributeWater = function() {
     let s = window._dcState;
-    let total = parseFloat($('waterInputTotal').value.replace(',', '.')) || 0;
-    let idxStart = parseFloat($('waterInputStart').value.replace(',', '.')) || 0;
-    let idxEnd = parseFloat($('waterInputEnd').value.replace(',', '.')) || 0;
+    let totalInput = $('waterInputTotal').value;
+    let startInput = $('waterInputStart').value;
+    let endInput = $('waterInputEnd').value;
+    
+    let total = parseFloat(totalInput.replace(',', '.')) || 0;
+    let isOnlyAmount = (totalInput.trim() !== '' && startInput.trim() === '' && endInput.trim() === '');
     
     let idxMoveInStr = $('waterInputMoveIn').value;
     let idxMoveOutStr = $('waterInputMoveOut').value;
     let idxMoveIn = idxMoveInStr ? parseFloat(idxMoveInStr.replace(',', '.')) : null;
     let idxMoveOut = idxMoveOutStr ? parseFloat(idxMoveOutStr.replace(',', '.')) : null;
     
-    if (idxEnd <= idxStart) {
-        alert("L'indice de fin doit être supérieur à l'indice de début.");
-        return;
+    let amountLoc = 0;
+    let text = "";
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
+    let fmtIdx = n => n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2});
+    
+    if (isOnlyAmount) {
+        amountLoc = total;
+        text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
+        text += `Distribution directe sans relevé d'index.<br>`;
+    } else {
+        let idxStart = parseFloat(startInput.replace(',', '.')) || 0;
+        let idxEnd = parseFloat(endInput.replace(',', '.')) || 0;
+        
+        if (idxEnd <= idxStart) {
+            alert("L'indice de fin doit être supérieur à l'indice de début.");
+            return;
+        }
+        
+        let totalCons = idxEnd - idxStart;
+        let locCons = totalCons;
+        
+        if (idxMoveIn !== null && !isNaN(idxMoveIn)) {
+            locCons = idxEnd - idxMoveIn;
+        } else if (idxMoveOut !== null && !isNaN(idxMoveOut)) {
+            locCons = idxMoveOut - idxStart;
+        }
+        
+        if (locCons < 0) locCons = 0;
+        if (locCons > totalCons) locCons = totalCons;
+        
+        amountLoc = (locCons / totalCons) * total;
+        
+        text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
+        text += `Consommation totale : ${fmtIdx(totalCons)} m³ (Indice fin ${fmtIdx(idxEnd)} - Indice début ${fmtIdx(idxStart)})<br>`;
+        if (idxMoveIn !== null && !isNaN(idxMoveIn)) {
+            text += `Le locataire a emménagé en cours de période. Indice d'entrée : ${fmtIdx(idxMoveIn)} m³.<br>`;
+            text += `Consommation locataire : ${fmtIdx(idxEnd)} - ${fmtIdx(idxMoveIn)} = ${fmtIdx(locCons)} m³.<br>`;
+        } else if (idxMoveOut !== null && !isNaN(idxMoveOut)) {
+            text += `Le locataire a quitté les lieux. Indice de sortie : ${fmtIdx(idxMoveOut)} m³.<br>`;
+            text += `Consommation locataire : ${fmtIdx(idxMoveOut)} - ${fmtIdx(idxStart)} = ${fmtIdx(locCons)} m³.<br>`;
+        } else {
+            text += `Consommation locataire : ${fmtIdx(locCons)} m³.<br>`;
+        }
+        text += `Coût locataire (règle de 3) : ${fmtEur(total)} x (${fmtIdx(locCons)} / ${fmtIdx(totalCons)}) = ${fmtEur(amountLoc)}<br>`;
     }
-    
-    let totalCons = idxEnd - idxStart;
-    let locCons = totalCons;
-    
-    if (idxMoveIn !== null && !isNaN(idxMoveIn)) {
-        locCons = idxEnd - idxMoveIn;
-    } else if (idxMoveOut !== null && !isNaN(idxMoveOut)) {
-        locCons = idxMoveOut - idxStart;
-    }
-    
-    if (locCons < 0) locCons = 0;
-    if (locCons > totalCons) locCons = totalCons;
-    
-    let amountLoc = (locCons / totalCons) * total;
     
     let bien = getRegulBien(currentRegulBienId);
     let ex = $('regulExerciceSelect').value;
     let col = bien.regulCols.find(c => c.id === s.colId);
     
-    let months = getRegulMonthsForExercice(ex);
+    text = `<br><br><b>${escapeHtml(col.name)}</b><br>` + text;
     
+    let months = getRegulMonthsForExercice(ex);
     let activeMonths = [];
     let my=0, mm=0, md=0;
     let moveInDate = bien.dateAnniversaire;
@@ -7456,7 +7487,6 @@ window.applyDistributeWater = function() {
         let mKey = `${mo.y}-${mo.m}`;
         let isGreyed = false;
         if (moY < my || (moY === my && moM < mm)) isGreyed = true;
-        // Optionally, if moveOut Date exists, we could grey it out too, but user didn't ask for moveOut date in quittance, just index in modal.
         if (!isGreyed) activeMonths.push({ mKey: mKey, moY, moM });
     });
     
@@ -7465,6 +7495,40 @@ window.applyDistributeWater = function() {
     let monthlyRounded = Math.round((amountLoc / activeMonths.length) * 100) / 100;
     
     if (!bien.regulData) bien.regulData = {};
+    if (!bien.regulData[ex]) bien.regulData[ex] = {};
+    if (!bien.regulFlags) bien.regulFlags = {};
+    if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
+    
+    activeMonths.forEach((am) => {
+        if (!bien.regulData[ex][am.mKey]) bien.regulData[ex][am.mKey] = {};
+        if (!bien.regulFlags[ex][am.mKey]) bien.regulFlags[ex][am.mKey] = {};
+        bien.regulData[ex][am.mKey][s.colId] = monthlyRounded;
+        bien.regulFlags[ex][am.mKey][s.colId] = 'real';
+    });
+    
+    text += `Réparti sur ${activeMonths.length} mois : ${fmtEur(monthlyRounded)} / mois.<br>`;
+    
+    if (!bien.regulExplications) bien.regulExplications = {};
+    let oldText = bien.regulExplications[ex] || '';
+    if (oldText && oldText.includes('\n')) oldText = oldText.replace(/\n/g, '<br>');
+    
+    function escapeRegExp(string) { return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    let regex = new RegExp(`(?:<br>\\s*|\\n)*(?:<b>|<strong>)\\s*${escapeRegExp(escapeHtml(col.name))}\\s*(?:<\\/b>|<\\/strong>)(?:<br>|\\n)[\\s\\S]*?(?=(?:<br>|\\n|\\s)*(?:<b>|<strong>)|$)`, 'i');
+    if (regex.test(oldText)) {
+        oldText = oldText.replace(regex, text);
+    } else {
+        oldText = oldText + text;
+    }
+    bien.regulExplications[ex] = oldText.trim();
+    if (bien.regulExplications[ex].startsWith('<br>')) {
+        bien.regulExplications[ex] = bien.regulExplications[ex].replace(/^(?:<br>\s*)+/, '');
+    }
+    
+    triggerSave(true);
+    window.closeDistributeWaterModal();
+    window.renderRegul();
+    showToast('Distribution d\'eau appliquée ✓');
+};
     if (!bien.regulData[ex]) bien.regulData[ex] = {};
     if (!bien.regulFlags) bien.regulFlags = {};
     if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
@@ -7611,9 +7675,26 @@ window.renderRegulColsList = function() {
 };
 window.addRegulCol = function() {
     let bien = getRegulBien(currentRegulBienId);
+    let msg = "Choisissez le type de charge (tapez le numéro) :\n" +
+              "1 - Charges communes\n" +
+              "2 - Charges individuelles (eau)\n" +
+              "3 - Taxe d'ordure ménagère\n" +
+              "4 - Charges exceptionnelles\n" +
+              "5 - Autre (personnalisé)";
+    let num = prompt(msg, "1");
+    if (!num) return;
+    let choice = "";
+    if (num === "1") choice = "Charges communes";
+    else if (num === "2") choice = "Charges individuelles (eau)";
+    else if (num === "3") choice = "Taxe d'ordure ménagère";
+    else if (num === "4") choice = "Charges exceptionnelles";
+    else if (num === "5") {
+        choice = prompt("Saisissez le nom de la colonne :");
+        if (!choice) return;
+    } else {
+        return;
+    }
     let id = 'c' + Date.now();
-    let choice = prompt("Nom de la colonne ?\nExemples suggérés : 'Charges communes', 'Charges individuelles (eau)', 'Taxe d'ordure ménagère', 'Charges exceptionnelles'.", "Nouvelle colonne");
-    if (!choice) return;
     bien.regulCols.push({ id: id, name: choice });
     triggerSave(false);
     window.renderRegulColsList();
