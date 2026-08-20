@@ -9,7 +9,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.1.6</title>
+    <title>Mes finances - v3.1.7</title>
     <!-- v3.0.8 - Ajout ligne manuelle BDD, version unifiée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1242,10 +1242,12 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
             <div class="summary-card" style="margin-top:20px;">
                 <h3 style="margin-bottom:12px;">📅 Échéancier de facturation</h3>
                 <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-                    <label style="font-size:0.85em;">Dernière date d'anniversaire du contrat
+                    <label style="font-size:0.85em;">Date d'emménagement
                         <input type="date" id="qDateAnniversaire" class="input-text" style="width:auto;display:inline-block;margin-left:8px;" onchange="window.setQuittanceAnniversaire(this.value)">
                     </label>
-                    <span style="font-size:0.8em;color:var(--ink-soft);">Génère automatiquement les 12 mois suivants.</span>
+                    <div id="qEcheancierYearWrap" style="display:none; margin-left:16px;">
+                        <select id="qEcheancierYearSelect" class="input-text" style="width:auto;font-weight:600;" onchange="window.renderQuittanceEcheancier()"></select>
+                    </div>
                     <button class="btn btn-danger" style="margin-left:auto;" onclick="window.resetQuittanceEcheancier()">♻️ RAZ Échéancier</button>
                 </div>
                 <div style="display:flex;gap:20px;flex-wrap:wrap;">
@@ -1529,7 +1531,7 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.1.6';
+const APP_VERSION = '3.1.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -5663,33 +5665,13 @@ function fmtIsoLocal(y, m, d) {
 window.setQuittanceAnniversaire = function(dateStr) {
     let bien = getCurrentBien(); if (!bien || !dateStr) return;
     bien.dateAnniversaire = dateStr;
-    let oldByDate = {};
-    (bien.echeancier || []).forEach(e => { oldByDate[e.date] = e; });
-    let newEcheancier = [];
-    // Référence : 1er jour du mois de la date d'anniversaire (calcul en local, sans passer par UTC)
-    let [y, m] = dateStr.split('-').map(Number);
-    for (let i = 0; i < 12; i++) {
-        let totalMonth = (m - 1) + i;
-        let yy = y + Math.floor(totalMonth / 12);
-        let mm = totalMonth % 12;
-        let iso = fmtIsoLocal(yy, mm, 1);
-        let prev = oldByDate[iso];
-        newEcheancier.push({
-            date: iso,
-            detail: prev ? (prev.detail || '') : '',
-            montant: prev ? (prev.montant || 0) : 0,
-            statut: prev ? (prev.statut || 'À venir') : 'À venir',
-            selected: false
-        });
-    }
-    bien.echeancier = newEcheancier;
     saveQuittancesBiens();
     window.renderQuittanceEcheancier();
 };
 
 window.resetQuittanceEcheancier = function() {
     let bien = getCurrentBien(); if (!bien) return;
-    if (!confirm('Réinitialiser complètement l\'échéancier de ce bien ?')) return;
+    if (!confirm('Réinitialiser complètement l\'échéancier de ce bien ? (L\'historique sera effacé)')) return;
     bien.dateAnniversaire = '';
     bien.echeancier = [];
     saveQuittancesBiens();
@@ -5697,18 +5679,20 @@ window.resetQuittanceEcheancier = function() {
     showToast('♻️ Échéancier réinitialisé');
 };
 
-window.updateQuittanceEcheance = function(idx, field, value) {
+window.updateQuittanceEcheance = function(dateIso, field, value) {
     let bien = getCurrentBien(); if (!bien) return;
+    let target = bien.echeancier.find(e => e.date === dateIso);
+    if (!target) return;
     if (field === 'montant') {
-        bien.echeancier[idx].montant = parseFloat(value) || 0;
+        target.montant = parseFloat(value) || 0;
     } else if (field === 'detail') {
-        bien.echeancier[idx].detail = value;
+        target.detail = value;
         let parts = String(value).split('+').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
         if (parts.length > 0) {
-            bien.echeancier[idx].montant = parts.reduce((a,b) => a+b, 0);
+            target.montant = parts.reduce((a,b) => a+b, 0);
         }
     } else {
-        bien.echeancier[idx][field] = value;
+        target[field] = value;
     }
     saveQuittancesBiens();
     window.renderQuittanceEcheancier();
@@ -5726,16 +5710,28 @@ window.toggleAllEcheanceSelect = function(checked) {
 };
 
 window.duplicateEcheanceToAll = function() {
-    let bien = getCurrentBien(); if (!bien || !bien.echeancier.length) return;
-    let source = bien.echeancier[0];
-    bien.echeancier.forEach((e, i) => {
-        if (i === 0) return;
-        e.detail = source.detail;
-        e.montant = source.montant;
+    let bien = getCurrentBien(); if (!bien) return;
+    let sel = $('qEcheancierYearSelect');
+    if(!sel || !sel.value || !bien.dateAnniversaire) return;
+    let currentSelYear = parseInt(sel.value);
+    let [y, m] = bien.dateAnniversaire.split('-').map(Number);
+    let yearDates = [];
+    for (let i = 0; i < 12; i++) {
+        let totalMonthOffset = (currentSelYear - 1) * 12 + i;
+        let targetY = y + Math.floor((m - 1 + totalMonthOffset) / 12);
+        let targetM = (m - 1 + totalMonthOffset) % 12;
+        yearDates.push(fmtIsoLocal(targetY, targetM, 1));
+    }
+    let sourceDate = yearDates[0];
+    let source = bien.echeancier.find(e => e.date === sourceDate);
+    if(!source) return;
+    yearDates.slice(1).forEach(dateIso => {
+        let target = bien.echeancier.find(e => e.date === dateIso);
+        if (target) { target.detail = source.detail; target.montant = source.montant; }
     });
     saveQuittancesBiens();
     window.renderQuittanceEcheancier();
-    showToast('✅ Ligne dupliquée sur tous les mois');
+    showToast('✅ Ligne dupliquée sur l\'année en cours');
 };
 
 window.duplicateEcheanceToSelection = function() {
@@ -5773,16 +5769,16 @@ function computeEcheanceMontantAffiche(e, fmtEur) {
     return 'A confirmer';
 }
 
-function renderEcheanceRow(e, idx, showCheckbox) {
+function renderEcheanceRow(e, dateIso, showCheckbox) {
     let fmtEur = n => (parseFloat(n)||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
     let isPaid = e.statut === 'Payé';
     let rowStyle = isPaid ? 'background:#8BC34A;color:#111;' : '';
     return `<tr style="${rowStyle}">
         <td style="color:#111;">${e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('fr-FR') : ''}</td>
-        <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance(${idx},'detail',this.value)"></td>
+        <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance('${dateIso}','detail',this.value)"></td>
         <td style="text-align:right;white-space:nowrap;color:#111;">${computeEcheanceMontantAffiche(e, fmtEur)}</td>
         <td>
-            <select class="input-text" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance(${idx},'statut',this.value)">
+            <select class="input-text" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance('${dateIso}','statut',this.value)">
                 <option value="Payé" ${e.statut==='Payé'?'selected':''}>Payé</option>
                 <option value="À venir" ${e.statut==='À venir'?'selected':''}>À venir</option>
             </select>
@@ -5793,10 +5789,61 @@ function renderEcheanceRow(e, idx, showCheckbox) {
 window.renderQuittanceEcheancier = function() {
     let bien = getCurrentBien(); if (!bien) return;
     $('qDateAnniversaire').value = bien.dateAnniversaire || '';
-    let list = bien.echeancier || [];
     let bodyA = $('qEcheancierBodyA'), bodyB = $('qEcheancierBodyB');
-    bodyA.innerHTML = list.slice(0,6).map((e, i) => renderEcheanceRow(e, i, i===0)).join('');
-    bodyB.innerHTML = list.slice(6,12).map((e, i) => renderEcheanceRow(e, i+6, false)).join('');
+    let yearSelWrap = $('qEcheancierYearWrap');
+
+    if (!bien.dateAnniversaire) {
+        bodyA.innerHTML = ''; bodyB.innerHTML = '';
+        if(yearSelWrap) yearSelWrap.style.display = 'none';
+        return;
+    }
+    if(yearSelWrap) yearSelWrap.style.display = 'inline-block';
+    
+    let [y, m, d] = bien.dateAnniversaire.split('-').map(Number);
+    let now = new Date();
+    let currentMonthsDiff = (now.getFullYear() - y) * 12 + (now.getMonth() - (m - 1));
+    let totalYears = Math.max(1, Math.ceil((currentMonthsDiff + 1) / 12)) + 1; 
+
+    let sel = $('qEcheancierYearSelect');
+    let currentSelYear = sel.value ? parseInt(sel.value) : Math.max(1, totalYears - 1);
+    if (currentSelYear > totalYears) currentSelYear = totalYears;
+    
+    let opts = '';
+    for (let i = 1; i <= totalYears; i++) {
+        let yStart = y + i - 1;
+        opts += `<option value="${i}" ${i === currentSelYear ? 'selected' : ''}>Année ${i} (${yStart}-${yStart+1})</option>`;
+    }
+    sel.innerHTML = opts;
+    
+    let yearDates = [];
+    for (let i = 0; i < 12; i++) {
+        let totalMonthOffset = (currentSelYear - 1) * 12 + i;
+        let targetY = y + Math.floor((m - 1 + totalMonthOffset) / 12);
+        let targetM = (m - 1 + totalMonthOffset) % 12;
+        yearDates.push(fmtIsoLocal(targetY, targetM, 1));
+    }
+    
+    if (!bien.echeancier) bien.echeancier = [];
+    let displayList = [];
+    yearDates.forEach(isoDate => {
+        let existing = bien.echeancier.find(e => e.date === isoDate);
+        if (!existing) {
+            let prevIso = null;
+            if (bien.echeancier.length > 0) {
+                let pastDates = bien.echeancier.filter(e => e.date < isoDate).sort((a,b) => b.date.localeCompare(a.date));
+                if (pastDates.length > 0) {
+                    existing = { date: isoDate, detail: pastDates[0].detail, montant: pastDates[0].montant, statut: 'À venir', selected: false };
+                }
+            }
+            if (!existing) existing = { date: isoDate, detail: '', montant: 0, statut: 'À venir', selected: false };
+            bien.echeancier.push(existing);
+        }
+        displayList.push(existing);
+    });
+    bien.echeancier.sort((a,b) => a.date.localeCompare(b.date));
+    
+    bodyA.innerHTML = displayList.slice(0,6).map((e, i) => renderEcheanceRow(e, e.date, i===0)).join('');
+    bodyB.innerHTML = displayList.slice(6,12).map((e, i) => renderEcheanceRow(e, e.date, false)).join('');
 };
 
 // ── Tableau de lignes Débit/Crédit de la quittance ──
@@ -6157,7 +6204,20 @@ window._generateQuittanceCore = function(type) {
         let bg = isPaid ? 'background:#8BC34A;color:#111;' : (inPeriode ? 'background:#FFF3CD;color:#111;' : 'color:#111;');
         return `<tr style="${bg}"><td style="padding:4px 8px;border:1px solid #ccc;">${d ? fmtDate(e.date) : ''}</td><td style="padding:4px 8px;border:1px solid #ccc;">${e.detail||''}${e.detail?' = ':''}${fmtEur(e.montant)}</td></tr>`;
     }
-    let echList = (type === 'loyer') ? (bien.echeancier || []) : [];
+    let echList = [];
+    if (type === 'loyer' && bien.dateAnniversaire) {
+        let sel = $('qEcheancierYearSelect');
+        let currentSelYear = sel && sel.value ? parseInt(sel.value) : 1;
+        let [y, m] = bien.dateAnniversaire.split('-').map(Number);
+        let yearDates = [];
+        for (let i = 0; i < 12; i++) {
+            let totalMonthOffset = (currentSelYear - 1) * 12 + i;
+            let targetY = y + Math.floor((m - 1 + totalMonthOffset) / 12);
+            let targetM = (m - 1 + totalMonthOffset) % 12;
+            yearDates.push(fmtIsoLocal(targetY, targetM, 1));
+        }
+        echList = yearDates.map(iso => bien.echeancier.find(e => e.date === iso) || {date:iso, detail:'', montant:0, statut:'À venir'});
+    }
     let echeancierRowsA = echList.slice(0,6).map(echRow).join('');
     let echeancierRowsB = echList.slice(6,12).map(echRow).join('');
     let echYears = echList.map(e => e.date ? parseInt(e.date.slice(0,4),10) : null).filter(y => y);
