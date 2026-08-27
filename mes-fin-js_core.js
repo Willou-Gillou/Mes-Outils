@@ -1,7 +1,6 @@
-// ==== INITIALISATIONS GLOBALES V3.2.2 ====
-const $ = id => document.getElementById(id);
-const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.2.2';
+// ==== INITIALISATIONS GLOBALES V3.2.3 ====
+const $ = id => document.getElementById(id); const $$ = sel => document.querySelectorAll(sel);
+const APP_VERSION = '3.2.3';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';

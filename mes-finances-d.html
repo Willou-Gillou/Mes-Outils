@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.2.2</title>
-    <!-- v3.2.2 - Correction intégrale des vues -->
+    <title>Mes finances - v3.2.3</title>
+    <!-- v3.2.3 - Correction Drive -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -29,7 +29,7 @@
 
 <header>
     <div class="app-title">
-        🔒 Mes Finances <span class="version" id="versionLabel">v3.2.2</span>
+        🔒 Mes Finances <span class="version" id="versionLabel">v3.2.3</span>
         <div class="font-controls">
             <button class="font-btn" onclick="window.adjustFont(1)" title="Augmenter la police">A+</button>
             <button class="font-btn" onclick="window.adjustFont(-1)" title="Réduire la police">A-</button>
@@ -109,7 +109,6 @@
         <div id="tcdScrollWrapper" style="overflow:auto;max-height:calc(100vh - 180px);"><div id="summaryGrid" style="position:relative;width:max-content;"></div></div>
     </div>
 
-    <!-- TCD Filtre Popup -->
     <div id="tcdFilterOverlay"></div>
     <div id="tcdFilterPopup">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -126,7 +125,6 @@
         <div class="filter-actions"><button class="btn btn-outline" style="font-size:0.82em" onclick="window.resetTcdFilter()">Tout afficher</button></div>
     </div>
 
-    <!-- Budget Filtre Popup -->
     <div id="budgetFilterOverlay"></div>
     <div id="budgetFilterPopup">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -173,6 +171,7 @@
                   <button class="btn btn-outline" id="dupBtn" onclick="window.toggleDuplicateFilter()" style="font-size:0.82em; padding:4px 10px;" title="Rechercher les doublons">🔍 Doublons</button>
                   <button class="btn btn-outline" id="importDbBtn" style="font-size:0.82em; padding:4px 10px;">📥 Importer</button>
                   <button class="btn btn-primary" id="addRowBtn" style="font-size:0.82em; padding:4px 10px;" onclick="window.addManualRow()">➕ Ajouter une ligne</button>
+                  <input type="file" id="dbFileInput" accept=".xlsx,.csv,.json" style="display:none">
                 </div>
             </div>
             

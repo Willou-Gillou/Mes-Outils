@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         location.reload(); 
     });
 
-    // Lancement de la vérification des API Google
     driveShowLoading('Connexion à Google Drive...');
     let _apiAttempts = 0;
     let _apiCheck = setInterval(() => {
@@ -53,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
             initDrive();
         } else {
             _apiAttempts++;
-            if(_apiAttempts > 60) { // ~12 secondes
+            if(_apiAttempts > 60) { 
                 clearInterval(_apiCheck);
                 driveHideLoading();
                 let overlay = $('driveLoginOverlay');
@@ -108,9 +107,7 @@ function decryptPayload(remoteData) {
         const p = JSON.parse(CryptoJS.AES.decrypt(remoteData.vault, appSecretKey).toString(CryptoJS.enc.Utf8));
         if(!p) throw new Error("Bad pwd");
         
-        // Sécurité: vérifier que ce fichier appartient bien au compte actif
         if(p.accountId && p.accountId !== currentAccountId) {
-            // Fusionner la liste des comptes
             if(p.accounts && Array.isArray(p.accounts)) {
                 let merged = accounts.slice();
                 p.accounts.forEach(function(remoteAcc) {
@@ -121,7 +118,6 @@ function decryptPayload(remoteData) {
                 accounts = merged;
                 saveAccountsList();
             }
-            // Switcher vers le bon compte et recharger
             currentAccountId = p.accountId;
             localStorage.setItem('f_current_account', currentAccountId);
             driveFileIdMap = {}; 
@@ -206,6 +202,8 @@ function decryptPayload(remoteData) {
                     tcdFilter.cat2   = new Set(tf.cat2   || []);
                     tcdFilter.yearsOp = new Set(tf.yearsOp || tf.years || []);
                     tcdFilter.yearsExpense = new Set(tf.yearsExpense || []);
+                    tcdFilter.fiscalYearsOp = new Set(tf.fiscalYearsOp || []);
+                    tcdFilter.fiscalYearsExpense = new Set(tf.fiscalYearsExpense || []);
                     tcdFilter.months = new Set(tf.months || []);
                     localStorage.setItem('tcd_filter', JSON.stringify(tf));
                     if (s.tcdRedCells && typeof s.tcdRedCells === 'object') {
@@ -279,11 +277,30 @@ const updateSyncBadge = (st, txt) => {
 };
 
 async function driveGetFileId() {
-    let fname = getAccountDriveFilename();
     if(driveFileIdMap[currentAccountId]) return driveFileIdMap[currentAccountId];
+    
+    let fname = getAccountDriveFilename();
     let r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${fname}'&fields=files(id)`,{headers:{Authorization:'Bearer '+driveAccessToken}});
     let d = await r.json();
     let fid = (d.files&&d.files.length>0) ? d.files[0].id : null;
+    
+    // --- FALLBACK V3.2.3 : RECHERCHE ANCIENS FICHIERS ---
+    if (!fid && currentAccountId === 'default') {
+        let r2 = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='app_sys_data_v1.dat'&fields=files(id)`,{headers:{Authorization:'Bearer '+driveAccessToken}});
+        let d2 = await r2.json();
+        fid = (d2.files&&d2.files.length>0) ? d2.files[0].id : null;
+        
+        if (!fid) {
+            let r3 = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&fields=files(id,name)`,{headers:{Authorization:'Bearer '+driveAccessToken}});
+            let d3 = await r3.json();
+            if (d3.files && d3.files.length > 0) {
+                let fallbackFile = d3.files.find(f => f.name.includes('app_sys_data') || f.name.includes('appsysdata'));
+                if (fallbackFile) fid = fallbackFile.id;
+            }
+        }
+    }
+    // ----------------------------------------------------
+    
     if(fid) driveFileIdMap[currentAccountId] = fid;
     return fid;
 }
@@ -377,7 +394,7 @@ window.triggerSave = function(reRenderDbView = false) {
             if(reRenderDbView && typeof window.renderDataTable === 'function') window.renderDataTable();
         } catch (e) {
             updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez');
-            showSaveError(e);
+            window.showSaveError(e);
         }
     }, 1000);
 };
