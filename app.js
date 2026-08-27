@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.0';
+const APP_VERSION = '3.3.1';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -52,6 +52,7 @@ let selectedUncatTxId = null;
 let selectedUncatIds = new Set();
 let tcdMap = {}; tcdMap['GRAND_TOTAL'] = [];
 let tcdTabulator = null; 
+let budgetTxMap = {};
 
 $('versionLabel').textContent = `v${APP_VERSION}`;
 document.title = 'Mes finances - v' + APP_VERSION;
@@ -682,6 +683,8 @@ window.renderBudget = function() {
 
     let realByC1C2Month = {}, realByC1Month = {};
     let extraMonthsMap = {}; // key "MM_YYYY" -> {m, y} pour les mois d'écriture hors intervalle standard
+    budgetTxMap = {}; budgetTxMap['GRAND_TOTAL'] = [];
+    const pushBudgetTx = (key, t) => { if (!budgetTxMap[key]) budgetTxMap[key] = []; budgetTxMap[key].push(t); };
     transactions.forEach(t => {
         if (t.amount === 0) return;
         // Sélection: la date réelle (dateExpense) doit appartenir à l'intervalle de l'exercice
@@ -704,6 +707,14 @@ window.renderBudget = function() {
         realByC1C2Month[k] = (realByC1C2Month[k]||0) + amt;
         let k1 = `${c1}::${m}`;
         realByC1Month[k1] = (realByC1Month[k1]||0) + amt;
+
+        // Alimentation de la map pour le détail des opérations (drilldown "Réel")
+        pushBudgetTx(`${c1}::${c2}::${m}`, t);
+        pushBudgetTx(`${c1}::${c2}::ALL`, t);
+        pushBudgetTx(`${c1}::ALL::${m}`, t);
+        pushBudgetTx(`${c1}::ALL::ALL`, t);
+        pushBudgetTx(`MONTH_TOTAL::${m}`, t);
+        pushBudgetTx('GRAND_TOTAL', t);
     });
 
     Object.keys(realByC1C2Month).forEach(k => realByC1C2Month[k] = Number(realByC1C2Month[k].toFixed(2)));
@@ -800,9 +811,11 @@ window.renderBudget = function() {
         return `<td class="tcd-cell budget-agg-cell${extraClass?(' '+extraClass):''}"><span class="budget-val-ro">${txt}</span>${delta}</td>`;
     };
     // ─── Cellules du tableau RÉEL (bas) ───
-    const realCell = (rVal, extraClass, forceShow) => {
+    const realCell = (rVal, extraClass, forceShow, key) => {
         let txt = (rVal || forceShow) ? formatCurrency(rVal || 0) : '';
-        return `<td class="tcd-cell real-cell${extraClass?(' '+extraClass):''}">${txt}</td>`;
+        let hasTxs = key && budgetTxMap[key] && budgetTxMap[key].length > 0;
+        let content = (txt && hasTxs) ? `<span class="tcd-clickable" data-k="${escapeHtml(key)}">${txt}</span>` : txt;
+        return `<td class="tcd-cell real-cell${extraClass?(' '+extraClass):''}">${content}</td>`;
     };
 
     let colGroupHtml = '<colgroup><col style="width:240px;">' + months.map(()=>'<col>').join('') + '<col style="width:110px;">' + (hasValidated ? '<col style="width:110px;">' : '') + '</colgroup>';
@@ -839,7 +852,7 @@ window.renderBudget = function() {
             grandRealByMonth[m] = (grandRealByMonth[m]||0) + rSum;
             grandValidatedByMonth[m] = (grandValidatedByMonth[m]||0) + vSum;
             htmlBudget += budgetAggCell(bSum, 'tcd-row-main-cell', c2List.length > 0, vSum, false);
-            htmlReal += realCell(rSum, 'tcd-row-main-cell');
+            htmlReal += realCell(rSum, 'tcd-row-main-cell', false, `${c1}::ALL::${m}`);
         });
         let c1BudgetTotal = Object.values(c1BudgetByMonth).reduce((a,b)=>a+b,0);
         let c1RealTotal = Object.values(c1RealByMonth).reduce((a,b)=>a+b,0);
@@ -847,7 +860,7 @@ window.renderBudget = function() {
         grandBudgetTotal += c1BudgetTotal; grandRealTotal += c1RealTotal; grandValidatedTotal += c1ValidatedTotal;
         htmlBudget += budgetAggCell(c1BudgetTotal, 'tcd-total-col tcd-grand tcd-row-main-cell', c2List.length > 0, c1ValidatedTotal, true);
         if (hasValidated) htmlBudget += `<td class="tcd-cell tcd-total-col tcd-grand tcd-row-main-cell"><span class="budget-val-ro">${formatCurrency(c1ValidatedTotal)}</span></td>`;
-        htmlReal += realCell(c1RealTotal, 'tcd-total-col tcd-grand tcd-row-main-cell', true);
+        htmlReal += realCell(c1RealTotal, 'tcd-total-col tcd-grand tcd-row-main-cell', true, `${c1}::ALL::ALL`);
         if (hasValidated) htmlReal += `<td class="tcd-cell tcd-total-col tcd-grand tcd-row-main-cell"><span class="budget-val-ro">${formatCurrency(c1ValidatedTotal)}</span></td>`;
         htmlBudget += '</tr>';
         htmlReal += '</tr>';
@@ -862,11 +875,11 @@ window.renderBudget = function() {
                 let vVal = getValidatedBudget(c1, c2, m);
                 c2BudgetTotal += bVal; c2RealTotal += rVal; c2ValidatedTotal += vVal;
                 htmlBudget += budgetEditableCell(c1, c2, m);
-                htmlReal += realCell(rVal);
+                htmlReal += realCell(rVal, '', false, `${c1}::${c2}::${m}`);
             });
             htmlBudget += budgetAggCell(c2BudgetTotal, 'tcd-total-col tcd-grand', false, c2ValidatedTotal, true);
             if (hasValidated) htmlBudget += `<td class="tcd-cell tcd-total-col tcd-grand"><span class="budget-val-ro">${formatCurrency(c2ValidatedTotal)}</span></td>`;
-            htmlReal += realCell(c2RealTotal, 'tcd-total-col tcd-grand', true);
+            htmlReal += realCell(c2RealTotal, 'tcd-total-col tcd-grand', true, `${c1}::${c2}::ALL`);
             if (hasValidated) htmlReal += `<td class="tcd-cell tcd-total-col tcd-grand"><span class="budget-val-ro">${formatCurrency(c2ValidatedTotal)}</span></td>`;
             htmlBudget += '</tr>';
             htmlReal += '</tr>';
@@ -877,11 +890,11 @@ window.renderBudget = function() {
     htmlReal += '<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL GLOBAL</div></td>';
     months.forEach(m => {
         htmlBudget += budgetAggCell(grandBudgetByMonth[m]||0, 'tcd-total-row-cell', true, grandValidatedByMonth[m]||0, false);
-        htmlReal += realCell(grandRealByMonth[m]||0, 'tcd-total-row-cell');
+        htmlReal += realCell(grandRealByMonth[m]||0, 'tcd-total-row-cell', false, `MONTH_TOTAL::${m}`);
     });
     htmlBudget += budgetAggCell(grandBudgetTotal, 'tcd-total-col tcd-grand tcd-total-row-cell', true, grandValidatedTotal, true);
     if (hasValidated) htmlBudget += `<td class="tcd-cell tcd-total-col tcd-grand tcd-total-row-cell"><span class="budget-val-ro">${formatCurrency(grandValidatedTotal)}</span></td>`;
-    htmlReal += realCell(grandRealTotal, 'tcd-total-col tcd-grand tcd-total-row-cell', true);
+    htmlReal += realCell(grandRealTotal, 'tcd-total-col tcd-grand tcd-total-row-cell', true, 'GRAND_TOTAL');
     if (hasValidated) htmlReal += `<td class="tcd-cell tcd-total-col tcd-grand tcd-total-row-cell"><span class="budget-val-ro">${formatCurrency(grandValidatedTotal)}</span></td>`;
     htmlBudget += '</tr>';
     htmlReal += '</tr>';
@@ -948,6 +961,26 @@ window.renderBudget = function() {
     document.querySelectorAll('#budgetGrid .tcd-native th, #budgetGrid .tcd-native td').forEach(el => {
         el.style.fontSize = fs + 'px';
     });
+
+    window.bindBudgetDrillDown();
+};
+
+let _budgetClickHandler = null;
+window.bindBudgetDrillDown = function() {
+    let grid = $('budgetGrid');
+    if (!grid) return;
+    // Supprimer l'ancien listener pour éviter les doublons
+    if (_budgetClickHandler) { grid.removeEventListener('click', _budgetClickHandler); _budgetClickHandler = null; }
+    _budgetClickHandler = function(e) {
+        let el = e.target.closest('.tcd-clickable');
+        if (!el) return;
+        let key = el.dataset.k;
+        if (!key) return;
+        let txs = budgetTxMap[key] || [];
+        if (txs.length === 0) return;
+        window.openTcdDetails(txs);
+    };
+    grid.addEventListener('click', _budgetClickHandler);
 };
 
 
