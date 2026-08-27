@@ -1,7 +1,7 @@
-// ==== INITIALISATIONS GLOBALES V3.2.1 ====
+// ==== INITIALISATIONS GLOBALES V3.2.2 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.2.1';
+const APP_VERSION = '3.2.2';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -75,7 +75,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Cache-busting : si une version différente est détectée en localStorage, forcer un hard-reload une seule fois
+// Cache-busting
 (function() {
     try {
         var storedVersion = localStorage.getItem('f_app_version_seen');
@@ -227,8 +227,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if(typeof window.tcdSaveScroll === 'function') window.tcdSaveScroll();
         $$('.tab-btn').forEach(b => b.classList.remove('active'));
         $$('.view').forEach(v => v.classList.remove('active'));
+        
         btn.classList.add('active');
-        $(btn.dataset.target).classList.add('active');
+        let targetId = btn.dataset.target;
+        if(targetId) {
+            let targetEl = $(targetId);
+            if(targetEl) {
+                targetEl.classList.add('active');
+            } else {
+                console.warn("La vue demandée n'existe pas : " + targetId);
+                let fallback = $('view-summary');
+                if(fallback) fallback.classList.add('active');
+                let fallbackBtn = document.querySelector('.tab-btn[data-target="view-summary"]');
+                if(fallbackBtn) fallbackBtn.classList.add('active');
+            }
+        }
+        
         if(typeof window.renderViewsSafe === 'function') window.renderViewsSafe();
     }));
 });
@@ -253,7 +267,6 @@ window.renderViewsSafe = function() {
         if (regulEnabled && typeof window.renderRegul === 'function') window.renderRegul(); 
     } catch(err) { 
         console.error('Erreur affichage:', err); 
-        alert("Erreur d'affichage: " + err.message); 
     }
 };
 
