@@ -1,7 +1,7 @@
-// ==== INITIALISATIONS GLOBALES V3.2.0 ====
+// ==== INITIALISATIONS GLOBALES V3.2.1 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.2.0';
+const APP_VERSION = '3.2.1';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -55,10 +55,24 @@ let selectedUncatIds = new Set();
 let tcdMap = {}; tcdMap['GRAND_TOTAL'] = [];
 let tcdTabulator = null; 
 
-// Initialisation UI basique
+// Initialisation UI au démarrage
 document.addEventListener('DOMContentLoaded', () => {
     let vl = $('versionLabel'); if(vl) vl.textContent = `v${APP_VERSION}`;
     document.title = 'Mes finances - v' + APP_VERSION;
+    
+    // Restauration de la liste des comptes
+    if (typeof window.renderAccountUI === 'function') window.renderAccountUI();
+    
+    // Restauration des paramètres du TCD
+    let savedPivot = localStorage.getItem('f_pivot_v2');
+    if(savedPivot) {
+        try {
+            let conf = JSON.parse(savedPivot);
+            if(conf.r1) { let el = $('pivotRows'); if(el) el.value = conf.r1; }
+            if(conf.r2 !== undefined) { let el = $('pivotRows2'); if(el) el.value = conf.r2; }
+            if(conf.axe) { let el = $('timeAxe'); if(el) el.value = conf.axe; }
+        } catch(e){}
+    }
 });
 
 // Cache-busting : si une version différente est détectée en localStorage, forcer un hard-reload une seule fois
