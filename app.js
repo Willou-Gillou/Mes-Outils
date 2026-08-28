@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.6';
+const APP_VERSION = '3.3.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -240,9 +240,17 @@ if (window._diagForceOpen) {
 tcdLoadCollapsed();
 loadTcdFilter();
 // Listener scroll direct sur le wrapper (fiable cross-browser)
+let _tcdScrollThrottleTimer = null;
+function tcdSaveScrollThrottled() {
+    // v3.3.7 : limite les écritures localStorage à 1 max toutes les 150ms pendant un scroll continu
+    // (les appels directs à tcdSaveScroll() ailleurs — fermeture d'onglet, changement de visibilité — restent immédiats)
+    if (_tcdScrollThrottleTimer) return;
+    tcdSaveScroll();
+    _tcdScrollThrottleTimer = setTimeout(() => { _tcdScrollThrottleTimer = null; }, 150);
+}
 (function attachWrapperScroll() {
     let w = document.getElementById('tcdScrollWrapper');
-    if (w) { w.addEventListener('scroll', tcdSaveScroll); }
+    if (w) { w.addEventListener('scroll', tcdSaveScrollThrottled); }
     else { requestAnimationFrame(attachWrapperScroll); }
 })();
 // Sauvegarder scroll juste avant refresh/fermeture
@@ -6571,12 +6579,6 @@ function tcdLoadCollapsed() {
         if (!hasSaved) window._tcdCollapseAllOnFirstRender = true;
     } catch(e) {}
 }
-
-// Sauvegarde scroll wrapper en temps réel
-document.addEventListener('scroll', function(e) {
-    let w = document.getElementById('tcdScrollWrapper');
-    if (e.target === w) tcdSaveScroll();
-}, true);
 
 // ════════════════════════════════════════════════════════
 // TCD — Filtre popup
