@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.3.2</title>
-    <!-- v3.3.2 - Nettoyage code mort, suppression doublon, factorisation, renommage TOTAL PROJETÉ -->
+    <title>Mes finances - v3.3.3</title>
+    <!-- v3.3.3 - Suppression du bloc HTML dupliqué (popup Filtres TCD orpheline) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -282,46 +282,6 @@
                 </thead>
                 <tbody></tbody>
             </table>
-        </div>
-    </div>
-
-    <!-- TCD Filtre Popup -->
-    <div id="tcdFilterOverlay"></div>
-    <div id="tcdFilterPopup">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-            <strong style="font-size:1em;">🔽 Filtres TCD</strong>
-            <span class="filter-close" onclick="window.closeTcdFilter()">✕</span>
-        </div>
-        <div class="filter-section" id="tcdFilterSectionCat1">
-            <h4>Catégorie 1</h4>
-            <div class="filter-tags" id="tcdFilterCat1Tags"></div>
-        </div>
-        <div class="filter-section" id="tcdFilterSectionCat2">
-            <h4>Catégorie 2</h4>
-            <div class="filter-tags" id="tcdFilterCat2Tags"></div>
-        </div>
-        <div class="filter-section" id="tcdFilterSectionYearsOp">
-            <h4>Années (Date écriture)</h4>
-            <div class="filter-tags" id="tcdFilterYearOpTags"></div>
-        </div>
-        <div class="filter-section" id="tcdFilterSectionYearsExpense">
-            <h4>Années (Date réelle)</h4>
-            <div class="filter-tags" id="tcdFilterYearExpenseTags"></div>
-        </div>
-        <div class="filter-section" id="tcdFilterSectionFiscalYearsOp">
-            <h4>Année écriture (Exercice fiscal)</h4>
-            <div class="filter-tags" id="tcdFilterFiscalYearOpTags"></div>
-        </div>
-        <div class="filter-section" id="tcdFilterSectionFiscalYearsExpense">
-            <h4>Année réelle (Exercice fiscal)</h4>
-            <div class="filter-tags" id="tcdFilterFiscalYearExpenseTags"></div>
-        </div>
-        <div class="filter-section" id="tcdFilterSectionMonths">
-            <h4>Mois</h4>
-            <div class="filter-tags" id="tcdFilterMonthTags"></div>
-        </div>
-        <div class="filter-actions">
-            <button class="btn btn-outline" style="font-size:0.82em" onclick="window.resetTcdFilter()">Tout afficher</button>
         </div>
     </div>
 
