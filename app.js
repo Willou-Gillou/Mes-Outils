@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.1';
+const APP_VERSION = '3.3.2';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -819,7 +819,7 @@ window.renderBudget = function() {
     };
 
     let colGroupHtml = '<colgroup><col style="width:240px;">' + months.map(()=>'<col>').join('') + '<col style="width:110px;">' + (hasValidated ? '<col style="width:110px;">' : '') + '</colgroup>';
-    let totalHeaderLabel = hasValidated ? 'TOTAL PROJECTION' : 'TOTAL BUDGET';
+    let totalHeaderLabel = hasValidated ? 'TOTAL PROJETÉ' : 'TOTAL BUDGET';
     let validatedHeaderHtml = hasValidated ? '<th class="tcd-th-grand">BUDGET VALIDÉ</th>' : '';
 
     let htmlBudget = '<table class="tcd-native budget-table" cellspacing="0" cellpadding="0">';
@@ -1201,6 +1201,7 @@ window.renderSummary = function(force=false) {
         return true;
     });
     let yearsMap = {}, tree = {}, colTotals = {}, totalGrand = 0;
+    const sortedMonthsOf = (y) => Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth));
     tcdMap = {}; tcdMap['GRAND_TOTAL'] = validTx;
 
     validTx.forEach(t => {
@@ -1265,7 +1266,7 @@ window.renderSummary = function(force=false) {
         let yearToggleLabel = '<span class="tcd-toggle-year" data-y="' + y + '" style="cursor:pointer;display:block;text-align:center;font-weight:700;letter-spacing:1px;" title="Cliquer pour réduire/développer">' + y + '</span>';
         let subCols = [];
         if (!isCol) {
-            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+            sortedMonthsOf(y).forEach(m => {
                 let padM = m.toString().padStart(2,'0');
                 let monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
                 subCols.push({ title: monthNames[parseInt(m)] || padM, field: y+'_'+padM, width:80, hozAlign:"right", formatter:"html", headerSort:false });
@@ -1297,7 +1298,7 @@ window.renderSummary = function(force=false) {
         yearsSorted.forEach(y => {
             let isCol = collapsedYears.has(y);
             if (!isCol) {
-                Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+                sortedMonthsOf(y).forEach(m => {
                     let padM = m.toString().padStart(2,'0');
                     rowObj[`${y}_${padM}`] = `<b>${cellFmt(tree[r1].cells[`${r1}::*::${y}::${m}`]||0, `${r1}::*::${y}::${m}`)}</b>`;
                 });
@@ -1316,7 +1317,7 @@ window.renderSummary = function(force=false) {
                 yearsSorted.forEach(y => {
                     let isCol = collapsedYears.has(y);
                     if (!isCol) {
-                        Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+                        sortedMonthsOf(y).forEach(m => {
                             let padM = m.toString().padStart(2,'0');
                             subObj[`${y}_${padM}`] = cellFmt(tree[r1].sub[r2].cells[`${r1}::${r2}::${y}::${m}`]||0, `${r1}::${r2}::${y}::${m}`, true);
                         });
@@ -1335,7 +1336,7 @@ window.renderSummary = function(force=false) {
         let isCol = collapsedYears.has(y);
         let yTotal = colTotals[`${y}::ALL`]||0;
         if (!isCol) {
-            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+            sortedMonthsOf(y).forEach(m => {
                 let padM = m.toString().padStart(2,'0');
                 totalObj[`${y}_${padM}`] = cellFmt(colTotals[`${y}::${m}`]||0, `MONTH_TOTAL::${y}::${padM}`);
             });
@@ -1385,7 +1386,7 @@ window.renderSummary = function(force=false) {
             html += '<th class="tcd-th-month tcd-total-col' + (isCol ? '' : ' tcd-year-total-hidden') + '"><b>TOTAL</b></th>';
         } else {
             let monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+            sortedMonthsOf(y).forEach(m => {
                 html += '<th class="tcd-th-month">' + (monthNames[parseInt(m)] || m) + '</th>';
             });
             // TOTAL colonne cachée quand développé
@@ -1405,7 +1406,7 @@ window.renderSummary = function(force=false) {
         yearsSorted.forEach(y => {
             let isCol = collapsedYears.has(y);
             if (!isCol) {
-                Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+                sortedMonthsOf(y).forEach(m => {
                     let padM = m.toString().padStart(2,'0');
                     html += cellFmt2(tree[r1].cells[`${r1}::*::${y}::${m}`]||0, `${r1}::*::${y}::${m}`);
                 });
@@ -1424,7 +1425,7 @@ window.renderSummary = function(force=false) {
                 yearsSorted.forEach(y => {
                     let isCol = collapsedYears.has(y);
                     if (!isCol) {
-                        Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+                        sortedMonthsOf(y).forEach(m => {
                             let padM = m.toString().padStart(2,'0');
                             html += cellFmt2(tree[r1].sub[r2].cells[`${r1}::${r2}::${y}::${m}`]||0, `${r1}::${r2}::${y}::${m}`, true);
                         });
@@ -1448,7 +1449,7 @@ window.renderSummary = function(force=false) {
     yearsSorted.forEach(y => {
         let isCol = collapsedYears.has(y);
         if (!isCol) {
-            Array.from(yearsMap[y]).sort((a,b)=>getFiscalMonthOrder(a,fiscalStartMonth)-getFiscalMonthOrder(b,fiscalStartMonth)).forEach(m => {
+            sortedMonthsOf(y).forEach(m => {
                 let padM = m.toString().padStart(2,'0');
                 let v = colTotals[`${y}::${m}`]||0;
                 html += '<td class="tcd-cell">' + (v ? '<span class="tcd-clickable" data-k="MONTH_TOTAL::' + y + '::' + padM + '">' + formatCurrency(v) + '</span>' : '') + '</td>';
@@ -2705,7 +2706,6 @@ function buildDatasetRow(ds, idx) {
 }
 
 
-window.removeCbDataset = function(btn) { btn.closest('.cb-dataset-row').remove(); window.updateCbPreview(); };
 window.removeCbDataset = function(btn) {
     btn.closest('.cb-dataset-row').remove();
     window.updateCbPreview();
@@ -3087,22 +3087,6 @@ $('ruleFileInput').addEventListener('change', e => {
     }
 });
 
-window.safeDeleteCat = function(c1) {
-  delete categories[c1];
-  triggerSave(); window.renderCategories();
-};
-window.safeDeleteSubCat = function(c1, c2) {
-  if (categories[c1]) categories[c1] = categories[c1].filter(x => x !== c2);
-  triggerSave(); window.renderCategories();
-};
-window.safeAddSubCat = function(inputEl, c1) {
-  const v = inputEl.value.trim();
-  if (v && !categories[c1].includes(v)) {
-    categories[c1].push(v);
-    categories[c1].sort(customSortCmp);
-    triggerSave(); window.renderCategories();
-  }
-};
 window.renderCategories = function() {
     let c=$('categoriesContainer'); c.innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<div class="summary-card cat1-dropzone" data-c1="${escapeHtml(c1)}" ondragover="window.onCat1DragOver(event,this)" ondragleave="window.onCat1DragLeave(event,this)" ondrop="window.onCat1Drop(event,'${escapeHtml(c1)}')"><div style="display:flex;justify-content:space-between;font-weight:600;align-items:center;"><span class="cat1-editable" data-c1="${escapeHtml(c1)}" title="Cliquer pour renommer" style="cursor:pointer;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor='var(--ink-faint)'" onmouseout="this.style.borderBottomColor='transparent'" onclick="window.startRenameCat1(this,'${escapeHtml(c1)}')">${escapeHtml(c1)}</span> <button class="btn btn-outline" style="padding:2px 6px;color:var(--urgent)" onclick="window.deleteCategory1('${escapeHtml(c1)}')">X</button></div><div style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;">${categories[c1].sort(customSortCmp).map(c2=>`<div class="cat2-chip" draggable="true" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" ondragstart="window.onCat2DragStart(event,'${escapeHtml(c1)}','${escapeHtml(c2)}')" ondragend="window.onCat2DragEnd(event)" style="background:var(--bg);border:1px solid var(--ink-faint);padding:2px 6px 2px 2px;border-radius:12px;font-size:0.85em;display:flex;gap:4px;align-items:center;"><span class="cat2-drag-handle" title="Glisser pour déplacer" style="cursor:grab;color:var(--ink-faint);font-size:1em;line-height:1;padding:0 2px;user-select:none;">⠿</span><span class="cat2-editable" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" title="Cliquer pour renommer" style="cursor:pointer;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor='var(--ink-faint)'" onmouseout="this.style.borderBottomColor='transparent'" onclick="window.startRenameCat2(this,'${escapeHtml(c1)}','${escapeHtml(c2)}')">${escapeHtml(c2)}</span> <button style="background:none;border:none;color:var(--urgent);cursor:pointer;font-size:1.1em;" onclick="window.deleteCategory2('${escapeHtml(c1)}','${escapeHtml(c2)}')">×</button></div>`).join('')}</div><div style="display:flex;gap:4px;"><input type="text" class="input-text" placeholder="Ajouter sous-cat..." onkeypress="if(event.key==='Enter'){if(this.value.trim()){categories['${escapeHtml(c1)}'].push(this.value.trim());categories['${escapeHtml(c1)}'].sort(customSortCmp);triggerSave();window.renderCategories();}}"></div></div>`).join('');
 };
@@ -4221,17 +4205,6 @@ window.updateQuittanceEcheance = function(dateIso, field, value) {
     window.renderQuittanceEcheancier();
 };
 
-window.toggleEcheanceSelect = function(idx, checked) {
-    let bien = getCurrentBien(); if (!bien) return;
-    bien.echeancier[idx].selected = checked;
-};
-
-window.toggleAllEcheanceSelect = function(checked) {
-    let bien = getCurrentBien(); if (!bien) return;
-    bien.echeancier.forEach(e => e.selected = checked);
-    window.renderQuittanceEcheancier();
-};
-
 window.duplicateEcheanceToAll = function() {
     let bien = getCurrentBien(); if (!bien) return;
     let sel = $('qEcheancierYearSelect');
@@ -5190,13 +5163,6 @@ window.renderRegulBiens = function() {
         currentRegulBienId = quittancesBiens[0].id;
     }
     sel.innerHTML = quittancesBiens.map(b => `<option value="${b.id}" ${b.id===currentRegulBienId?'selected':''}>${escapeHtml(b.nom)}</option>`).join('');
-};
-window.setRegulDateLocation = function(val) {
-    let bien = getRegulBien(currentRegulBienId);
-    if (!bien) return;
-    bien.dateLocation = val;
-    triggerSave(false);
-    window.populateRegulExerciceSelect();
 };
 window.populateRegulExerciceSelect = function() {
     let sel = $('regulExerciceSelect');
@@ -6617,12 +6583,6 @@ window.applyUncatFilters = function() {
     uncatColFilters.cat         = ($('ufCat')        ||{value:''}).value.toLowerCase();
     uncatColFilters.note        = ($('ufNote')       ||{value:''}).value.toLowerCase();
     uncatColFilters.amount      = ($('ufAmount')     ||{value:''}).value.toLowerCase();
-    window.renderUncategorized();
-};
-
-window.toggleUncatNotEmpty = function(field) {
-    if (field === 'cat')  { uncatColFilters.catNotEmpty  = !uncatColFilters.catNotEmpty;  document.getElementById('ufCatNotEmpty').classList.toggle('active',  uncatColFilters.catNotEmpty);  }
-    if (field === 'note') { uncatColFilters.noteNotEmpty = !uncatColFilters.noteNotEmpty; document.getElementById('ufNoteNotEmpty').classList.toggle('active', uncatColFilters.noteNotEmpty); }
     window.renderUncategorized();
 };
 
