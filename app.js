@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.5';
+const APP_VERSION = '3.3.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -44,6 +44,8 @@ var fiscalStartMonth = 1; // 1=Janvier (par défaut), 1-12
 var budgetEnabled = false;
 var regulEnabled = false;
 var currentRegulBienId = null;
+// ── v3.3.6 : Diagnostic intégré (réglage global, sans distinction de compte) ──
+var diagEnabled = localStorage.getItem('f_diag_enabled') === '1';
 var fiscalStartMonthSyndic = 10;
 var budgetData = {}; // { [fiscalYearLabel]: { [cat1]: { [cat2]: { [month01..12]: montant } } } }// [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
 var currentQuittanceBienId = null;
@@ -61,6 +63,7 @@ document.title = 'Mes finances - v' + APP_VERSION;
     try {
         var storedVersion = localStorage.getItem('f_app_version_seen');
         if (storedVersion !== APP_VERSION) {
+            if (storedVersion) window._diagForceOpen = true; // v3.3.6 : mise à jour détectée → ouvrir le Diagnostic
             localStorage.setItem('f_app_version_seen', APP_VERSION);
             if (storedVersion && 'caches' in window) {
                 caches.keys().then(function(names) { names.forEach(function(n) { caches.delete(n); }); });
@@ -222,6 +225,16 @@ $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     $(btn.dataset.target).classList.add('active');
     window.renderViewsSafe();
 }));
+
+// v3.3.6 : état initial de l'onglet Diagnostic (réglage global, indépendant du compte/déverrouillage)
+applyDiagOptionState();
+if (window._diagForceOpen) {
+    let diagTab = $('tabDiagnostic');
+    if (diagTab) {
+        diagTab.style.display = '';
+        setTimeout(() => { diagTab.click(); window.runDiagnostics(); }, 300);
+    }
+}
 
 // Restaurer état TCD avant premier rendu
 tcdLoadCollapsed();
@@ -3957,6 +3970,136 @@ function applyBudgetOptionState() {
     if (cb) cb.checked = enabled;
     if (enabled) window.populateBudgetExerciceSelect();
 }
+
+// ── v3.3.6 : Diagnostic intégré (réglage global, sans distinction de compte) ──
+window.toggleDiagOption = function(checked) {
+    diagEnabled = checked;
+    localStorage.setItem('f_diag_enabled', checked ? '1' : '0');
+    applyDiagOptionState();
+    if (!checked) {
+        let activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab && activeTab.dataset.target === 'view-diagnostic') {
+            document.querySelector('.tab-btn[data-target="view-summary"]').click();
+        }
+    }
+};
+
+function applyDiagOptionState() {
+    let show = diagEnabled || window._diagForceOpen === true;
+    let tab = $('tabDiagnostic');
+    if (tab) tab.style.display = show ? '' : 'none';
+    let cb = $('optDiagCb');
+    if (cb) cb.checked = diagEnabled;
+}
+
+window.hideDiagnosticTab = function() {
+    diagEnabled = false;
+    window._diagForceOpen = false;
+    localStorage.setItem('f_diag_enabled', '0');
+    applyDiagOptionState();
+    let sumTab = document.querySelector('.tab-btn[data-target="view-summary"]');
+    if (sumTab) sumTab.click();
+};
+
+// ── v3.3.6 : Batterie de tests automatisés ──────────────────────────────────
+window.runDiagnostics = function() {
+    let results = [];
+    const t = (name, fn) => {
+        try {
+            let r = fn();
+            if (r === false) results.push({ name, ok: false, msg: '' });
+            else results.push({ name, ok: true, msg: (typeof r === 'string') ? r : '' });
+        } catch (e) {
+            results.push({ name, ok: false, msg: e.message || String(e) });
+        }
+    };
+
+    // --- Bibliothèques externes (regression guard : CDN / SRI / disponibilité) ---
+    t('Bibliothèque CryptoJS', () => typeof CryptoJS !== 'undefined' && typeof CryptoJS.AES !== 'undefined');
+    t('Bibliothèque XLSX (SheetJS)', () => typeof XLSX !== 'undefined' && typeof XLSX.utils !== 'undefined');
+    t('Bibliothèque jsPDF', () => typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF === 'function');
+    t('Bibliothèque jsPDF-AutoTable', () => typeof window.jspdf !== 'undefined' && typeof window.jspdf.jsPDF.API.autoTable === 'function');
+    t('Bibliothèque html2canvas', () => typeof html2canvas === 'function');
+    t('Bibliothèque Tabulator', () => typeof Tabulator !== 'undefined');
+    t('Bibliothèque Chart.js', () => typeof Chart !== 'undefined');
+
+    // --- Chiffrement (round-trip complet) ---
+    t('Chiffrement AES : cycle complet', () => {
+        let sample = { hello: 'world', n: 42 };
+        let enc = CryptoJS.AES.encrypt(JSON.stringify(sample), 'test-diag-key').toString();
+        let dec = JSON.parse(CryptoJS.AES.decrypt(enc, 'test-diag-key').toString(CryptoJS.enc.Utf8));
+        return dec.hello === 'world' && dec.n === 42;
+    });
+
+    // --- Fonctions de calcul pures ---
+    t('Calcul exercice fiscal (getFiscalYearLabel)', () => {
+        let ok1 = getFiscalYearLabel('2024', '03', 1) === '2024';
+        let ok2 = getFiscalYearLabel('2024', '03', 10) === '2023-2024';
+        let ok3 = getFiscalYearLabel('2024', '11', 10) === '2024-2025';
+        let ok4 = getFiscalYearLabel('', '', 1) === 'vide';
+        if (!(ok1 && ok2 && ok3 && ok4)) throw new Error('Résultat inattendu sur un des cas de test');
+        return true;
+    });
+    t('Tri des mois d\'exercice (getFiscalMonthOrder)', () => {
+        let ok1 = getFiscalMonthOrder('01', 1) === 0;
+        let ok2 = getFiscalMonthOrder('10', 10) === 0;
+        let ok3 = getFiscalMonthOrder('09', 10) === 11;
+        if (!(ok1 && ok2 && ok3)) throw new Error('Résultat inattendu sur un des cas de test');
+        return true;
+    });
+    t('Formatage monétaire (formatCurrency)', () => {
+        let s = formatCurrency(1234.5);
+        if (!s.includes('234') || !s.includes('€')) throw new Error('Format obtenu : "' + s + '"');
+        return true;
+    });
+    t('Échappement HTML (escapeHtml)', () => {
+        let s = escapeHtml('<script>"x"&\'y\'</script>');
+        if (s.includes('<') || s.includes('>')) throw new Error('Échappement incomplet : "' + s + '"');
+        return true;
+    });
+
+    // --- Cohérence du DOM (regression guard : doublon d'ID déjà rencontré) ---
+    t('Aucun identifiant HTML dupliqué', () => {
+        let seen = {}, dups = [];
+        document.querySelectorAll('[id]').forEach(el => {
+            seen[el.id] = (seen[el.id] || 0) + 1;
+        });
+        Object.keys(seen).forEach(id => { if (seen[id] > 1) dups.push(id); });
+        if (dups.length) throw new Error('ID dupliqué(s) : ' + dups.join(', '));
+        return true;
+    });
+    t('Version affichée cohérente', () => {
+        let lbl = $('versionLabel') ? $('versionLabel').textContent : '';
+        if (!lbl.includes(APP_VERSION)) throw new Error('Étiquette de version : "' + lbl + '"');
+        return true;
+    });
+
+    // --- Rendu des écrans principaux (smoke test sur les données réelles) ---
+    const renderChecks = [
+        ['Rendu Tableau de bord', window.renderSummary],
+        ['Rendu Base de données', window.renderDataTable],
+        ['Rendu Non catégorisées', window.renderUncategorized],
+        ['Rendu Règles', window.renderRules],
+        ['Rendu Catégories', window.renderCategories],
+        ['Rendu Graphiques', window.renderCharts],
+    ];
+    if (budgetEnabled && typeof window.renderBudget === 'function') renderChecks.push(['Rendu Budget/Projection', window.renderBudget]);
+    if (regulEnabled && typeof window.renderRegul === 'function') renderChecks.push(['Rendu Suivi & Régule', window.renderRegul]);
+    if (quittancesEnabled && typeof window.renderQuittancesView === 'function') renderChecks.push(['Rendu Quittances', window.renderQuittancesView]);
+    renderChecks.forEach(([name, fn]) => t(name, () => { fn(); return true; }));
+
+    // --- Rendu du rapport ---
+    let okCount = results.filter(r => r.ok).length;
+    let errCount = results.length - okCount;
+    $('diagSummary').innerHTML = `<span style="color:${errCount ? 'var(--urgent)' : 'var(--done)'}">${errCount ? '❌' : '✅'} ${okCount} / ${results.length} tests réussis</span>`
+        + ` <span style="color:var(--ink-soft);font-weight:400;font-size:0.85em;">— dernière exécution : ${new Date().toLocaleString('fr-FR')}</span>`;
+    $('diagResults').innerHTML = results.map(r => `
+        <div class="diag-row ${r.ok ? 'diag-ok' : 'diag-err'}">
+            <span class="diag-badge ${r.ok ? 'diag-ok' : 'diag-err'}">${r.ok ? 'OK' : 'ERR'}</span>
+            <span class="diag-row-label">${escapeHtml(r.name)}</span>
+            <span class="diag-row-msg">${escapeHtml(r.msg || '')}</span>
+        </div>`).join('');
+};
 
 function applyFiscalStartMonthState() {
     let sel = $('fiscalStartMonthSelect');
