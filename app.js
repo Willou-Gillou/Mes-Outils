@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.3';
+const APP_VERSION = '3.3.4';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -5529,7 +5529,7 @@ window.dcUpdateUI = function() {
     let prevGrp = $('dcPrevGroup');
     let inpGrp = $('dcInputGroup');
     let s = window._dcState;
-    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
     
     if (type === 'prev') {
         prevGrp.style.display = 'block';
@@ -5658,7 +5658,7 @@ window.applyDistributeCosts = function() {
         }
     });
     
-    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
     
     let text = `<br><br><b>${escapeHtml(col.name)}</b><br>`;
     text += `Locataires présents entre ${startLabel} et ${endLabel}.<br>`;
@@ -5745,7 +5745,7 @@ window.applyDistributeWater = function() {
     let idxMoveIn = idxMoveInStr ? parseFloat(idxMoveInStr.replace(',', '.')) : null;
     let idxMoveOut = idxMoveOutStr ? parseFloat(idxMoveOutStr.replace(',', '.')) : null;
     
-    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + '€';
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
     let fmtIdx = n => n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2});
     
     let bien = getRegulBien(currentRegulBienId);
