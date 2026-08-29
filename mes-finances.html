@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.3.12</title>
-    <!-- v3.3.12 - Suivi & Régule : sauvegarde uniquement si changement réel (même correction que Budget/Projection) -->
+    <title>Mes finances - v3.3.13</title>
+    <!-- v3.3.13 - Suivi & Régule : cellules centrées, fusion Estimation/Réel avec bouton bascule, reprise exercice précédent grisée si indisponible, 3 modes pour charges individuelles -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -820,11 +820,45 @@
     <div class="overlay" id="distributeWaterModal">
         <div class="modal" style="max-width:500px;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-                <h2 style="margin:0;">Charges individuelles (eau)</h2>
+                <h2 style="margin:0;">Charges individuelles : <span id="waterColName"></span></h2>
                 <button class="btn btn-outline" onclick="window.closeDistributeWaterModal()" style="padding:4px 10px;border-radius:20px;">✕</button>
             </div>
-            
-            <div style="padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px; border:1px solid var(--ink-faint);">
+
+            <div style="margin-bottom: 16px;">
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;" id="waterPrevLabel">
+                    <input type="radio" name="waterType" id="waterTypePrev" value="prev" onchange="window.waterUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Reprise exercice précédent + %
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
+                    <input type="radio" name="waterType" value="amount" checked onchange="window.waterUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Déclaration d'un montant
+                </label>
+                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="radio" name="waterType" value="indice" onchange="window.waterUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Déclaration avec indice (relevé compteur)
+                </label>
+            </div>
+
+            <div id="waterPrevGroup" style="display:none; padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px; border:1px solid var(--ink-faint);">
+                <div style="font-size:0.95em; margin-bottom:8px;">Total de la colonne pour l'exercice précédent : <strong id="waterPrevTotal">0.00€</strong></div>
+                <div style="display:flex;align-items:center;gap:8px; font-size:0.95em;">
+                    Augmentation (%) : <input type="number" id="waterPrevPct" class="input-text" style="width:80px;" value="0">
+                </div>
+            </div>
+
+            <div id="waterAmountGroup" style="padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px; border:1px solid var(--ink-faint);">
+                <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;font-weight:600;margin-bottom:12px;">
+                    <label style="width:180px;">Montant total :</label>
+                    <input type="number" id="waterAmountTotal" class="input-text" style="width:120px;" placeholder="Ex: 120.50"> €
+                </div>
+                <div style="display:flex;gap:16px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.9em;">
+                        <input type="radio" name="waterAmountFlag" value="est" checked style="accent-color:var(--warn);"> ~ Estimation
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.9em;">
+                        <input type="radio" name="waterAmountFlag" value="real" style="accent-color:var(--done);"> ✔︎ Réel
+                    </label>
+                </div>
+            </div>
+
+            <div id="waterIndiceGroup" style="display:none; padding: 12px; background: var(--bg); border-radius: 8px; margin-bottom: 16px; border:1px solid var(--ink-faint);">
                 <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;font-weight:600;margin-bottom:12px;">
                     <label style="width:180px;">Montant total facture :</label>
                     <input type="number" id="waterInputTotal" class="input-text" style="width:120px;" placeholder="Ex: 120.50"> €
@@ -837,9 +871,9 @@
                     <label style="width:180px;">Indice eau fin (m³) :</label>
                     <input type="number" id="waterInputEnd" class="input-text" style="width:120px;">
                 </div>
-                
+
                 <hr style="border:0; border-top:1px solid var(--ink-faint); margin: 12px 0;">
-                
+
                 <div style="font-size:0.85em; color:var(--ink-soft); margin-bottom:8px;">(Renseigner un seul des deux champs suivants si applicable)</div>
                 <div style="display:flex;align-items:center;gap:8px;font-size:0.95em;margin-bottom:8px;">
                     <label style="width:180px;">Indice locataire entrée :</label>
@@ -850,10 +884,10 @@
                     <input type="number" id="waterInputMoveOut" class="input-text" style="width:120px;" placeholder="Départ">
                 </div>
             </div>
-            
+
             <div style="text-align:right;">
                 <button class="btn btn-outline" onclick="window.closeDistributeWaterModal()">Annuler</button>
-                <button class="btn btn-primary" onclick="window.applyDistributeWater()">Calculer & Appliquer</button>
+                <button class="btn btn-primary" onclick="window.applyDistributeWater()">Calculer &amp; Appliquer</button>
             </div>
         </div>
     </div>
@@ -902,8 +936,8 @@
             </div>
             
             <div style="margin-bottom: 16px;">
-                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
-                    <input type="radio" name="dcType" value="prev" onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Reprise exercice précédent + %
+                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;" id="dcPrevLabel">
+                    <input type="radio" name="dcType" id="dcTypePrev" value="prev" onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Reprise exercice précédent + %
                 </label>
                 <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
                     <input type="radio" name="dcType" value="est" checked onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Estimation globale

@@ -590,6 +590,21 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 .regul-table .tcd-total-row td, .regul-table .tcd-total-row th, .regul-table .tcd-total-row .tcd-col-axis { background-color: #111827 !important; color: #FFFFFF !important; font-weight: 700; border-color: #333; }
 .regul-table .tcd-total-row .budget-val-ro { color: #FFFFFF !important; }
 .regul-row-disabled td, .regul-row-disabled .tcd-col-axis { background-color: #f3f4f6 !important; color: #9ca3af !important; pointer-events: none; }
+/* v3.3.13 : centrage des valeurs dans le tableau Suivi & Régule (la colonne "Dates" reste alignée à gauche pour la lisibilité) */
+.regul-table td.tcd-cell { text-align: center !important; }
+.regul-table .budget-val, .regul-table .budget-val-ro { display: inline-block; }
+/* Bouton bascule Estimation / Réel, fusionné avec la déclaration du montant */
+.regul-flag-toggle, .regul-flag-badge {
+    display: inline-flex; align-items: center; gap: 2px; margin-left: 4px;
+    font-size: 0.72em; font-weight: 700; padding: 1px 6px; border-radius: 10px;
+    border: 1px solid transparent; white-space: nowrap; vertical-align: middle;
+}
+.regul-flag-toggle { cursor: pointer; }
+.regul-flag-toggle.is-est, .regul-flag-badge.is-est { color: var(--warn); background: #fffbeb; border-color: var(--warn); }
+.regul-flag-toggle.is-real, .regul-flag-badge.is-real { color: var(--done); background: #ecfdf5; border-color: var(--done); }
+.regul-flag-toggle:hover { filter: brightness(0.95); }
+/* Radio grisé (ex: "Reprise exercice précédent" sans exercice précédent disponible) */
+label:has(input:disabled) { opacity: 0.45; cursor: not-allowed !important; }
 
 
 /* ── Diagnostic ── */

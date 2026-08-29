@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.12';
+const APP_VERSION = '3.3.13';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -5490,11 +5490,17 @@ window.renderRegul = function() {
             }
             let indHtml = (!isGreyed && isProv && provVal !== null) ? regulIndicatorHtml(isEmpty ? null : actualVal, provVal, mKey, c.id) : '';
 
-            // Handle Flags
+            // Handle Flags — v3.3.13 : badge/bouton bascule Estimation ⇄ Réel, fusionné avec la déclaration du montant
             let flag = bien.regulFlags && bien.regulFlags[ex] && bien.regulFlags[ex][mKey] && bien.regulFlags[ex][mKey][c.id];
             let flagHtml = '';
-            if (!isEmpty && !isProv && flag === 'est') flagHtml = ' <span style="color:var(--warn);font-weight:bold;font-size:1.1em;padding-left:2px;" title="Estimation globale ou reprise">~</span>';
-            if (!isEmpty && !isProv && flag === 'real') flagHtml = ' <span style="color:var(--done);font-weight:bold;font-size:1.1em;padding-left:2px;" title="Montant réel distribué">✔︎</span>';
+            if (!isEmpty && !isProv) {
+                let isReal = flag === 'real';
+                if (isClosed || isGreyed) {
+                    flagHtml = ` <span class="regul-flag-badge ${isReal ? 'is-real' : 'is-est'}">${isReal ? '✔︎ Réel' : '~ Estim.'}</span>`;
+                } else {
+                    flagHtml = ` <button type="button" class="regul-flag-toggle ${isReal ? 'is-real' : 'is-est'}" onclick="window.toggleRegulFlag('${mKey}','${c.id}')" title="Cliquer pour basculer Estimation ⇄ Réel">${isReal ? '✔︎ Réel' : '~ Estim.'}</button>`;
+                }
+            }
 
             if (isClosed || isGreyed) {
                 html += `<td class="tcd-cell"><span class="budget-val-ro">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
@@ -5604,10 +5610,33 @@ window.setRegulCellSilent = function(mKey, colId, text) {
         let n = parseFloat(cleaned);
         if (!isNaN(n)) {
             if (existing !== n) { bien.regulData[ex][mKey][colId] = n; changed = true; }
-            if (hadFlag) { delete bien.regulFlags[ex][mKey][colId]; changed = true; }
+            // v3.3.13 : toute déclaration manuelle démarre en "Estimation" ; à confirmer via le bouton bascule dans la cellule
+            let col = (bien.regulCols || []).find(c => c.id === colId);
+            let isProv = col && col.name.toLowerCase().includes('provision');
+            if (!hadFlag && !isProv) {
+                if (!bien.regulFlags) bien.regulFlags = {};
+                if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
+                if (!bien.regulFlags[ex][mKey]) bien.regulFlags[ex][mKey] = {};
+                bien.regulFlags[ex][mKey][colId] = 'est';
+                changed = true;
+            }
         }
     }
     return changed;
+};
+
+window.toggleRegulFlag = function(mKey, colId) {
+    let bien = getRegulBien(currentRegulBienId);
+    if (!bien) return;
+    let ex = $('regulExerciceSelect').value;
+    if (bien.regulClosed && bien.regulClosed[ex]) return;
+    if (!bien.regulFlags) bien.regulFlags = {};
+    if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
+    if (!bien.regulFlags[ex][mKey]) bien.regulFlags[ex][mKey] = {};
+    let cur = bien.regulFlags[ex][mKey][colId] || 'est';
+    bien.regulFlags[ex][mKey][colId] = (cur === 'est') ? 'real' : 'est';
+    triggerSave(true);
+    window.renderRegul();
 };
 
 window.saveRegulExplication = function(ex, text) {
@@ -5689,6 +5718,12 @@ window.openDistributeCostsModal = function(colId) {
     window._dcState.wasIncomplete = wasIncomplete;
     window._dcState.prevDaysPresent = prevDaysPresent;
     window._dcState.prevDaysTotal = prevDaysTotal;
+    
+    // v3.3.13 : griser "Reprise exercice précédent" si aucun exercice précédent n'existe
+    let hasPrevEx = !!(bien.regulData && bien.regulData[prevEx] && Object.keys(bien.regulData[prevEx]).length > 0);
+    window._dcState.hasPrevEx = hasPrevEx;
+    let prevRadio = $('dcTypePrev');
+    if (prevRadio) prevRadio.disabled = !hasPrevEx;
     
     document.querySelector('input[name="dcType"][value="est"]').checked = true;
     
@@ -5892,15 +5927,55 @@ window.openWaterModal = function(colId) {
     let moveInDate = bien.dateAnniversaire;
     if (!moveInDate) return alert("La date d'emménagement n'est pas renseignée dans les quittances pour ce bien.");
     
+    let col = bien.regulCols.find(c => c.id === colId);
+    $('waterColName').textContent = col ? col.name : '';
+    
     window._dcState.colId = colId;
     
+    // v3.3.13 : reprise exercice précédent — même logique que le modal générique de distribution
+    let exParts = ex.split('-');
+    let prevEx = '';
+    if (exParts.length === 1) {
+        prevEx = String(parseInt(exParts[0]) - 1);
+    } else {
+        prevEx = String(parseInt(exParts[0]) - 1) + '-' + String(parseInt(exParts[1]) - 1);
+    }
+    let prevSum = 0;
+    if (bien.regulData && bien.regulData[prevEx]) {
+        Object.keys(bien.regulData[prevEx]).forEach(mK => {
+            let v = bien.regulData[prevEx][mK][colId];
+            if (v && !isNaN(v)) prevSum += parseFloat(v);
+        });
+    }
+    let hasPrevEx = !!(bien.regulData && bien.regulData[prevEx] && Object.keys(bien.regulData[prevEx]).length > 0);
+    window._dcState.waterPrevSum = prevSum;
+    window._dcState.waterHasPrevEx = hasPrevEx;
+    let prevRadio = $('waterTypePrev');
+    if (prevRadio) { prevRadio.disabled = !hasPrevEx; if (!hasPrevEx) prevRadio.checked = false; }
+    
+    document.querySelector('input[name="waterType"][value="amount"]').checked = true;
+    document.querySelector('input[name="waterAmountFlag"][value="est"]').checked = true;
+    
+    $('waterAmountTotal').value = '';
     $('waterInputTotal').value = '';
     $('waterInputStart').value = '';
     $('waterInputEnd').value = '';
     $('waterInputMoveIn').value = '';
     $('waterInputMoveOut').value = '';
     
+    window.waterUpdateUI();
     $('distributeWaterModal').classList.add('open');
+};
+
+window.waterUpdateUI = function() {
+    let type = document.querySelector('input[name="waterType"]:checked').value;
+    let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
+    $('waterPrevGroup').style.display = (type === 'prev') ? 'block' : 'none';
+    $('waterAmountGroup').style.display = (type === 'amount') ? 'block' : 'none';
+    $('waterIndiceGroup').style.display = (type === 'indice') ? 'block' : 'none';
+    if (type === 'prev') {
+        $('waterPrevTotal').textContent = fmtEur(window._dcState.waterPrevSum || 0);
+    }
 };
 
 window.closeDistributeWaterModal = function() {
@@ -5909,18 +5984,7 @@ window.closeDistributeWaterModal = function() {
 
 window.applyDistributeWater = function() {
     let s = window._dcState;
-    let totalInput = $('waterInputTotal').value;
-    let startInput = $('waterInputStart').value;
-    let endInput = $('waterInputEnd').value;
-    
-    let total = parseFloat(totalInput.replace(',', '.')) || 0;
-    let isOnlyAmount = (totalInput.trim() !== '' && startInput.trim() === '' && endInput.trim() === '');
-    
-    let idxMoveInStr = $('waterInputMoveIn').value;
-    let idxMoveOutStr = $('waterInputMoveOut').value;
-    let idxMoveIn = idxMoveInStr ? parseFloat(idxMoveInStr.replace(',', '.')) : null;
-    let idxMoveOut = idxMoveOutStr ? parseFloat(idxMoveOutStr.replace(',', '.')) : null;
-    
+    let type = document.querySelector('input[name="waterType"]:checked').value;
     let fmtEur = n => n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' €';
     let fmtIdx = n => n.toLocaleString('fr-FR',{minimumFractionDigits:0,maximumFractionDigits:2});
     
@@ -5948,16 +6012,43 @@ window.applyDistributeWater = function() {
     if (activeMonths.length === 0) return alert("Aucun mois actif pour le locataire.");
     
     let text = `<br><br><b>${escapeHtml(col.name)}</b><br>`;
-    
     let monthlyBase = 0;
-    if (isOnlyAmount) {
+    let cellFlag = 'real'; // v3.3.13 : par défaut "réel" (reprise = estimation ; déclaration montant = choix utilisateur ; indice = mesure réelle)
+    
+    // ── Mode 1 : Reprise exercice précédent + % ──────────────────────────────
+    if (type === 'prev') {
+        let pctInput = $('waterPrevPct');
+        let pct = pctInput ? (parseFloat(pctInput.value) || 0) : 0;
+        let total = (s.waterPrevSum || 0) * (1 + pct / 100);
         monthlyBase = total / 12;
-        text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
-        text += `Distribution directe sans relevé d'index.<br>`;
+        cellFlag = 'est';
+        text += `Reprise de l'exercice précédent (${pct}% d'augmentation).<br>`;
+        text += `Montant global = ${fmtEur(total)}<br>`;
         text += `1/12ème de ${fmtEur(total)} = ${fmtEur(Math.round(monthlyBase * 100) / 100)} par mois<br>`;
+    
+    // ── Mode 2 : Déclaration d'un montant, avec bascule Estimation / Réel ────
+    } else if (type === 'amount') {
+        let totalInput = $('waterAmountTotal').value;
+        let total = parseFloat(String(totalInput).replace(',', '.')) || 0;
+        cellFlag = document.querySelector('input[name="waterAmountFlag"]:checked').value;
+        monthlyBase = total / 12;
+        text += `Montant global déclaré : ${fmtEur(total)} (${cellFlag === 'real' ? 'Réel' : 'Estimation'})<br>`;
+        text += `1/12ème de ${fmtEur(total)} = ${fmtEur(Math.round(monthlyBase * 100) / 100)} par mois<br>`;
+    
+    // ── Mode 3 : Déclaration avec indice (relevé compteur) ───────────────────
     } else {
-        let idxStart = parseFloat(startInput.replace(',', '.')) || 0;
-        let idxEnd = parseFloat(endInput.replace(',', '.')) || 0;
+        let totalInput = $('waterInputTotal').value;
+        let startInput = $('waterInputStart').value;
+        let endInput = $('waterInputEnd').value;
+        let total = parseFloat(String(totalInput).replace(',', '.')) || 0;
+        
+        let idxMoveInStr = $('waterInputMoveIn').value;
+        let idxMoveOutStr = $('waterInputMoveOut').value;
+        let idxMoveIn = idxMoveInStr ? parseFloat(idxMoveInStr.replace(',', '.')) : null;
+        let idxMoveOut = idxMoveOutStr ? parseFloat(idxMoveOutStr.replace(',', '.')) : null;
+        
+        let idxStart = parseFloat(String(startInput).replace(',', '.')) || 0;
+        let idxEnd = parseFloat(String(endInput).replace(',', '.')) || 0;
         
         if (idxEnd <= idxStart) {
             alert("L'indice de fin doit être supérieur à l'indice de début.");
@@ -5978,7 +6069,7 @@ window.applyDistributeWater = function() {
         
         let amountLoc = (locCons / totalCons) * total;
         
-        text += `Montant global de la facture d'eau : ${fmtEur(total)}<br>`;
+        text += `Montant global de la facture : ${fmtEur(total)}<br>`;
         text += `Consommation totale : ${fmtIdx(totalCons)} m³ (Indice fin ${fmtIdx(idxEnd)} - Indice début ${fmtIdx(idxStart)})<br>`;
         if (idxMoveIn !== null && !isNaN(idxMoveIn)) {
             text += `Le locataire a emménagé en cours de période. Indice d'entrée : ${fmtIdx(idxMoveIn)} m³.<br>`;
@@ -6001,6 +6092,7 @@ window.applyDistributeWater = function() {
             }
         });
         monthlyBase = amountLoc / sumWeights;
+        cellFlag = 'real';
     }
     
     let monthlyRounded = Math.round(monthlyBase * 100) / 100;
@@ -6023,10 +6115,10 @@ window.applyDistributeWater = function() {
             firstMonthDaysPresent = firstMonthDaysTotal - md + 1;
             firstMonthProrata = Math.round(monthlyBase * firstMonthDaysPresent / firstMonthDaysTotal * 100) / 100;
             bien.regulData[ex][mKey][s.colId] = firstMonthProrata;
-            bien.regulFlags[ex][mKey][s.colId] = 'real';
+            bien.regulFlags[ex][mKey][s.colId] = cellFlag;
         } else {
             bien.regulData[ex][mKey][s.colId] = monthlyRounded;
-            bien.regulFlags[ex][mKey][s.colId] = 'real';
+            bien.regulFlags[ex][mKey][s.colId] = cellFlag;
         }
     });
     
