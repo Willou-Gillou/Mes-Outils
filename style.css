@@ -604,3 +604,68 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 
 /* v3.3.8 : Empêche le menu natif iOS (sélection texte/loupe) d'interférer avec l'appui long (tag rouge/noir) */
 #summaryGrid td, #summaryGrid th { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+
+/* ══ v3.3.9 : Barre de menu mobile compactée — les onglets remontent juste sous une seule ligne d'en-tête ══ */
+@media (max-width: 768px) {
+    header {
+        flex-direction: row !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        gap: 8px !important;
+        padding: 8px 10px !important;
+        padding-top: calc(8px + env(safe-area-inset-top)) !important;
+        position: relative;
+        flex-wrap: nowrap !important;
+    }
+    .app-title {
+        font-size: 1em !important;
+        gap: 6px !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+    }
+    .app-title .version { display: none; } /* la version reste visible dans le menu déroulant / onglet Diagnostic */
+    .app-title .font-controls { display: none; } /* déplacé dans le menu déroulant pour gagner de la place */
+    #mobileMenuToggle {
+        display: inline-flex !important;
+        flex: 0 0 auto;
+        font-size: 1.3em !important;
+        line-height: 1;
+        padding: 6px 14px !important;
+        min-height: 40px;
+    }
+    /* Le bloc de contrôles secondaires devient un menu déroulant, plutôt que d'empiler l'en-tête */
+    #headerControlsRow {
+        display: none !important;
+        position: absolute;
+        top: 100%;
+        left: 0; right: 0;
+        background: var(--surface);
+        border-bottom: 1px solid var(--ink-faint);
+        box-shadow: var(--shadow);
+        padding: 14px !important;
+        z-index: 100;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        flex-wrap: nowrap !important;
+        gap: 10px !important;
+        max-height: calc(100dvh - 60px);
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    #headerControlsRow.mobile-menu-open { display: flex !important; }
+    #headerControlsRow > *, #headerControlsRow .btn, #headerControlsRow .badge-sync {
+        width: 100% !important;
+        justify-content: center !important;
+        font-size: 0.9em !important;
+        padding: 9px 12px !important;
+        text-align: center;
+    }
+    #headerControlsRow #accountSelector { flex: 1; }
+    .font-controls-mobile { display: flex !important; }
+    /* Onglets : juste sous l'en-tête compact, le plus haut possible */
+    .nav-tabs { padding: 0 4px; }
+}
+@media (min-width: 769px) {
+    #mobileMenuToggle { display: none !important; }
+}

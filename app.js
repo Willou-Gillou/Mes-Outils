@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.8';
+const APP_VERSION = '3.3.9';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -224,7 +224,24 @@ $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     btn.classList.add('active');
     $(btn.dataset.target).classList.add('active');
     window.renderViewsSafe();
+    window.closeMobileHeaderMenu();
 }));
+
+// v3.3.9 : Menu déroulant mobile (regroupe compte/sync/import/police pour garder les onglets tout en haut)
+window.toggleMobileHeaderMenu = function() {
+    let row = $('headerControlsRow');
+    if (row) row.classList.toggle('mobile-menu-open');
+};
+window.closeMobileHeaderMenu = function() {
+    let row = $('headerControlsRow');
+    if (row) row.classList.remove('mobile-menu-open');
+};
+document.addEventListener('click', (e) => {
+    let row = $('headerControlsRow'), toggle = $('mobileMenuToggle');
+    if (!row || !row.classList.contains('mobile-menu-open')) return;
+    if (row.contains(e.target) || (toggle && toggle.contains(e.target))) return;
+    window.closeMobileHeaderMenu();
+});
 
 // v3.3.6 : état initial de l'onglet Diagnostic (réglage global, indépendant du compte/déverrouillage)
 applyDiagOptionState();
