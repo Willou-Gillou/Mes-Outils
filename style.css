@@ -9,7 +9,7 @@
         
         body { 
             background: var(--bg); font-family: system-ui, -apple-system, sans-serif; color: var(--ink); 
-            height: 100vh; display: flex; flex-direction: column; overflow: hidden; font-size: var(--font-size); 
+            height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; font-size: var(--font-size); 
             transition: font-size 0.2s ease;
         }
         
@@ -131,7 +131,7 @@
         .tcd-year-total-hidden { display: none; }
         .tcd-th-year { font-weight: 700; letter-spacing: 1px; }
         .tcd-th-month { font-size: 0.85em; opacity: 0.9; }
-        #tcdScrollWrapper { scroll-behavior: auto; overflow: auto; max-height: calc(100vh - 180px); }
+        #tcdScrollWrapper { scroll-behavior: auto; overflow: auto; max-height: calc(100vh - 180px); max-height: calc(100dvh - 180px); }
         #summaryGrid { margin-bottom: 24px; border-radius: var(--radius); overflow: visible !important; box-shadow: var(--shadow); background: var(--surface); border: 1px solid var(--ink-faint); font-family: system-ui, -apple-system, sans-serif; }
         .tabulator { font-size: var(--tcd-font-size, 13px); background-color: var(--surface); }
         .tabulator .tabulator-row { font-size: var(--tcd-font-size, 13px) !important; }
@@ -382,7 +382,7 @@
     }
 
     /* TCD natif : réduire police et paddings, garder colonne catégorie sticky */
-    #tcdScrollWrapper { max-height: calc(100vh - 220px); }
+    #tcdScrollWrapper { max-height: calc(100vh - 220px); max-height: calc(100dvh - 220px); }
     .tcd-native { font-size: 0.72em; }
     .tcd-native th, .tcd-native td { padding: 3px 5px; }
     .tcd-col-axis { min-width: 130px; max-width: 160px; }
@@ -511,7 +511,7 @@
     }
 
     /* Empêcher le rebond de scroll indésirable sur le body (garder le scroll interne aux vues) */
-    html, body { position: fixed; width: 100%; height: 100%; overflow: hidden; }
+    html, body { position: fixed; width: 100%; height: 100%; height: 100dvh; overflow: hidden; }
     main { -webkit-overflow-scrolling: touch; height: 100%; }
     .table-wrap { -webkit-overflow-scrolling: touch; }
 
@@ -601,3 +601,6 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
 .diag-badge.diag-err { background: var(--urgent); }
 .diag-row-label { font-weight:600; flex:0 0 auto; min-width:220px; }
 .diag-row-msg { color: var(--ink-soft); font-size:0.88em; }
+
+/* v3.3.8 : Empêche le menu natif iOS (sélection texte/loupe) d'interférer avec l'appui long (tag rouge/noir) */
+#summaryGrid td, #summaryGrid th { -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }

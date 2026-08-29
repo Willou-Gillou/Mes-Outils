@@ -50,12 +50,7 @@
   var ctxMenu = document.getElementById('tcdContextMenu');
   var ctxCell = null;
 
-  document.addEventListener('contextmenu', function(e) {
-    var grid = document.getElementById('summaryGrid');
-    if (!grid) return;
-    var cell = e.target.closest('td, th');
-    if (!cell || !grid.contains(cell)) return;
-    e.preventDefault();
+  function openCtxMenuForCell(cell, clientX, clientY) {
     ctxCell = cell;
     var key = buildKey(cell);
     cell.dataset.redKey = key;
@@ -63,10 +58,46 @@
     var isRed = !!(key && store[key]);
     document.getElementById('ctxTagRed').style.display = isRed ? 'none' : 'flex';
     document.getElementById('ctxTagBlack').style.display = isRed ? 'flex' : 'none';
-    ctxMenu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
-    ctxMenu.style.top = Math.min(e.clientY, window.innerHeight - 100) + 'px';
+    ctxMenu.style.left = Math.max(4, Math.min(clientX, window.innerWidth - 220)) + 'px';
+    ctxMenu.style.top = Math.max(4, Math.min(clientY, window.innerHeight - 100)) + 'px';
     ctxMenu.style.display = 'block';
+  }
+
+  document.addEventListener('contextmenu', function(e) {
+    var grid = document.getElementById('summaryGrid');
+    if (!grid) return;
+    var cell = e.target.closest('td, th');
+    if (!cell || !grid.contains(cell)) return;
+    e.preventDefault();
+    openCtxMenuForCell(cell, e.clientX, e.clientY);
   });
+
+  // v3.3.8 : Appui long tactile (iOS Safari ne déclenche pas 'contextmenu' de façon fiable sur une cellule)
+  (function() {
+    var pressTimer = null, startX = 0, startY = 0, longPressCell = null;
+    var LONG_PRESS_MS = 500, MOVE_TOLERANCE = 10;
+    document.addEventListener('touchstart', function(e) {
+      var grid = document.getElementById('summaryGrid');
+      if (!grid || e.touches.length !== 1) return;
+      var cell = e.target.closest('td, th');
+      if (!cell || !grid.contains(cell)) return;
+      longPressCell = cell;
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+      pressTimer = setTimeout(function() {
+        if (!longPressCell) return;
+        if (navigator.vibrate) { try { navigator.vibrate(15); } catch(e){} }
+        openCtxMenuForCell(longPressCell, startX, startY);
+        longPressCell = null;
+      }, LONG_PRESS_MS);
+    }, { passive: true });
+    document.addEventListener('touchmove', function(e) {
+      if (!pressTimer || !e.touches.length) return;
+      var dx = Math.abs(e.touches[0].clientX - startX), dy = Math.abs(e.touches[0].clientY - startY);
+      if (dx > MOVE_TOLERANCE || dy > MOVE_TOLERANCE) { clearTimeout(pressTimer); pressTimer = null; longPressCell = null; }
+    }, { passive: true });
+    document.addEventListener('touchend', function() { clearTimeout(pressTimer); pressTimer = null; longPressCell = null; });
+    document.addEventListener('touchcancel', function() { clearTimeout(pressTimer); pressTimer = null; longPressCell = null; });
+  })();
 
   document.getElementById('ctxTagRed').addEventListener('click', function() {
     if (!ctxCell) return;
