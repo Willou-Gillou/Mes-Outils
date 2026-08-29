@@ -643,26 +643,31 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
         background: var(--surface);
         border-bottom: 1px solid var(--ink-faint);
         box-shadow: var(--shadow);
-        padding: 14px !important;
+        padding: 10px !important;
         z-index: 100;
         flex-direction: column !important;
         align-items: stretch !important;
         flex-wrap: nowrap !important;
-        gap: 10px !important;
+        gap: 6px !important;
         max-height: calc(100dvh - 60px);
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
     }
     #headerControlsRow.mobile-menu-open { display: flex !important; }
-    #headerControlsRow > *, #headerControlsRow .btn, #headerControlsRow .badge-sync {
-        width: 100% !important;
+    /* Ligne "paire" : 2 boutons côte à côte pour condenser le menu */
+    #headerControlsRow .hcr-pair { display: flex !important; gap: 6px; width: 100%; }
+    #headerControlsRow .hcr-pair > .btn { flex: 1; width: auto !important; }
+    /* Éléments pleine largeur (compte, déconnexion) */
+    #headerControlsRow .hcr-full { width: 100% !important; }
+    /* Badge de synchronisation intégré dans la ligne "Compte" plutôt que sur sa propre ligne */
+    #headerControlsRow .hcr-sync-inline { margin-left: auto; flex: 0 0 auto; white-space: nowrap; }
+    #headerControlsRow .btn, #headerControlsRow .badge-sync {
+        font-size: 0.82em !important;
+        padding: 7px 8px !important;
         justify-content: center !important;
-        font-size: 0.9em !important;
-        padding: 9px 12px !important;
         text-align: center;
     }
-    #headerControlsRow #accountSelector { flex: 1; }
-    .font-controls-mobile { display: flex !important; }
+    #headerControlsRow > .btn.hcr-full { width: 100% !important; }
     /* Onglets : juste sous l'en-tête compact, le plus haut possible */
     .nav-tabs { padding: 0 4px; }
 }

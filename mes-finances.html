@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.3.9</title>
-    <!-- v3.3.9 - Mobile : en-tête compacté en menu déroulant, onglets remontés tout en haut -->
+    <title>Mes finances - v3.3.10</title>
+    <!-- v3.3.10 - Mobile : menu déroulant condensé (boutons appariés, badge sync intégré à la ligne compte) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -36,19 +36,21 @@
         <button id="mobileMenuToggle" class="btn btn-outline" style="display:none;" onclick="window.toggleMobileHeaderMenu()" title="Menu">⋮</button>
     </div>
     <div id="headerControlsRow" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-        <div class="font-controls-mobile" style="display:none;gap:10px;justify-content:center;">
-            <button class="font-btn btn btn-outline" style="flex:1;" onclick="window.adjustFont(1)" title="Augmenter la police">A+ Agrandir</button>
-            <button class="font-btn btn btn-outline" style="flex:1;" onclick="window.adjustFont(-1)" title="Réduire la police">A- Réduire</button>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--ink-faint);border-radius:6px;padding:4px 10px;">
+        <div class="hcr-full" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--ink-faint);border-radius:6px;padding:4px 10px;">
           <span style="font-size:0.8em;font-weight:600;color:var(--ink-soft);">Compte :</span>
-          <select id="accountSelector" style="border:none;background:transparent;font-size:0.9em;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit;" onchange="window.switchAccount(this.value)"></select>
+          <select id="accountSelector" style="border:none;background:transparent;font-size:0.9em;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit;flex:1;" onchange="window.switchAccount(this.value)"></select>
           <button class="btn btn-outline" style="padding:2px 7px;font-size:0.85em;" onclick="window.openAccountManager()" title="Gérer les comptes">⚙️</button>
+          <span class="badge badge-sync hcr-sync-inline" id="syncBadge">Déconnecté</span>
         </div>
-        <button class="btn btn-outline" style="font-size:0.9em;" onclick="window.openIdeasPopup()" title="Idées d'amélioration">💡 Idées</button>
-        <span class="badge badge-sync" id="syncBadge">Déconnecté</span>
-        <button class="btn btn-outline" id="importBtnUI" style="font-size:0.9em;">📥 Importer extrait compte</button>
-        <button class="btn btn-outline" id="logoutBtn" style="display:none; font-size:0.9em;">Déconnexion</button>
+        <div class="hcr-pair">
+            <button class="btn btn-outline" onclick="window.openIdeasPopup()" title="Idées d'amélioration">💡 Idées</button>
+            <button class="btn btn-outline" id="importBtnUI">📥 Importer</button>
+        </div>
+        <div class="font-controls-mobile hcr-pair" style="display:none;">
+            <button class="font-btn btn btn-outline" onclick="window.adjustFont(1)" title="Augmenter la police">A+ Agrandir</button>
+            <button class="font-btn btn btn-outline" onclick="window.adjustFont(-1)" title="Réduire la police">A- Réduire</button>
+        </div>
+        <button class="btn btn-outline hcr-full" id="logoutBtn" style="display:none;">Déconnexion</button>
     </div>
 </header>
 
