@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.3.13</title>
-    <!-- v3.3.13 - Suivi & Régule : cellules centrées, fusion Estimation/Réel avec bouton bascule, reprise exercice précédent grisée si indisponible, 3 modes pour charges individuelles -->
+    <title>Mes finances - v3.3.14</title>
+    <!-- v3.3.14 - Suivi & Régule : fusion Estimation/Réel étendue à "Déclaration d'un montant" (charges communes et TOM) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -939,11 +939,8 @@
                 <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;" id="dcPrevLabel">
                     <input type="radio" name="dcType" id="dcTypePrev" value="prev" onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Reprise exercice précédent + %
                 </label>
-                <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;">
-                    <input type="radio" name="dcType" value="est" checked onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Estimation globale
-                </label>
                 <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input type="radio" name="dcType" value="real" onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Montant réel
+                    <input type="radio" name="dcType" value="amount" checked onchange="window.dcUpdateUI()" style="width:16px;height:16px;accent-color:var(--pro);"> Déclaration d'un montant
                 </label>
             </div>
             

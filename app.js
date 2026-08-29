@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.13';
+const APP_VERSION = '3.3.14';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -5725,7 +5725,7 @@ window.openDistributeCostsModal = function(colId) {
     let prevRadio = $('dcTypePrev');
     if (prevRadio) prevRadio.disabled = !hasPrevEx;
     
-    document.querySelector('input[name="dcType"][value="est"]').checked = true;
+    document.querySelector('input[name="dcType"][value="amount"]').checked = true;
     
     window.dcUpdateUI();
     $('distributeCostsModal').classList.add('open');
@@ -5763,22 +5763,31 @@ window.dcUpdateUI = function() {
         inpGrp.style.display = 'block';
         
         let html = '';
-        if (window._dcState.isTOM && window._dcState.spansYears && type !== 'prev') {
+        if (window._dcState.isTOM && window._dcState.spansYears) {
             html += `<div style="font-size:0.95em; margin-bottom:12px; color:var(--ink-soft);">Cette taxe étant souvent annuelle, veuillez renseigner le coût pour chaque année civile couverte par l'exercice :</div>`;
             html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
                         <label style="width:100px;font-weight:600;">Année ${window._dcState.y1} :</label>
                         <input type="number" id="dcInputY1" class="input-text" style="width:120px;" placeholder="Ex: 250"> €
                      </div>`;
-            html += `<div style="display:flex;align-items:center;gap:8px;">
+            html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
                         <label style="width:100px;font-weight:600;">Année ${window._dcState.y2} :</label>
                         <input type="number" id="dcInputY2" class="input-text" style="width:120px;" placeholder="Ex: 260"> €
                      </div>`;
         } else {
-            html += `<div style="display:flex;align-items:center;gap:8px;font-size:0.95em;font-weight:600;">
+            html += `<div style="display:flex;align-items:center;gap:8px;font-size:0.95em;font-weight:600;margin-bottom:12px;">
                         <label>Montant total :</label>
                         <input type="number" id="dcInputTotal" class="input-text" style="width:120px;" placeholder="Ex: 500"> €
                      </div>`;
         }
+        // v3.3.14 : bascule Estimation / Réel fusionnée avec la déclaration du montant (charges communes et TOM)
+        html += `<div style="display:flex;gap:16px;">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.9em;">
+                        <input type="radio" name="dcAmountFlag" value="est" checked style="accent-color:var(--warn);"> ~ Estimation
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.9em;">
+                        <input type="radio" name="dcAmountFlag" value="real" style="accent-color:var(--done);"> ✔︎ Réel
+                    </label>
+                 </div>`;
         inpGrp.innerHTML = html;
     }
 };
@@ -5788,7 +5797,8 @@ window.applyDistributeCosts = function() {
     let s = window._dcState;
     
     let totalY1 = 0, totalY2 = 0, totalGlob = 0;
-    let flag = (type === 'real') ? 'real' : 'est';
+    // v3.3.14 : le statut Estimation/Réel vient désormais du bouton bascule fusionné avec la déclaration du montant
+    let flag = 'est';
     let pct = 0;
     
     if (type === 'prev') {
@@ -5798,6 +5808,8 @@ window.applyDistributeCosts = function() {
         totalY1 = totalGlob;
         totalY2 = totalGlob;
     } else {
+        let flagInput = document.querySelector('input[name="dcAmountFlag"]:checked');
+        flag = flagInput ? flagInput.value : 'est';
         if (s.isTOM && s.spansYears) {
             let el1 = $('dcInputY1'), el2 = $('dcInputY2');
             totalY1 = el1 ? parseFloat(el1.value.replace(',','.')) || 0 : 0;
