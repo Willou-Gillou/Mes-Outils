@@ -671,6 +671,24 @@ th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
     /* Onglets : juste sous l'en-tête compact, le plus haut possible */
     .nav-tabs { padding: 0 4px; }
 }
+
+/* v3.3.11 : Alignement visuel de "À catégoriser" et "Base de données" sur le style du Tableau de bord */
+/* (filtres, tri et logique JS existants intégralement conservés — uniquement l'apparence change) */
+#uncatTable thead th, #dataTable thead th {
+    background: var(--tcd-header-color, #2d3748) !important;
+    color: #fff !important;
+}
+#uncatTable thead .col-header-wrap, #dataTable thead .col-header-wrap { color: #fff; }
+#uncatTable thead .sort-btn, #dataTable thead .sort-btn { color: #fff; }
+#uncatTable thead .sort-btn:hover, #dataTable thead .sort-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+#uncatTable thead .col-filter, #dataTable thead .col-filter {
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
+}
+#uncatTable thead .col-filter::placeholder, #dataTable thead .col-filter::placeholder { color: rgba(255,255,255,0.7); }
+#uncatTable thead #fltNoteNotEmptyBtn, #dataTable thead #fltNoteNotEmptyBtn { background: rgba(255,255,255,0.15) !important; border-color: rgba(255,255,255,0.4) !important; color: #fff !important; }
+#uncatTable tbody tr:hover td, #dataTable tbody tr:hover td { background: rgba(100,140,210,0.13) !important; }
 @media (min-width: 769px) {
     #mobileMenuToggle { display: none !important; }
 }

@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.10';
+const APP_VERSION = '3.3.12';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -645,6 +645,9 @@ window.setBudgetCell = function(ex, c1, c2, month, val) {
     let cleaned = String(val||'').replace(/[\s\u00A0\u202F€a-zA-Z]/g,'').replace(',', '.').trim();
     let n = parseFloat(cleaned);
     if (isNaN(n)) n = 0;
+    // v3.3.11 : ne sauvegarder que si la valeur a réellement changé (simple focus/clic sans édition ne doit rien déclencher)
+    let existing = (budgetData[ex] && budgetData[ex][c1] && budgetData[ex][c1][c2] && budgetData[ex][c1][c2][month]) || 0;
+    if (n === existing) return;
     if (!budgetData[ex]) budgetData[ex] = {};
     if (!budgetData[ex][c1]) budgetData[ex][c1] = {};
     if (!budgetData[ex][c1][c2]) budgetData[ex][c1][c2] = {};
@@ -5590,16 +5593,21 @@ window.setRegulCellSilent = function(mKey, colId, text) {
     if (!bien.regulData[ex]) bien.regulData[ex] = {};
     if (!bien.regulData[ex][mKey]) bien.regulData[ex][mKey] = {};
     let cleaned = String(text||'').replace(/[\s\u00A0\u202F€a-zA-Z~✔︎]/g,'').replace(',', '.').trim();
+    // v3.3.12 : ne modifier (et signaler un changement) que si la valeur ou le flag diffère réellement
+    let existing = bien.regulData[ex][mKey][colId];
+    let hadFlag = !!(bien.regulFlags && bien.regulFlags[ex] && bien.regulFlags[ex][mKey] && (colId in bien.regulFlags[ex][mKey]));
+    let changed = false;
     if (cleaned === '') {
-        delete bien.regulData[ex][mKey][colId];
-        if (bien.regulFlags && bien.regulFlags[ex] && bien.regulFlags[ex][mKey]) delete bien.regulFlags[ex][mKey][colId];
+        if (existing !== undefined) { delete bien.regulData[ex][mKey][colId]; changed = true; }
+        if (hadFlag) { delete bien.regulFlags[ex][mKey][colId]; changed = true; }
     } else {
         let n = parseFloat(cleaned);
         if (!isNaN(n)) {
-            bien.regulData[ex][mKey][colId] = n;
-            if (bien.regulFlags && bien.regulFlags[ex] && bien.regulFlags[ex][mKey]) delete bien.regulFlags[ex][mKey][colId];
+            if (existing !== n) { bien.regulData[ex][mKey][colId] = n; changed = true; }
+            if (hadFlag) { delete bien.regulFlags[ex][mKey][colId]; changed = true; }
         }
     }
+    return changed;
 };
 
 window.saveRegulExplication = function(ex, text) {
@@ -6081,7 +6089,8 @@ window.onRegulIndicatorTripleClick = function(event, el) {
 window.setRegulCell = function(mKey, colId, text) {
     let bien = getRegulBien(currentRegulBienId);
     if (!bien) return;
-    window.setRegulCellSilent(mKey, colId, text);
+    let changed = window.setRegulCellSilent(mKey, colId, text);
+    if (!changed) return;
     triggerSave(true);
     window.renderRegul();
 };
