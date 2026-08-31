@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.5';
+const APP_VERSION = '3.4.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -519,6 +519,60 @@ function driveMigrateLegacyAccountFiles() {
     return driveLegacyScanPromise;
 }
 
+// v3.4.6 : registre central des comptes — source de vérité unique sur Drive.
+// Avant cette version, la liste `accounts` n'existait qu'en copies : une par navigateur
+// (localStorage) et une embarquée dans CHAQUE fichier de compte, fusionnées de façon purement
+// additive au chargement (jamais de suppression). Deux conséquences : un compte restauré via
+// "Importer depuis .dat" (qui génère toujours un nouvel id, jamais l'id source) créait un
+// doublon jamais nettoyé, et supprimer un compte ne mettait à jour QUE le fichier du compte
+// actif au moment du clic — les autres fichiers gardaient l'ancienne liste et la faisaient
+// ressurgir au chargement. Le registre ci-dessous devient la référence unique : chargé en
+// priorité à la connexion, et réécrit à chaque ajout/renommage/suppression de compte.
+const ACCOUNTS_REGISTRY_FILENAME = 'appsysdata-accounts.dat';
+let driveAccountsRegistryFileId = null;
+
+async function driveGetAccountsRegistryFileId() {
+    if (driveAccountsRegistryFileId) return driveAccountsRegistryFileId;
+    let r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${ACCOUNTS_REGISTRY_FILENAME}'&fields=files(id)`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+    let d = await r.json();
+    let fid = (d.files && d.files.length > 0) ? d.files[0].id : null;
+    if (fid) driveAccountsRegistryFileId = fid;
+    return fid;
+}
+
+async function loadAccountsRegistry() {
+    if (!driveAccessToken || !appSecretKey) return false;
+    try {
+        let fileId = await driveGetAccountsRegistryFileId();
+        if (!fileId) return false;
+        let resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+        let text = await resp.text();
+        if (!text || !text.trim().startsWith('{')) return false;
+        let remoteData = JSON.parse(text);
+        if (!remoteData.vault) return false;
+        let list = JSON.parse(CryptoJS.AES.decrypt(remoteData.vault, appSecretKey).toString(CryptoJS.enc.Utf8));
+        if (!Array.isArray(list) || !list.length) return false;
+        accounts = list;
+        saveAccountsList();
+        return true;
+    } catch (e) { console.warn('Lecture du registre des comptes échouée:', e); return false; }
+}
+
+async function saveAccountsRegistry() {
+    if (!driveAccessToken || !appSecretKey) return;
+    try {
+        let payload = JSON.stringify({ vault: CryptoJS.AES.encrypt(JSON.stringify(accounts), appSecretKey).toString() });
+        let fileId = await driveGetAccountsRegistryFileId();
+        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', method = 'POST';
+        let form = new FormData();
+        if (fileId) { url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`; method = 'PATCH'; }
+        else { form.append('metadata', new Blob([JSON.stringify({ name: ACCOUNTS_REGISTRY_FILENAME, parents: ['appDataFolder'] })], { type: 'application/json' })); }
+        form.append('file', new Blob([payload], { type: 'application/json' }));
+        let r = await fetch(url, { method, headers: { Authorization: 'Bearer ' + driveAccessToken }, body: fileId ? payload : form });
+        if (!fileId && r.ok) { let d = await r.json(); if (d.id) driveAccountsRegistryFileId = d.id; }
+    } catch (e) { console.warn('Écriture du registre des comptes échouée:', e); }
+}
+
 async function driveGetFileId(accountId) {
     let id = accountId || currentAccountId;
     let fname = getAccountDriveFilename(id);
@@ -536,18 +590,25 @@ async function driveGetFileId(accountId) {
 
 async function fetchDriveData() {
     try {
+        // Charge le registre central des comptes AVANT de résoudre le fichier du compte courant :
+        // c'est désormais la référence, prioritaire sur la copie locale (localStorage) et sur
+        // les copies embarquées dans les fichiers de comptes (fusionnées, elles, en aval).
+        await loadAccountsRegistry();
         const fileId = await driveGetFileId();
         if (fileId) {
             const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${driveAccessToken}` } });
             let text = await resp.text(), remoteData={}; if(text && text.trim().startsWith('{')) remoteData = JSON.parse(text);
             const decryptResult = decryptPayload(remoteData);
             if(decryptResult === true) {
-                driveDataLoaded=true; 
+                driveDataLoaded=true;
                 window._suppressSave = true;
-                localStorage.setItem(DRIVE_LS+'token', driveAccessToken); 
-                tcdLoadCollapsed(); loadTcdFilter(); 
-                window.renderAccountUI(); window.renderViewsSafe(); 
+                localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
+                tcdLoadCollapsed(); loadTcdFilter();
+                window.renderAccountUI(); window.renderViewsSafe();
                 window._suppressSave = false;
+                // Remonte au registre toute entrée que la fusion locale aurait ajoutée
+                // (migration en douceur des anciennes copies embarquées, compte par compte).
+                saveAccountsRegistry();
                 updateSyncBadge('ok', '✓ Connecté'); driveHideLoading();
             } else if(decryptResult === 'redirect') {
                 // Mauvais fichier de compte → rechargement en cours, patienter
@@ -3966,6 +4027,7 @@ window.addAccount = async function() {
     let id = 'acc_' + Date.now();
     accounts.push({id, name});
     saveAccountsList();
+    saveAccountsRegistry();
     nameEl.value = '';
     window.renderAccountManagerList();
     window.renderAccountUI();
@@ -6421,6 +6483,7 @@ window.importAccountFromDat = async function(input) {
 
         accounts.push({ id: newId, name });
         saveAccountsList();
+        saveAccountsRegistry();
         window.renderAccountManagerList();
         window.renderAccountUI();
 
@@ -6464,7 +6527,7 @@ window.importAccountFromDat = async function(input) {
 window.renameAccount = function(id, name) {
     if (!name.trim()) return;
     let acc = accounts.find(a => a.id === id);
-    if (acc) { acc.name = name.trim(); saveAccountsList(); window.renderAccountUI(); triggerSave(false); }
+    if (acc) { acc.name = name.trim(); saveAccountsList(); saveAccountsRegistry(); window.renderAccountUI(); triggerSave(false); }
 };
 
 window.deleteAccount = async function(id) {
@@ -6484,6 +6547,7 @@ window.deleteAccount = async function(id) {
     accounts = accounts.filter(a => a.id !== id);
     delete driveFileIdMap[id];
     saveAccountsList();
+    await saveAccountsRegistry(); // met à jour la référence unique pour que ce compte ne ressurgisse pas ailleurs
     triggerSave(false);
     window.renderAccountManagerList();
     window.renderAccountUI();
@@ -6536,10 +6600,11 @@ window.deleteAdminDriveFile = async function(fileId, fileName) {
             headers: { Authorization: 'Bearer ' + driveAccessToken }
         });
         if (r.status === 204 || r.ok) {
-            // Invalider le cache du fileId si c'est un compte connu
+            // Invalider le cache du fileId si c'est un compte connu (ou le registre des comptes)
             Object.keys(driveFileIdMap).forEach(function(k) {
                 if (driveFileIdMap[k] === fileId) delete driveFileIdMap[k];
             });
+            if (driveAccountsRegistryFileId === fileId) driveAccountsRegistryFileId = null;
             showToast('Fichier "' + fileName + '" supprimé ✓');
             window.loadDriveFilesList();
         } else {
