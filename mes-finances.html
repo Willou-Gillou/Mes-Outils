@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.7</title>
-    <!-- v3.4.7 - Fix : exercice fiscal (Tableau de bord) enfin sauvegardé dans le .dat + import de compte restaure désormais Quittances/Budget/Régule et toutes les options -->
+    <title>Mes finances - v3.4.8</title>
+    <!-- v3.4.8 - Fix : filtre Budget/Projection sauvegardé dans le .dat + sélecteur de compte remplacé par un menu qui se resynchronise avec le registre Drive à chaque ouverture -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -38,7 +38,12 @@
     <div id="headerControlsRow" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
         <div class="hcr-full" style="display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--ink-faint);border-radius:6px;padding:4px 10px;">
           <span style="font-size:0.8em;font-weight:600;color:var(--ink-soft);">Compte :</span>
-          <select id="accountSelector" style="border:none;background:transparent;font-size:0.9em;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit;flex:1;" onchange="window.switchAccount(this.value)"></select>
+          <div id="accountSelectorWrap" style="position:relative;flex:1;">
+            <button type="button" id="accountSelectorBtn" onclick="window.toggleAccountDropdown(event)" style="border:none;background:transparent;font-size:0.9em;font-weight:600;color:var(--ink);cursor:pointer;font-family:inherit;width:100%;text-align:left;padding:0;display:flex;align-items:center;justify-content:space-between;gap:4px;">
+                <span id="accountSelectorLabel"></span><span style="font-size:0.75em;color:var(--ink-soft);">▾</span>
+            </button>
+            <div id="accountDropdownList" style="display:none;position:absolute;top:calc(100% + 4px);left:0;min-width:180px;z-index:50;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;box-shadow:var(--shadow);max-height:260px;overflow-y:auto;padding:4px;"></div>
+          </div>
           <button class="btn btn-outline" style="padding:2px 7px;font-size:0.85em;" onclick="window.openAccountManager()" title="Gérer les comptes">⚙️</button>
           <span class="badge badge-sync hcr-sync-inline" id="syncBadge">Déconnecté</span>
         </div>

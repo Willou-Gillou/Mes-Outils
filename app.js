@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.7';
+const APP_VERSION = '3.4.8';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -301,6 +301,7 @@ const buildEncryptedPayload = () => {
         collapsedGroups: [...collapsedGroups],
         collapsedYears:  [...collapsedYears],
         tcdFilter: { cat1:[...tcdFilter.cat1], cat2:[...tcdFilter.cat2], yearsOp:[...tcdFilter.yearsOp], yearsExpense:[...tcdFilter.yearsExpense], months:[...tcdFilter.months] },
+        budgetFilter: { cat1:[...budgetFilter.cat1], cat2:[...budgetFilter.cat2] },
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
         settingsTs: Date.now(),
     };
@@ -423,6 +424,12 @@ function decryptPayload(remoteData) {
                         window.appState.tcdRedCells = s.tcdRedCells;
                         setTimeout(function() { if(window.applyTcdRedTags) window.applyTcdRedTags(); }, 300);
                     }
+                }
+                if(s.budgetFilter) {
+                    let bf = s.budgetFilter;
+                    budgetFilter.cat1 = new Set(bf.cat1 || []);
+                    budgetFilter.cat2 = new Set(bf.cat2 || []);
+                    localStorage.setItem('budget_filter_' + currentAccountId, JSON.stringify(bf));
                 }
             }
         }
@@ -1208,12 +1215,12 @@ window.resetBudgetFilter = function() {
     window.openBudgetFilter({stopPropagation:()=>{}});
 };
 function saveBudgetFilter() {
-    localStorage.setItem('budget_filter', JSON.stringify({ cat1: [...budgetFilter.cat1], cat2: [...budgetFilter.cat2] }));
-    triggerSave(false);
+    localStorage.setItem('budget_filter_' + currentAccountId, JSON.stringify({ cat1: [...budgetFilter.cat1], cat2: [...budgetFilter.cat2] }));
+    triggerSave(false); // budgetFilter fait partie du vault (settings.budgetFilter), synchronisé comme le reste
 }
 function loadBudgetFilter() {
     try {
-        let raw = localStorage.getItem('budget_filter');
+        let raw = localStorage.getItem('budget_filter_' + currentAccountId);
         if (!raw) return;
         let obj = JSON.parse(raw);
         budgetFilter.cat1 = new Set(obj.cat1||[]);
@@ -3964,12 +3971,56 @@ window.adjustBudgetFont = function(dir) {
 // MULTI-COMPTE
 // ══════════════════════════════════════════════════════
 window.renderAccountUI = function() {
-    let sel = document.getElementById('accountSelector');
-    if (!sel) return;
-    sel.innerHTML = accounts.map(a =>
-        `<option value="${a.id}" ${a.id===currentAccountId?'selected':''}>${a.name}</option>`
-    ).join('');
+    let lbl = document.getElementById('accountSelectorLabel');
+    if (!lbl) return;
+    let current = accounts.find(a => a.id === currentAccountId);
+    lbl.textContent = current ? current.name : '—';
+    let dd = document.getElementById('accountDropdownList');
+    if (dd && dd.style.display === 'block') window.renderAccountDropdownList();
 };
+
+// v3.4.8 : le sélecteur de compte est un menu personnalisé (plus un <select> natif) pour
+// pouvoir rafraîchir la liste depuis le registre central Drive à CHAQUE ouverture — un
+// <select> natif ne permet pas d'intercepter l'ouverture pour la mettre à jour avant affichage.
+window.renderAccountDropdownList = function() {
+    let dd = $('accountDropdownList');
+    if (!dd) return;
+    dd.innerHTML = accounts.map(function(a) {
+        let isCurrent = a.id === currentAccountId;
+        return '<div onclick="window.selectAccountFromDropdown(\'' + a.id.replace(/'/g, "\\'") + '\')" '
+            + 'style="padding:6px 10px;border-radius:6px;cursor:pointer;font-size:0.9em;white-space:nowrap;'
+            + 'font-weight:' + (isCurrent ? '700' : '400') + ';background:' + (isCurrent ? 'var(--pro-soft)' : 'transparent') + ';" '
+            + 'onmouseover="this.style.background=\'var(--bg)\'" '
+            + 'onmouseout="this.style.background=\'' + (isCurrent ? 'var(--pro-soft)' : 'transparent') + '\'">'
+            + (isCurrent ? '✓ ' : '') + escapeHtml(a.name) + '</div>';
+    }).join('');
+};
+
+window.toggleAccountDropdown = function(e) {
+    if (e) e.stopPropagation();
+    let dd = $('accountDropdownList');
+    if (!dd) return;
+    if (dd.style.display === 'block') { dd.style.display = 'none'; return; }
+    window.renderAccountDropdownList(); // affichage immédiat avec ce qu'on a déjà en mémoire
+    dd.style.display = 'block';
+    // Rafraîchit depuis le registre central Drive pendant que le menu est ouvert
+    loadAccountsRegistry().then(function() {
+        window.renderAccountUI();
+        window.renderAccountDropdownList();
+    });
+};
+
+window.selectAccountFromDropdown = function(id) {
+    let dd = $('accountDropdownList'); if (dd) dd.style.display = 'none';
+    window.switchAccount(id);
+};
+
+document.addEventListener('click', function(e) {
+    let dd = $('accountDropdownList');
+    if (dd && dd.style.display === 'block' && !dd.contains(e.target) && !(e.target.closest && e.target.closest('#accountSelectorBtn'))) {
+        dd.style.display = 'none';
+    }
+});
 
 window.switchAccount = async function(newId) {
     if (newId === currentAccountId) return;
@@ -3980,6 +4031,7 @@ window.switchAccount = async function(newId) {
     transactions = []; rules = []; categories = {}; savedCharts = [];
     quittancesBiens = []; currentQuittanceBienId = null;
     budgetData = {};
+    budgetFilter.cat1.clear(); budgetFilter.cat2.clear(); loadBudgetFilter();
     loadFiscalStartMonth();
     loadFiscalStartMonthSyndic(); applyFiscalStartMonthState();
     budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
@@ -3997,6 +4049,11 @@ window.switchAccount = async function(newId) {
 window.openAccountManager = function() {
     window.renderAccountManagerList();
     document.getElementById('accountManagerModal').classList.add('open');
+    // Rafraîchit depuis le registre central Drive pendant que la modale est ouverte
+    loadAccountsRegistry().then(function() {
+        window.renderAccountManagerList();
+        window.renderAccountUI();
+    });
 };
 
 window.renderAccountManagerList = function() {
@@ -4055,6 +4112,7 @@ window.addAccount = async function() {
                     collapsedGroups: [],
                     collapsedYears: [],
                     tcdFilter: { cat1:[], cat2:[], years:[], months:[] },
+                    budgetFilter: { cat1:[], cat2:[] },
                     tcdRedCells: {},
                     settingsTs: Date.now()
                 },
@@ -6512,6 +6570,7 @@ window.importAccountFromDat = async function(input) {
                 tcdHeaderColor: '', fontSize: '14', tcdFontSize: '13', pivot: '',
                 collapsedGroups: [], collapsedYears: [],
                 tcdFilter: { cat1:[], cat2:[], yearsOp:[], yearsExpense:[], months:[] },
+                budgetFilter: { cat1:[], cat2:[] },
                 tcdRedCells: {}, settingsTs: Date.now()
             },
             accountId: newId,
