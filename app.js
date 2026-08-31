@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.0';
+const APP_VERSION = '3.4.1';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -9,7 +9,7 @@ const DRIVE_LS = 'finances_drive_';
 
 var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBankForImport="";
 let dbSortCol='dateOp', dbSortDir=-1, catModalTxId=null, catModalSelectedCat1=null, catModalSelectedCat2=null;
-var driveAccessToken=null, driveFileId=null, driveTokenClient=null, saveTimer=null;
+var driveAccessToken=null, driveFileId=null, driveTokenClient=null, saveTimer=null, saveMaxWaitTimer=null;
 var driveDataLoaded = false; // true uniquement après chargement confirmé depuis Drive
 // ── Multi-compte ──
 var accounts = JSON.parse(localStorage.getItem('f_accounts')||'[{"id":"default","name":"Mon Compte"}]');
@@ -520,38 +520,51 @@ async function fetchDriveData() {
     } catch (e) { updateSyncBadge('error', 'Erreur Sync'); driveHideLoading(); $('authOverlay').classList.add('open'); }
 }
 
-function triggerSave(reRenderDbView = false) {
-        if(window._suppressSave) return; // bloqué pendant chargement initial
-        updateSyncBadge('syncing', 'Sauvegarde en cours...'); clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-        if (!driveAccessToken || !appSecretKey) return;
-        try {
-            const payload = buildEncryptedPayload(); const fileId = await driveGetFileId();
-            let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', method = 'POST'; const form = new FormData();
-            if (fileId) { url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`; method = 'PATCH'; }
-            else { const meta = { name: getAccountDriveFilename(), parents: ['appDataFolder'] }; form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' })); }
-            form.append('file', new Blob([payload], { type: 'application/json' }));
-            const _sr=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
-            if(!_sr.ok) {
-                // Token expiré → on le renouvelle et on réessaie une fois
-                if(_sr.status===401) {
-                    driveAccessToken = null;
-                    try {
-                        await new Promise((res,rej)=>{ driveTokenClient.requestAccessToken({prompt:''}); setTimeout(res,3000); });
-                        const _sr2=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
-                        if(!_sr2.ok) throw new Error('HTTP '+_sr2.status);
-                    } catch(e2) { throw new Error('401 retry failed'); }
-                } else {
-                    throw new Error('HTTP '+_sr.status);
-                }
+async function performSave(reRenderDbView) {
+    clearTimeout(saveTimer); saveTimer = null;
+    clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
+    if (!driveAccessToken || !appSecretKey) return;
+    try {
+        const payload = buildEncryptedPayload(); const fileId = await driveGetFileId();
+        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', method = 'POST'; const form = new FormData();
+        if (fileId) { url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`; method = 'PATCH'; }
+        else { const meta = { name: getAccountDriveFilename(), parents: ['appDataFolder'] }; form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' })); }
+        form.append('file', new Blob([payload], { type: 'application/json' }));
+        const _sr=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
+        if(!_sr.ok) {
+            // Token expiré → on le renouvelle et on réessaie une fois
+            if(_sr.status===401) {
+                driveAccessToken = null;
+                try {
+                    await new Promise((res,rej)=>{ driveTokenClient.requestAccessToken({prompt:''}); setTimeout(res,3000); });
+                    const _sr2=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
+                    if(!_sr2.ok) throw new Error('HTTP '+_sr2.status);
+                } catch(e2) { throw new Error('401 retry failed'); }
+            } else {
+                throw new Error('HTTP '+_sr.status);
             }
-            if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
-            updateSyncBadge('ok', '✓ Sauvegardé'); if(reRenderDbView) window.renderDataTable();
-        } catch (e) {
-            updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez');
-            showSaveError(e);
         }
-    }, 1000);
+        if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
+        updateSyncBadge('ok', '✓ Sauvegardé'); if(reRenderDbView) window.renderDataTable();
+    } catch (e) {
+        updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez');
+        showSaveError(e);
+    }
+}
+
+function triggerSave(reRenderDbView = false) {
+    if(window._suppressSave) return; // bloqué pendant chargement initial
+    updateSyncBadge('syncing', 'Sauvegarde en cours...');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => performSave(reRenderDbView), 1000);
+    // Filet de sécurité : lors d'une rafale de modifications rapprochées (ex. catégorisation
+    // en série), chaque appel repousse saveTimer et la sauvegarde réelle n'arrive jamais tant
+    // que l'utilisateur ne s'arrête pas — le badge reste bloqué sur "Sauvegarde en cours..."
+    // et les données restent non sauvegardées plus longtemps que nécessaire. Ce timer plafond
+    // force une sauvegarde périodique même en cas d'activité continue.
+    if (!saveMaxWaitTimer) {
+        saveMaxWaitTimer = setTimeout(() => performSave(reRenderDbView), 5000);
+    }
 }
 
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
