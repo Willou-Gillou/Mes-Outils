@@ -274,8 +274,9 @@
 }
 #dataTable thead th:first-child,
 #uncatTable thead th:first-child {
+  top: 0 !important;
   z-index: 5 !important;
-  background: var(--bg, #F9FAFB) !important;
+  background: var(--tcd-header-color, #2d3748) !important;
 }
 #dataTable tr.selected-row td:first-child,
 #uncatTable tr.selected-row td:first-child {
