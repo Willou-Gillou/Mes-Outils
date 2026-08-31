@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.3.14';
+const APP_VERSION = '3.4.0';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4857,7 +4857,7 @@ window._generateQuittanceCore = function(type) {
 
     let lignesHtml = lignesSource.map(l => {
         let isDatedLine = l.libelle === 'Payé par virement bancaire, le' || l.dateDetail === true;
-        let libelleAffiche = isDatedLine ? (l.libelle + (l.detail ? ' ' + fmtDate(l.detail) : '')) : (l.libelle + (l.detail ? ' : ' + l.detail : ''));
+        let libelleAffiche = isDatedLine ? (escapeHtml(l.libelle) + (l.detail ? ' ' + escapeHtml(fmtDate(l.detail)) : '')) : (escapeHtml(l.libelle) + (l.detail ? ' : ' + escapeHtml(l.detail) : ''));
         return `<tr>
             <td style="padding:6px 10px;border-bottom:1px solid #eee;">${libelleAffiche}</td>
             <td style="padding:6px 10px;border-bottom:1px solid #eee;text-align:right;">${(l.debit||0) > 0 ? fmtEur(l.debit) : ''}</td>
@@ -4870,7 +4870,7 @@ window._generateQuittanceCore = function(type) {
         let inPeriode = d && periodeStart && periodeEnd && d >= periodeStart && d <= periodeEnd;
         let isPaid = e.statut === 'Payé';
         let bg = isPaid ? 'background:#8BC34A;color:#111;' : (inPeriode ? 'background:#FFF3CD;color:#111;' : 'color:#111;');
-        return `<tr style="${bg}"><td style="padding:4px 8px;border:1px solid #ccc;">${d ? fmtDate(e.date) : ''}</td><td style="padding:4px 8px;border:1px solid #ccc;">${e.detail||''}${e.detail?' = ':''}${fmtEur(e.montant)}</td></tr>`;
+        return `<tr style="${bg}"><td style="padding:4px 8px;border:1px solid #ccc;">${d ? fmtDate(e.date) : ''}</td><td style="padding:4px 8px;border:1px solid #ccc;">${escapeHtml(e.detail||'')}${e.detail?' = ':''}${fmtEur(e.montant)}</td></tr>`;
     }
     let echList = [];
     if (type === 'loyer' && bien.dateAnniversaire) {
@@ -4896,10 +4896,10 @@ window._generateQuittanceCore = function(type) {
     }
 
     let designation = bien.designation || { texte:'', adresse:'' };
-    let nomsLocatairesHtml = bien.locataires.map(l => l.nom || '').filter(Boolean).join('<br>');
-    let adresseLocativeHtml = designation.adresse ? `<span style="font-size:0.85em;color:#555;">${designation.adresse}</span><br>` : '';
+    let nomsLocatairesHtml = bien.locataires.map(l => escapeHtml(l.nom || '')).filter(Boolean).join('<br>');
+    let adresseLocativeHtml = designation.adresse ? `<span style="font-size:0.85em;color:#555;">${escapeHtml(designation.adresse)}</span><br>` : '';
     let contactsLocatairesHtml = bien.locataires.map(l => {
-        let lignes = [l.email, l.tel].filter(Boolean);
+        let lignes = [l.email, l.tel].filter(Boolean).map(escapeHtml);
         return lignes.length ? `<span style="font-size:0.85em;color:#555;">${lignes.join('<br>')}</span>` : '';
     }).filter(Boolean).join('<br>');
     let locatairesHtml = `${nomsLocatairesHtml}<br>${adresseLocativeHtml}${contactsLocatairesHtml}`;
@@ -4918,10 +4918,10 @@ window._generateQuittanceCore = function(type) {
 
     let html = `
     <div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:0.92em;">
-        <div style="width:48%;"><strong>Le bailleur:</strong><div style="margin-top:4px;">${bien.bailleur.nom}<br>${bien.bailleur.adresse}<br>${bien.bailleur.email}<br>${bien.bailleur.tel}</div></div>
+        <div style="width:48%;"><strong>Le bailleur:</strong><div style="margin-top:4px;">${escapeHtml(bien.bailleur.nom)}<br>${escapeHtml(bien.bailleur.adresse)}<br>${escapeHtml(bien.bailleur.email)}<br>${escapeHtml(bien.bailleur.tel)}</div></div>
         <div style="width:48%;"><strong>Le(s) locataire(s):</strong><div style="margin-top:4px;">${locatairesHtml}</div></div>
     </div>
-    <p style="margin-bottom:12px;font-size:0.92em;">Désignation des locaux : ${designation.texte || ''}</p>
+    <p style="margin-bottom:12px;font-size:0.92em;">Désignation des locaux : ${escapeHtml(designation.texte || '')}</p>
     <div style="border:0.6px solid #111;text-align:center;padding:8px;font-size:1.1em;font-weight:bold;margin-bottom:12px;">${titreAffiche}</div>
     ${periodeHtml}
     <table style="width:100%;border-collapse:collapse;margin-bottom:0;font-size:0.85em;">
@@ -4929,10 +4929,10 @@ window._generateQuittanceCore = function(type) {
         <tbody>${lignesHtml}</tbody>
         <tfoot><tr style="font-weight:bold;border-top:0.6px solid #333;"><td style="padding:6px 8px;">TOTAL</td><td style="padding:6px 8px;text-align:right;">${fmtEur(totalDebit)}</td><td style="padding:6px 8px;text-align:right;">${fmtEur(totalCredit)}</td></tr></tfoot>
     </table>
-    <p style="text-align:right;margin:16px 0 3px;font-size:0.85em;">Fait à ${bien.faitA || ''}, le ${fmtDate(bien.signatureDate) || new Date().toLocaleDateString('fr-FR')}</p>
-    <p style="text-align:right;font-size:0.85em;">${bien.signatureTexte || ''}</p>
+    <p style="text-align:right;margin:16px 0 3px;font-size:0.85em;">Fait à ${escapeHtml(bien.faitA || '')}, le ${fmtDate(bien.signatureDate) || new Date().toLocaleDateString('fr-FR')}</p>
+    <p style="text-align:right;font-size:0.85em;">${escapeHtml(bien.signatureTexte || '')}</p>
     <div style="text-align:right;">${logoHtml}</div>
-    ${(bien.commentaires||'').trim() ? `<div style="margin-top:14px;font-size:0.8em;"><strong>Commentaires:</strong><br>${(bien.commentaires||'').replace(/\n/g,'<br>')}</div>` : ''}
+    ${(bien.commentaires||'').trim() ? `<div style="margin-top:14px;font-size:0.8em;"><strong>Commentaires:</strong><br>${escapeHtml(bien.commentaires||'').replace(/\n/g,'<br>')}</div>` : ''}
     ${echeancierHtml}
     `;
 
@@ -5176,9 +5176,10 @@ window.closeQuittanceEmailModal = function() {
 };
 
 window.sendQuittanceEmail = async function() {
-    let to = ($('qEmailDestinataires').value || '').split(',').map(s => s.trim()).filter(Boolean);
+    const stripCrlf = s => String(s || '').replace(/[\r\n]+/g, ' ').trim();
+    let to = ($('qEmailDestinataires').value || '').split(',').map(s => stripCrlf(s)).filter(Boolean);
     if (!to.length) { alert('Veuillez renseigner au moins un destinataire.'); return; }
-    let subject = $('qEmailObjet').value || '';
+    let subject = stripCrlf($('qEmailObjet').value || '');
     let body = $('qEmailCorps').value || '';
     let link = window._quittanceEmailFileLink;
     if (!link) { alert('Lien du document introuvable. Réessayez depuis la liste des fichiers Drive.'); return; }
