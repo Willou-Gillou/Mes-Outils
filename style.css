@@ -270,13 +270,17 @@
   left: 0 !important;
   z-index: 3 !important;
   background: var(--surface, #fff) !important;
+  background-clip: padding-box !important;
   box-shadow: 2px 0 4px rgba(0,0,0,0.06);
+  isolation: isolate;
 }
 #dataTable thead th:first-child,
 #uncatTable thead th:first-child {
   top: 0 !important;
-  z-index: 5 !important;
+  z-index: 6 !important;
   background: var(--tcd-header-color, #2d3748) !important;
+  background-clip: padding-box !important;
+  border-color: var(--tcd-header-color, #2d3748) !important;
 }
 #dataTable tr.selected-row td:first-child,
 #uncatTable tr.selected-row td:first-child {
