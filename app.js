@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.4';
+const APP_VERSION = '3.4.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -15,11 +15,14 @@ var driveDataLoaded = false; // true uniquement après chargement confirmé depu
 var accounts = JSON.parse(localStorage.getItem('f_accounts')||'[{"id":"default","name":"Mon Compte"}]');
 var currentAccountId = localStorage.getItem('f_current_account')||'default';
 let driveFileIdMap = {};
-function getAccountDriveFilename(){
-    if (currentAccountId === 'default') return 'appsysdata-default.dat';
-    var idx = accounts.findIndex(function(a){ return a.id === currentAccountId; });
-    if (idx <= 0) return 'appsysdata-default.dat';
-    return 'appsysdata-' + (idx + 1) + '.dat';
+// v3.4.5 : le nom de fichier Drive d'un compte est dérivé de son id STABLE (ex: "acc_1735600000000"),
+// jamais de sa position dans le tableau `accounts` — cette position dépend de l'ordre de fusion local
+// et peut différer d'un navigateur à l'autre, ce qui faisait pointer un même compte vers des fichiers
+// Drive différents (et donc en écraser/corrompre un autre) selon le navigateur utilisé.
+function getAccountDriveFilename(accountId){
+    var id = accountId || currentAccountId;
+    if (id === 'default') return 'appsysdata-default.dat';
+    return 'appsysdata-' + id + '.dat';
 }
 function saveAccountsList(){ localStorage.setItem('f_accounts', JSON.stringify(accounts)); }
 
@@ -478,13 +481,56 @@ const updateSyncBadge=(st,txt)=>{
     b.title   = st==='error' ? 'Cliquez pour réessayer la sauvegarde' : '';
 };
 
-async function driveGetFileId() {
-    let fname = getAccountDriveFilename();
-    if(driveFileIdMap[currentAccountId]) return driveFileIdMap[currentAccountId];
+// v3.4.5 : scanne une seule fois par session les anciens fichiers "appsysdata-<index>.dat"
+// (nommage instable basé sur la position dans le tableau `accounts`, abandonné) pour les
+// renommer vers le nom stable basé sur l'accountId réel contenu dans leur contenu déchiffré.
+// Renommer (et non recopier) préserve le même fichier Drive : aucune perte de données.
+let driveLegacyScanPromise = null;
+function driveMigrateLegacyAccountFiles() {
+    if (driveLegacyScanPromise) return driveLegacyScanPromise;
+    driveLegacyScanPromise = (async () => {
+        if (!appSecretKey || !driveAccessToken) return;
+        try {
+            let r = await fetch("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name+contains+'appsysdata-'&fields=files(id,name)&pageSize=100", { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+            let d = await r.json();
+            let legacyFiles = (d.files || []).filter(f => /^appsysdata-\d+\.dat$/.test(f.name));
+            for (let f of legacyFiles) {
+                try {
+                    let resp = await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+                    let text = await resp.text();
+                    if (!text || !text.trim().startsWith('{')) continue;
+                    let remoteData = JSON.parse(text);
+                    if (!remoteData.vault) continue;
+                    let decrypted = JSON.parse(CryptoJS.AES.decrypt(remoteData.vault, appSecretKey).toString(CryptoJS.enc.Utf8));
+                    if (!decrypted || !decrypted.accountId) continue;
+                    let newName = getAccountDriveFilename(decrypted.accountId);
+                    if (newName !== f.name) {
+                        await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}`, {
+                            method: 'PATCH',
+                            headers: { Authorization: 'Bearer ' + driveAccessToken, 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: newName })
+                        });
+                    }
+                    driveFileIdMap[decrypted.accountId] = f.id;
+                } catch (e) { console.warn('Migration ignorée pour', f.name, e); }
+            }
+        } catch (e) { console.warn('Scan de migration des anciens fichiers de compte échoué:', e); }
+    })();
+    return driveLegacyScanPromise;
+}
+
+async function driveGetFileId(accountId) {
+    let id = accountId || currentAccountId;
+    let fname = getAccountDriveFilename(id);
+    if(driveFileIdMap[id]) return driveFileIdMap[id];
     let r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${fname}'&fields=files(id)`,{headers:{Authorization:'Bearer '+driveAccessToken}});
     let d = await r.json();
     let fid = (d.files&&d.files.length>0) ? d.files[0].id : null;
-    if(fid) driveFileIdMap[currentAccountId] = fid;
+    if (!fid && id !== 'default') {
+        await driveMigrateLegacyAccountFiles();
+        fid = driveFileIdMap[id] || null;
+    }
+    if(fid) driveFileIdMap[id] = fid;
     return fid;
 }
 
@@ -3925,8 +3971,7 @@ window.addAccount = async function() {
     window.renderAccountUI();
     // Créer un fichier vide totalement isolé pour ce nouveau compte
     if (driveAccessToken) {
-        let newIdx = accounts.length;
-        let fname = 'appsysdata-' + newIdx + '.dat';
+        let fname = getAccountDriveFilename(id);
         try {
             let emptyState = {
                 transactions: [],
@@ -6380,8 +6425,7 @@ window.importAccountFromDat = async function(input) {
         window.renderAccountUI();
 
         // Construire le nouvel état isolé pour ce compte (accountId propre, jamais celui du fichier source)
-        let newIdx = accounts.length;
-        let fname = 'appsysdata-' + newIdx + '.dat';
+        let fname = getAccountDriveFilename(newId);
         let isolatedState = {
             transactions: decrypted.transactions || [],
             rules: decrypted.rules || [],
@@ -6427,17 +6471,13 @@ window.deleteAccount = async function(id) {
     let acc = accounts.find(a => a.id === id);
     if (!acc) return;
     if (!confirm('Supprimer le compte "' + acc.name + '" et toutes ses données Drive ? Cette action est irréversible.')) return;
-    // Supprimer fichier Drive de ce compte
+    // Supprimer fichier Drive de ce compte (résolution stable par accountId, avec migration
+    // automatique si ce compte n'a jamais été chargé dans ce navigateur depuis la v3.4.5)
     if (driveAccessToken) {
         try {
-            let idx = accounts.findIndex(a => a.id === id);
-            let fname = (id === 'default' || idx === 0)
-                ? 'appsysdata-default.dat'
-                : 'appsysdata-' + (idx + 1) + '.dat';
-            let r = await fetch('https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name=%27' + fname + '%27&fields=files(id)', {headers:{Authorization:'Bearer '+driveAccessToken}});
-            let d = await r.json();
-            if (d.files && d.files.length > 0) {
-                await fetch('https://www.googleapis.com/drive/v3/files/' + d.files[0].id, {method:'DELETE', headers:{Authorization:'Bearer '+driveAccessToken}});
+            let fileId = await driveGetFileId(id);
+            if (fileId) {
+                await fetch('https://www.googleapis.com/drive/v3/files/' + fileId, {method:'DELETE', headers:{Authorization:'Bearer '+driveAccessToken}});
             }
         } catch(e) { console.warn('Erreur suppression Drive:', e); }
     }
