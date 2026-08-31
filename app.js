@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.6';
+const APP_VERSION = '3.4.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -304,7 +304,7 @@ const buildEncryptedPayload = () => {
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic}),appSecretKey).toString()});
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -349,7 +349,7 @@ function decryptPayload(remoteData) {
         quittancesBiens.forEach(b => { b.signatureDate = _todayStr; });
         if (typeof p.quittancesEnabled === 'boolean') {
             quittancesEnabled = p.quittancesEnabled;
-            localStorage.setItem('f_quittances_enabled', quittancesEnabled ? '1' : '0');
+            localStorage.setItem('f_quittances_enabled_' + currentAccountId, quittancesEnabled ? '1' : '0');
         }
         currentQuittanceBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
         if (typeof applyQuittancesOptionState === 'function') applyQuittancesOptionState();
@@ -369,6 +369,11 @@ function decryptPayload(remoteData) {
             fiscalStartMonthSyndic = parseInt(p.fiscalStartMonthSyndic) || 10;
             localStorage.setItem('f_fiscal_syndic_' + currentAccountId, fiscalStartMonthSyndic);
         }
+        if (p.fiscalStartMonth) {
+            fiscalStartMonth = parseInt(p.fiscalStartMonth) || 1;
+            localStorage.setItem('f_fiscal_start_' + currentAccountId, fiscalStartMonth);
+        }
+        if (typeof applyFiscalStartMonthState === 'function') applyFiscalStartMonthState();
         currentRegulBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
         if (typeof applyRegulOptionState === 'function') applyRegulOptionState();
         // Fusionner la liste des comptes depuis Drive avec la liste locale (jamais de remplacement pur)
@@ -4053,7 +4058,14 @@ window.addAccount = async function() {
                     tcdRedCells: {},
                     settingsTs: Date.now()
                 },
-                accountId: id
+                accountId: id,
+                quittancesBiens: [],
+                quittancesEnabled: false,
+                budgetData: {},
+                budgetEnabled: false,
+                regulEnabled: false,
+                fiscalStartMonthSyndic: 10,
+                fiscalStartMonth: 1
             };
             let emptyPayload = JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify(emptyState), appSecretKey || '').toString()});
             let blob = new Blob([emptyPayload], {type:'application/json'});
@@ -6502,7 +6514,17 @@ window.importAccountFromDat = async function(input) {
                 tcdFilter: { cat1:[], cat2:[], yearsOp:[], yearsExpense:[], months:[] },
                 tcdRedCells: {}, settingsTs: Date.now()
             },
-            accountId: newId
+            accountId: newId,
+            // v3.4.7 : reprendre TOUTES les données du fichier source, pas seulement les
+            // transactions/règles/catégories — Quittances, Budget, Régule et les options
+            // (cases à cocher, exercices fiscaux) étaient silencieusement perdues à l'import.
+            quittancesBiens: decrypted.quittancesBiens || [],
+            quittancesEnabled: !!decrypted.quittancesEnabled,
+            budgetData: (decrypted.budgetData && typeof decrypted.budgetData === 'object') ? decrypted.budgetData : {},
+            budgetEnabled: !!decrypted.budgetEnabled,
+            regulEnabled: !!decrypted.regulEnabled,
+            fiscalStartMonthSyndic: parseInt(decrypted.fiscalStartMonthSyndic) || 10,
+            fiscalStartMonth: parseInt(decrypted.fiscalStartMonth) || 1
         };
         let payload = JSON.stringify({ vault: CryptoJS.AES.encrypt(JSON.stringify(isolatedState), appSecretKey).toString() });
         let blob = new Blob([payload], { type: 'application/json' });
