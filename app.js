@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.8';
+const APP_VERSION = '3.4.9';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -220,13 +220,23 @@ function initResizers(tableId) {
         let cw = JSON.parse(localStorage.getItem('f_cw'))||{}; if(cw[`${tableId}_${i}`]){th.style.width=cw[`${tableId}_${i}`];th.style.minWidth=cw[`${tableId}_${i}`];th.style.maxWidth=cw[`${tableId}_${i}`];}
     });
 }
-$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
-    tcdSaveScroll();
+// v3.4.9 : factorisé pour pouvoir aussi activer un onglet par programme (restauration de
+// l'onglet actif d'un compte, sans réagir comme un clic utilisateur qui déclencherait une sauvegarde).
+function activateTab(target, silent) {
+    let btn = document.querySelector(`.tab-btn[data-target="${target}"]`);
+    if (!btn || btn.style.display === 'none') return false;
     $$('.tab-btn').forEach(b => b.classList.remove('active'));
     $$('.view').forEach(v => v.classList.remove('active'));
     btn.classList.add('active');
-    $(btn.dataset.target).classList.add('active');
-    window.renderViewsSafe();
+    $(target).classList.add('active');
+    if (!silent) window.renderViewsSafe();
+    return true;
+}
+$$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
+    tcdSaveScroll();
+    activateTab(btn.dataset.target);
+    localStorage.setItem('f_active_tab_' + currentAccountId, btn.dataset.target);
+    triggerSave(false);
     window.closeMobileHeaderMenu();
 }));
 
@@ -293,10 +303,14 @@ $('unlockBtn').addEventListener('click', () => {
 });
 
 const buildEncryptedPayload = () => {
+    let activeTabBtn = document.querySelector('.tab-btn.active');
+    let activeTab = activeTabBtn ? activeTabBtn.dataset.target : 'view-summary';
     let settings = {
         tcdHeaderColor: localStorage.getItem('f_tcd_header_color') || '',
         fontSize: localStorage.getItem('f_fontSize') || '14',
         tcdFontSize: localStorage.getItem('f_tcd_fontsize') || '13',
+        budgetFontSize: localStorage.getItem('f_budget_fontsize') || '13',
+        regulFontSize: localStorage.getItem('f_regul_fontsize') || '13',
         pivot: localStorage.getItem('f_pivot_v2') || '',
         collapsedGroups: [...collapsedGroups],
         collapsedYears:  [...collapsedYears],
@@ -305,7 +319,7 @@ const buildEncryptedPayload = () => {
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth}),appSecretKey).toString()});
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -405,6 +419,8 @@ function decryptPayload(remoteData) {
             if(driveFresher) localStorage.setItem('f_settings_ts', driveTs);
             if(s.tcdHeaderColor) { localStorage.setItem('f_tcd_header_color', s.tcdHeaderColor); document.documentElement.style.setProperty('--tcd-header-color', s.tcdHeaderColor); let pk=$('tcdColorPicker'); if(pk) pk.value=s.tcdHeaderColor; }
             if(s.tcdFontSize) { localStorage.setItem('f_tcd_fontsize', s.tcdFontSize); let px=s.tcdFontSize+'px'; document.querySelectorAll('#summaryGrid .tcd-native th, #summaryGrid .tcd-native td').forEach(el=>{el.style.fontSize=px;el.style.height=px;}); }
+            if(s.budgetFontSize) { localStorage.setItem('f_budget_fontsize', s.budgetFontSize); }
+            if(s.regulFontSize) { localStorage.setItem('f_regul_fontsize', s.regulFontSize); }
             if(s.fontSize) { localStorage.setItem('f_fontSize', s.fontSize); currentFontSize=parseInt(s.fontSize)||14; document.documentElement.style.setProperty('--font-size', currentFontSize+'px'); }            // Paramètres vue TCD : appliquer seulement si Drive est plus récent
             if(driveFresher) {
                 if(s.pivot) { localStorage.setItem('f_pivot_v2', s.pivot); try { let c=JSON.parse(s.pivot); if(c.r1){let el=$('pivotRows');if(el)el.value=c.r1;} if(c.r2!==undefined){let el=$('pivotRows2');if(el)el.value=c.r2;} if(c.axe){let el=$('timeAxe');if(el)el.value=c.axe;} } catch(e){} }
@@ -432,6 +448,10 @@ function decryptPayload(remoteData) {
                     localStorage.setItem('budget_filter_' + currentAccountId, JSON.stringify(bf));
                 }
             }
+        }
+        if (p.activeTab) {
+            localStorage.setItem('f_active_tab_' + currentAccountId, p.activeTab);
+            if (typeof activateTab === 'function') activateTab(p.activeTab, true);
         }
         mergeRules(); return true;
     } catch(e) { return false; }
@@ -955,6 +975,9 @@ window.renderBudget = function() {
         let yReal = (mi >= fiscalStartMonth) ? yFiscalStart : yFiscalStart + 1;
         return (yReal > nowY) || (yReal === nowY && mi > nowM);
     };
+    // v3.4.9 : montants du tableau Budget/Projection en bleu pour les mois passés/en cours,
+    // en noir (couleur par défaut) pour les mois futurs — même logique que isFutureMonth().
+    const monthColorClass = (m) => isFutureMonth(m) ? '' : 'budget-col-past';
     const indicatorHtml = (bVal, rVal, c1, c2, m) => {
         if (isFutureMonth(m)) return '';
         let bEmpty = !bVal, rEmpty = !rVal;
@@ -968,10 +991,11 @@ window.renderBudget = function() {
     const budgetEditableCell = (c1, c2, m) => {
         let bVal = getBudget(c1, c2, m);
         let rVal = realByC1C2Month[`${c1}::${c2}::${m}`] || 0;
+        let colClass = monthColorClass(m);
         if (budgetLocked) {
-            return `<td class="tcd-cell budget-editable-cell"><span class="budget-val">${bVal ? formatCurrency(bVal) : ''}</span>${indicatorHtml(bVal, rVal, c1, c2, m)}</td>`;
+            return `<td class="tcd-cell budget-editable-cell ${colClass}"><span class="budget-val">${bVal ? formatCurrency(bVal) : ''}</span>${indicatorHtml(bVal, rVal, c1, c2, m)}</td>`;
         }
-        return `<td class="tcd-cell budget-editable-cell">
+        return `<td class="tcd-cell budget-editable-cell ${colClass}">
             <span class="budget-val" contenteditable="true" data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}"
                 onfocus="window.onBudgetCellFocus(this)"
                 onblur="window.setBudgetCell('${escapeHtml(ex)}','${escapeHtml(c1)}','${escapeHtml(c2)}','${m}',this.textContent)"
@@ -1024,7 +1048,7 @@ window.renderBudget = function() {
             grandBudgetByMonth[m] = (grandBudgetByMonth[m]||0) + bSum;
             grandRealByMonth[m] = (grandRealByMonth[m]||0) + rSum;
             grandValidatedByMonth[m] = (grandValidatedByMonth[m]||0) + vSum;
-            htmlBudget += budgetAggCell(bSum, 'tcd-row-main-cell', c2List.length > 0, vSum, false);
+            htmlBudget += budgetAggCell(bSum, 'tcd-row-main-cell ' + monthColorClass(m), c2List.length > 0, vSum, false);
             htmlReal += realCell(rSum, 'tcd-row-main-cell', false, `${c1}::ALL::${m}`);
         });
         let c1BudgetTotal = Object.values(c1BudgetByMonth).reduce((a,b)=>a+b,0);
@@ -1062,7 +1086,7 @@ window.renderBudget = function() {
     htmlBudget += '<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL GLOBAL</div></td>';
     htmlReal += '<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL GLOBAL</div></td>';
     months.forEach(m => {
-        htmlBudget += budgetAggCell(grandBudgetByMonth[m]||0, 'tcd-total-row-cell', true, grandValidatedByMonth[m]||0, false);
+        htmlBudget += budgetAggCell(grandBudgetByMonth[m]||0, 'tcd-total-row-cell ' + monthColorClass(m), true, grandValidatedByMonth[m]||0, false);
         htmlReal += realCell(grandRealByMonth[m]||0, 'tcd-total-row-cell', false, `MONTH_TOTAL::${m}`);
     });
     htmlBudget += budgetAggCell(grandBudgetTotal, 'tcd-total-col tcd-grand tcd-total-row-cell', true, grandValidatedTotal, true);
@@ -4039,6 +4063,10 @@ window.switchAccount = async function(newId) {
     regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
     applyRegulOptionState();
     if (window.appState) window.appState.tcdRedCells = window.appState.tcdRedCells || {};
+    // Restauration immédiate (cache local) de l'onglet actif de ce compte, en attendant la
+    // confirmation depuis Drive dans decryptPayload().
+    let cachedTab = localStorage.getItem('f_active_tab_' + currentAccountId);
+    if (cachedTab) activateTab(cachedTab, true);
     driveFileId = null;
     window.renderAccountUI();
     driveShowLoading('Chargement du compte...');
@@ -4108,6 +4136,8 @@ window.addAccount = async function() {
                     tcdHeaderColor: localStorage.getItem('f_tcd_header_color') || '',
                     fontSize: localStorage.getItem('f_fontSize') || '14',
                     tcdFontSize: localStorage.getItem('f_tcd_fontsize') || '13',
+                    budgetFontSize: localStorage.getItem('f_budget_fontsize') || '13',
+                    regulFontSize: localStorage.getItem('f_regul_fontsize') || '13',
                     pivot: localStorage.getItem('f_pivot_v2') || '',
                     collapsedGroups: [],
                     collapsedYears: [],
@@ -4123,7 +4153,8 @@ window.addAccount = async function() {
                 budgetEnabled: false,
                 regulEnabled: false,
                 fiscalStartMonthSyndic: 10,
-                fiscalStartMonth: 1
+                fiscalStartMonth: 1,
+                activeTab: 'view-summary'
             };
             let emptyPayload = JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify(emptyState), appSecretKey || '').toString()});
             let blob = new Blob([emptyPayload], {type:'application/json'});
@@ -6567,7 +6598,7 @@ window.importAccountFromDat = async function(input) {
             version: APP_VERSION,
             accounts: accounts,
             settings: decrypted.settings || {
-                tcdHeaderColor: '', fontSize: '14', tcdFontSize: '13', pivot: '',
+                tcdHeaderColor: '', fontSize: '14', tcdFontSize: '13', budgetFontSize: '13', regulFontSize: '13', pivot: '',
                 collapsedGroups: [], collapsedYears: [],
                 tcdFilter: { cat1:[], cat2:[], yearsOp:[], yearsExpense:[], months:[] },
                 budgetFilter: { cat1:[], cat2:[] },
@@ -6583,7 +6614,8 @@ window.importAccountFromDat = async function(input) {
             budgetEnabled: !!decrypted.budgetEnabled,
             regulEnabled: !!decrypted.regulEnabled,
             fiscalStartMonthSyndic: parseInt(decrypted.fiscalStartMonthSyndic) || 10,
-            fiscalStartMonth: parseInt(decrypted.fiscalStartMonth) || 1
+            fiscalStartMonth: parseInt(decrypted.fiscalStartMonth) || 1,
+            activeTab: decrypted.activeTab || 'view-summary'
         };
         let payload = JSON.stringify({ vault: CryptoJS.AES.encrypt(JSON.stringify(isolatedState), appSecretKey).toString() });
         let blob = new Blob([payload], { type: 'application/json' });

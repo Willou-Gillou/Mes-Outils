@@ -557,6 +557,9 @@
 .budget-val:hover { border-color: var(--ink-faint); }
 .budget-val:focus { border-color: var(--pro,#3a6ea5); box-shadow: 0 0 0 2px var(--pro-soft); background: #ffffff; }
 .budget-val-ro { display:inline-block; font-size: 0.98em; font-weight: 800; color: var(--ink); line-height: 1.2; }
+/* v3.4.9 : mois passés/en cours en bleu, mois futurs en noir (couleur par défaut) dans le tableau Budget/Projection */
+.budget-table .budget-col-past .budget-val,
+.budget-table .budget-col-past .budget-val-ro { color: var(--pro); }
 .budget-table .tcd-row-main-cell .budget-val-ro { font-weight: 800; }
 .budget-table .tcd-total-row-cell .budget-val-ro { font-weight: 800; }
 .budget-table td.tcd-total-col .budget-val-ro { font-style: italic; font-weight: 700; font-size: 0.88em; }
