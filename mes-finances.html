@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.9</title>
-    <!-- v3.4.9 - Budget/Projection : mois passés/en cours en bleu ; taille des tableaux Budget/Régule et onglet actif désormais sauvegardés dans le .dat du compte -->
+    <title>Mes finances - v3.4.10</title>
+    <!-- v3.4.10 - Sauvegarde silencieuse au changement d'onglet + option "Graphiques" dans Options additionnelles (activée par défaut) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -65,7 +65,7 @@
     <button class="tab-btn" data-target="view-data">Base de données</button>
     <button class="tab-btn" data-target="view-categories">Catégories</button>
     <button class="tab-btn" data-target="view-rules">Règles</button>
-    <button class="tab-btn" data-target="view-charts">📈 Graphiques</button>
+    <button class="tab-btn" data-target="view-charts" id="tabCharts">📈 Graphiques</button>
     <button class="tab-btn" data-target="view-quittances" id="tabQuittances" style="display:none;">🧾 Quittances</button>
     <button class="tab-btn" data-target="view-budget" id="tabBudget" style="display:none;">📊 Budget / Projection</button>
     <button class="tab-btn" data-target="view-regul" id="tabRegul" style="display:none;">⚖️ Suivi & Régule charges</button>
@@ -545,6 +545,11 @@
         <div class="summary-card" style="margin-top:24px;">
             <h3 style="margin-bottom:12px;">🧩 Options additionnelles</h3>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;">
+                <input type="checkbox" id="optChartsCb" style="width:18px;height:18px;" onchange="window.toggleChartsOption(this.checked)">
+                Graphiques (visualiser les dépenses/revenus sous forme de graphiques)
+            </label>
+            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active l'onglet "📈 Graphiques". Activé par défaut.</p>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optQuittancesCb" style="width:18px;height:18px;" onchange="window.toggleQuittancesOption(this.checked)">
                 Quittances (générer des quittances de loyer en PDF)
             </label>

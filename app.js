@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.9';
+const APP_VERSION = '3.4.10';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -47,6 +47,8 @@ var fiscalStartMonth = 1; // 1=Janvier (par défaut), 1-12
 var budgetEnabled = false;
 var regulEnabled = false;
 var currentRegulBienId = null;
+// ── v3.4.10 : Graphiques (par compte, activé par défaut) ────────────────────────
+var chartsEnabled = true;
 // ── v3.3.6 : Diagnostic intégré (réglage global, sans distinction de compte) ──
 var diagEnabled = localStorage.getItem('f_diag_enabled') === '1';
 var fiscalStartMonthSyndic = 10;
@@ -236,7 +238,7 @@ $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     tcdSaveScroll();
     activateTab(btn.dataset.target);
     localStorage.setItem('f_active_tab_' + currentAccountId, btn.dataset.target);
-    triggerSave(false);
+    triggerSave(false, true); // silencieux : changer d'onglet ne doit pas afficher "Sauvegarde en cours..."
     window.closeMobileHeaderMenu();
 }));
 
@@ -319,7 +321,7 @@ const buildEncryptedPayload = () => {
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab}),appSecretKey).toString()});
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -366,6 +368,13 @@ function decryptPayload(remoteData) {
             quittancesEnabled = p.quittancesEnabled;
             localStorage.setItem('f_quittances_enabled_' + currentAccountId, quittancesEnabled ? '1' : '0');
         }
+        // Graphiques : activé par défaut (chartsEnabled vaut true tant qu'aucune valeur explicite
+        // n'a été sauvegardée) — donc les comptes existants créés avant cette option restent activés.
+        if (typeof p.chartsEnabled === 'boolean') {
+            chartsEnabled = p.chartsEnabled;
+            localStorage.setItem('f_charts_enabled_' + currentAccountId, chartsEnabled ? '1' : '0');
+        }
+        if (typeof applyChartsOptionState === 'function') applyChartsOptionState();
         currentQuittanceBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
         if (typeof applyQuittancesOptionState === 'function') applyQuittancesOptionState();
         budgetData = (p.budgetData && typeof p.budgetData === 'object') ? p.budgetData : {};
@@ -660,6 +669,8 @@ async function fetchDriveData() {
 }
 
 async function performSave(reRenderDbView) {
+    let quiet = pendingSaveQuiet;
+    pendingSaveQuiet = true; // repart silencieux pour le prochain lot de modifications
     clearTimeout(saveTimer); saveTimer = null;
     clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
     if (!driveAccessToken || !appSecretKey) return;
@@ -684,16 +695,23 @@ async function performSave(reRenderDbView) {
             }
         }
         if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
-        updateSyncBadge('ok', '✓ Sauvegardé'); if(reRenderDbView) window.renderDataTable();
+        if (!quiet) updateSyncBadge('ok', '✓ Sauvegardé');
+        if(reRenderDbView) window.renderDataTable();
     } catch (e) {
-        updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez');
+        updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez'); // toujours visible, même pour un lot silencieux
         showSaveError(e);
     }
 }
 
-function triggerSave(reRenderDbView = false) {
+// v3.4.10 : lot de sauvegarde "silencieux" — reste true tant qu'aucun appel non silencieux n'a
+// rejoint le lot en cours ; performSave() le consulte au moment de s'exécuter puis le remet à
+// true. Sert à éviter le badge "Sauvegarde en cours..." pour des actions mineures (changer
+// d'onglet) sans renoncer à synchroniser sur Drive.
+let pendingSaveQuiet = true;
+function triggerSave(reRenderDbView = false, quiet = false) {
     if(window._suppressSave) return; // bloqué pendant chargement initial
-    updateSyncBadge('syncing', 'Sauvegarde en cours...');
+    pendingSaveQuiet = pendingSaveQuiet && quiet;
+    if (!pendingSaveQuiet) updateSyncBadge('syncing', 'Sauvegarde en cours...');
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => performSave(reRenderDbView), 1000);
     // Filet de sécurité : lors d'une rafale de modifications rapprochées (ex. catégorisation
@@ -708,7 +726,7 @@ function triggerSave(reRenderDbView = false) {
 
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
-    try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
+    try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyChartsOptionState(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
     regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
     applyRegulOptionState(); if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget(); if (regulEnabled && typeof window.renderRegul === 'function') window.renderRegul(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
 };
@@ -4062,6 +4080,8 @@ window.switchAccount = async function(newId) {
     applyBudgetOptionState();
     regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
     applyRegulOptionState();
+    chartsEnabled = localStorage.getItem('f_charts_enabled_' + currentAccountId) !== '0'; // activé par défaut
+    applyChartsOptionState();
     if (window.appState) window.appState.tcdRedCells = window.appState.tcdRedCells || {};
     // Restauration immédiate (cache local) de l'onglet actif de ce compte, en attendant la
     // confirmation depuis Drive dans decryptPayload().
@@ -4154,7 +4174,8 @@ window.addAccount = async function() {
                 regulEnabled: false,
                 fiscalStartMonthSyndic: 10,
                 fiscalStartMonth: 1,
-                activeTab: 'view-summary'
+                activeTab: 'view-summary',
+                chartsEnabled: true
             };
             let emptyPayload = JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify(emptyState), appSecretKey || '').toString()});
             let blob = new Blob([emptyPayload], {type:'application/json'});
@@ -4196,6 +4217,28 @@ function applyQuittancesOptionState() {
     $('tabQuittances').style.display = enabled ? '' : 'none';
     let cb = $('optQuittancesCb');
     if (cb) cb.checked = enabled;
+}
+
+// ── v3.4.10 : Graphiques (activé par défaut) ────────────────────────────────
+window.toggleChartsOption = function(checked) {
+    chartsEnabled = checked;
+    localStorage.setItem('f_charts_enabled_' + currentAccountId, checked ? '1' : '0');
+    $('tabCharts').style.display = checked ? '' : 'none';
+    if (!checked) {
+        let activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab && activeTab.dataset.target === 'view-charts') {
+            document.querySelector('.tab-btn[data-target="view-summary"]').click();
+        }
+    }
+    triggerSave(false);
+};
+
+function applyChartsOptionState() {
+    let enabled = chartsEnabled;
+    $('tabCharts').style.display = enabled ? '' : 'none';
+    let cb = $('optChartsCb');
+    if (cb) cb.checked = enabled;
+    if (enabled && typeof window.renderCharts === 'function') window.renderCharts();
 }
 
 // ── v3.0.8 : Budget / Projection ────────────────────────────────────────────
@@ -6541,6 +6584,8 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             quittancesEnabled = localStorage.getItem('f_quittances_enabled_' + currentAccountId) === '1';
             applyQuittancesOptionState();
+            chartsEnabled = localStorage.getItem('f_charts_enabled_' + currentAccountId) !== '0'; // activé par défaut
+            applyChartsOptionState();
             loadFiscalStartMonth();
     loadFiscalStartMonthSyndic();
             applyFiscalStartMonthState();
@@ -6615,7 +6660,8 @@ window.importAccountFromDat = async function(input) {
             regulEnabled: !!decrypted.regulEnabled,
             fiscalStartMonthSyndic: parseInt(decrypted.fiscalStartMonthSyndic) || 10,
             fiscalStartMonth: parseInt(decrypted.fiscalStartMonth) || 1,
-            activeTab: decrypted.activeTab || 'view-summary'
+            activeTab: decrypted.activeTab || 'view-summary',
+            chartsEnabled: typeof decrypted.chartsEnabled === 'boolean' ? decrypted.chartsEnabled : true
         };
         let payload = JSON.stringify({ vault: CryptoJS.AES.encrypt(JSON.stringify(isolatedState), appSecretKey).toString() });
         let blob = new Blob([payload], { type: 'application/json' });
