@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.3</title>
-    <!-- v3.4.3 - Fix : opacité de l'en-tête de la colonne case à cocher (glitch de rendu "coin figé" lors du scroll) dans "À catégoriser" et "Base de données" -->
+    <title>Mes finances - v3.4.4</title>
+    <!-- v3.4.4 - Fix : z-index du bandeau d'en-tête relevé au-dessus de la colonne case à cocher figée, dans "À catégoriser" et "Base de données" -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -192,7 +192,7 @@
         </div>
         <div class="table-wrap" style="height:calc(100vh - 325px); overflow-y:auto;">
             <table id="uncatTable" class="std-table">
-                <thead style="position:sticky; top:0; z-index:2; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <thead style="position:sticky; top:0; z-index:4; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <tr>
                         <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAllUncatCb" onclick="window.toggleSelectAllUncat()" style="cursor:pointer; width:16px; height:16px;"></th>
                         <th style="width:120px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateOp')"><span id="uncatSortDateOp">Date Écriture</span></div><input type="text" class="col-filter uf-filter" id="ufDateOp" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
@@ -245,7 +245,7 @@
         <div id="dbPaginationNav" style="padding:2px 4px;"></div>
         <div class="table-wrap" style="height:calc(100vh - 230px); overflow-y:auto;">
             <table id="dataTable" class="std-table">
-                <thead style="position:sticky; top:0; z-index:2; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                <thead style="position:sticky; top:0; z-index:4; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <tr>
                         <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAllCb" onclick="window.toggleSelectAll()" style="cursor:pointer; width:16px; height:16px;"></th>
                         <th style="width:130px;"><div class="col-header-wrap">Date Écr. <button class="sort-btn" data-col="dateOp">↕</button></div><input type="text" class="col-filter" id="fltDate" placeholder="Filtre..."> <div class="resizer"></div></th>
