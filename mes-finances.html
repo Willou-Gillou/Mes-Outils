@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.11</title>
-    <!-- v3.4.11 - Tableau de bord : dans le popup "Détail des opérations", une ligne recatégorisée hors de la cellule d'origine est retirée du popup -->
+    <title>Mes finances - v3.4.12</title>
+    <!-- v3.4.12 - Administration Drive : sélection multiple + suppression groupée, aperçu de fichier en popup, séparation Production/Sauvegardes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -969,6 +969,17 @@
                 <button class="btn btn-outline" onclick="window.closeDistributeCostsModal()">Annuler</button>
                 <button class="btn btn-primary" onclick="window.applyDistributeCosts()">Appliquer</button>
             </div>
+        </div>
+    </div>
+
+    <!-- ══════════ ADMIN DRIVE - APERÇU FICHIER ══════════ -->
+    <div class="overlay" id="driveFilePreviewModal">
+        <div class="modal" style="max-width:900px;width:96vw;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+                <h2 style="margin:0;font-size:1.1em;" id="driveFilePreviewTitle">Fichier</h2>
+                <button class="btn btn-outline" onclick="window.closeDriveFilePreview()" style="padding:4px 10px;border-radius:20px;">✕</button>
+            </div>
+            <pre id="driveFilePreviewBody" style="max-height:70vh;overflow:auto;background:var(--bg);border:1px solid var(--ink-faint);border-radius:8px;padding:12px;font-size:0.8em;white-space:pre-wrap;word-break:break-word;margin:0;"></pre>
         </div>
     </div>
 

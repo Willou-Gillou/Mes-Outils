@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.11';
+const APP_VERSION = '3.4.12';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6762,28 +6762,125 @@ window.loadDriveFilesList = async function() {
         let d = await r.json();
         let files = d.files || [];
         if (!files.length) { container.innerHTML = '<p style="color:var(--ink-soft);">Aucun fichier trouvé.</p>'; return; }
-        let html = '<table class="std-table" style="width:100%;margin-top:8px;"><thead><tr><th>Nom</th><th>Taille</th><th>Modifié le</th><th>Action</th></tr></thead><tbody>';
-        files.forEach(function(f) {
+
+        // v3.4.12 : sépare les sauvegardes (nom contenant "-BackupAAAAMMJJ", cf. backupAdminDriveFile)
+        // des fichiers de production, pour les distinguer visuellement dans la liste.
+        let isBackup = f => f.name.indexOf('-Backup') !== -1;
+        let prodFiles = files.filter(f => !isBackup(f)).sort((a,b) => a.name.localeCompare(b.name));
+        let backupFiles = files.filter(isBackup).sort((a,b) => new Date(b.modifiedTime) - new Date(a.modifiedTime));
+
+        const rowHtml = (f) => {
             let size = f.size ? Math.round(f.size/1024) + ' Ko' : '—';
             let date = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString('fr-FR') : '—';
-            let safeId = f.id.replace(/'/g, "\'");
+            let safeId = f.id.replace(/'/g, "\\'");
             let safeName = (f.name||'').replace(/</g,'&lt;');
-            html += '<tr>';
-            html += '<td>' + safeName + '</td>';
-            html += '<td style="text-align:right;">' + size + '</td>';
-            html += '<td>' + date + '</td>';
-            html += '<td style="display:flex;gap:6px;">'
+            return '<tr>'
+                + '<td style="text-align:center;"><input type="checkbox" class="admin-drive-cb" value="' + f.id + '" onclick="window.updateAdminDriveBulkActions()"></td>'
+                + '<td>' + safeName + '</td>'
+                + '<td style="text-align:right;">' + size + '</td>'
+                + '<td>' + date + '</td>'
+                + '<td style="display:flex;gap:6px;flex-wrap:wrap;">'
+                + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;" onclick="window.previewAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">👁️ Visualiser</button>'
                 + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;" onclick="window.downloadAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">⬇️ Télécharger</button>'
                 + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;color:var(--done);" onclick="window.backupAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">☁️ Backup Cloud</button>'
                 + '<button class="btn btn-danger" style="padding:3px 8px;font-size:0.82em;" onclick="window.deleteAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">🗑️ Supprimer</button>'
-                + '</td>';
-            html += '</tr>';
-        });
+                + '</td></tr>';
+        };
+        const sectionRow = (label, count) => '<tr><td colspan="5" style="background:var(--bg);font-weight:700;font-size:0.82em;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:6px 10px;">' + label + ' (' + count + ')</td></tr>';
+
+        let html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+            + '<button class="btn btn-danger" id="adminDriveBulkDeleteBtn" style="display:none;padding:4px 10px;font-size:0.85em;" onclick="window.bulkDeleteAdminDriveFiles()">🗑️ Supprimer la sélection (<span id="adminDriveSelCount">0</span>)</button>'
+            + '</div>';
+        html += '<table class="std-table" style="width:100%;margin-top:8px;"><thead><tr>'
+            + '<th style="width:36px;text-align:center;"><input type="checkbox" id="adminDriveSelectAllCb" onclick="window.toggleSelectAllAdminDrive(this)"></th>'
+            + '<th>Nom</th><th>Taille</th><th>Modifié le</th><th>Action</th></tr></thead><tbody>';
+        html += sectionRow('📁 Production', prodFiles.length);
+        prodFiles.forEach(f => { html += rowHtml(f); });
+        if (backupFiles.length) {
+            html += sectionRow('🗄️ Sauvegardes', backupFiles.length);
+            backupFiles.forEach(f => { html += rowHtml(f); });
+        }
         html += '</tbody></table>';
         container.innerHTML = html;
+        window.updateAdminDriveBulkActions();
     } catch(e) {
         container.innerHTML = '<p style="color:var(--urgent);">Erreur : ' + e.message + '</p>';
     }
+};
+
+window.toggleSelectAllAdminDrive = function(cb) {
+    document.querySelectorAll('.admin-drive-cb').forEach(el => { el.checked = cb.checked; });
+    window.updateAdminDriveBulkActions();
+};
+
+window.updateAdminDriveBulkActions = function() {
+    let checked = document.querySelectorAll('.admin-drive-cb:checked');
+    let btn = $('adminDriveBulkDeleteBtn'), cnt = $('adminDriveSelCount');
+    if (cnt) cnt.textContent = checked.length;
+    if (btn) btn.style.display = checked.length ? 'inline-flex' : 'none';
+};
+
+window.bulkDeleteAdminDriveFiles = async function() {
+    let ids = Array.from(document.querySelectorAll('.admin-drive-cb:checked')).map(cb => cb.value);
+    if (!ids.length) return;
+    if (!confirm('Supprimer définitivement ' + ids.length + ' fichier(s) de Google Drive ? Cette action est irréversible.')) return;
+    let okCount = 0, errCount = 0;
+    for (let id of ids) {
+        try {
+            let r = await fetch('https://www.googleapis.com/drive/v3/files/' + id, { method: 'DELETE', headers: { Authorization: 'Bearer ' + driveAccessToken } });
+            if (r.status === 204 || r.ok) {
+                okCount++;
+                Object.keys(driveFileIdMap).forEach(k => { if (driveFileIdMap[k] === id) delete driveFileIdMap[k]; });
+                if (driveAccountsRegistryFileId === id) driveAccountsRegistryFileId = null;
+            } else { errCount++; }
+        } catch(e) { errCount++; }
+    }
+    showToast((errCount ? '⚠️ ' : '✅ ') + okCount + ' fichier(s) supprimé(s)' + (errCount ? ', ' + errCount + ' échec(s)' : ''));
+    window.loadDriveFilesList();
+};
+
+// v3.4.12 : aperçu du contenu d'un fichier Drive dans un popup — déchiffré avec la clé de session
+// courante (partagée entre tous les comptes d'un même utilisateur) quand c'est un vault reconnu.
+window.previewAdminDriveFile = async function(fileId, fileName) {
+    let modal = $('driveFilePreviewModal'), title = $('driveFilePreviewTitle'), body = $('driveFilePreviewBody');
+    if (!modal || !body) return;
+    if (title) title.textContent = fileName || 'Fichier';
+    body.textContent = 'Chargement...';
+    modal.classList.add('open');
+    try {
+        let r = await fetch('https://www.googleapis.com/drive/v3/files/' + fileId + '?alt=media', {
+            headers: { Authorization: 'Bearer ' + driveAccessToken }
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        let text = await r.text();
+        let out = text;
+        let remoteData = null;
+        try { remoteData = JSON.parse(text); } catch (parseErr) { /* pas du JSON : affiché tel quel */ }
+        if (remoteData && remoteData.vault) {
+            if (!appSecretKey) {
+                out = '(Fichier chiffré — clé de déchiffrement indisponible dans cette session)';
+            } else {
+                try {
+                    let decrypted = CryptoJS.AES.decrypt(remoteData.vault, appSecretKey).toString(CryptoJS.enc.Utf8);
+                    if (!decrypted) throw new Error('résultat vide');
+                    out = JSON.stringify(JSON.parse(decrypted), null, 2);
+                } catch (decErr) {
+                    out = '(Impossible de déchiffrer ce fichier avec la clé de session actuelle)';
+                }
+            }
+        } else if (remoteData) {
+            out = JSON.stringify(remoteData, null, 2);
+        }
+        let MAX = 300000;
+        if (out.length > MAX) out = out.slice(0, MAX) + '\n\n… (tronqué — téléchargez le fichier pour le contenu complet)';
+        body.textContent = out;
+    } catch (e) {
+        body.textContent = 'Erreur : ' + e.message;
+    }
+};
+window.closeDriveFilePreview = function() {
+    let modal = $('driveFilePreviewModal');
+    if (modal) modal.classList.remove('open');
 };
 
 window.deleteAdminDriveFile = async function(fileId, fileName) {
