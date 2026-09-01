@@ -1,14 +1,14 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.10';
+const APP_VERSION = '3.4.11';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
 const DRIVE_LS = 'finances_drive_';
 
 var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBankForImport="";
-let dbSortCol='dateOp', dbSortDir=-1, catModalTxId=null, catModalSelectedCat1=null, catModalSelectedCat2=null;
+let dbSortCol='dateOp', dbSortDir=-1, catModalTxId=null, catModalSelectedCat1=null, catModalSelectedCat2=null, catModalSource=null;
 var driveAccessToken=null, driveFileId=null, driveTokenClient=null, saveTimer=null, saveMaxWaitTimer=null;
 var driveDataLoaded = false; // true uniquement après chargement confirmé depuis Drive
 // ── Multi-compte ──
@@ -1706,7 +1706,7 @@ window.bindTcdDrillDown = function() {
         if (!key) return;
         let txs = tcdMap[key] || [];
         if (txs.length === 0) return;
-        window.openTcdDetails(txs);
+        window.openTcdDetails(txs, key);
     };
     grid.addEventListener('click', _tcdClickHandler);
 };
@@ -1717,8 +1717,9 @@ window.sortTcdDetail = function(col) {
     localStorage.setItem('tcdDetailSortDir', tcdDetailSortDir);
     window.openTcdDetails(window._lastTcdDetailTxs || []);
 };
-window.openTcdDetails = function(txs) {
+window.openTcdDetails = function(txs, key) {
     window._lastTcdDetailTxs = txs;
+    if (key !== undefined) window._lastTcdDetailKey = key;
     txs = txs.slice().sort((a,b) => {
         let va = a[tcdDetailSortCol]||'', vb = b[tcdDetailSortCol]||'';
         return (va < vb ? -1 : va > vb ? 1 : 0) * tcdDetailSortDir;
@@ -1768,11 +1769,43 @@ window.openTcdDetails = function(txs) {
             ev.stopPropagation();
             let tx = transactions.find(x => String(x.id) === String(btn.dataset.id));
             if (!tx) return;
-            window.openCatModal(tx.id, tx.cat1||'', tx.cat2||'', !!(tx.cat1 && tx.cat1 !== '_SANS_CATEGORIE'));
+            window.openCatModal(tx.id, tx.cat1||'', tx.cat2||'', !!(tx.cat1 && tx.cat1 !== '_SANS_CATEGORIE'), 'tcdDetails');
         });
     });
 };
 
+// v3.4.11 : détermine la catégorie (cat1/cat2) représentée par la cellule du TCD à l'origine
+// du popup "Détail des opérations", à partir de sa clé (ex: "Loyers::Appt A::2025::03") et du
+// regroupement L1/L2 choisi. Retourne null si la cellule ne représente pas une catégorie précise
+// (totaux, regroupement par libellé...) — dans ce cas, aucune ligne n'est jamais retirée.
+function deriveTcdCatFilterFromKey(key) {
+    if (!key || key === 'GRAND_TOTAL' || key.indexOf('MONTH_TOTAL::') === 0 || key.indexOf('YEAR_TOTAL::') === 0) return null;
+    let parts = key.split('::');
+    if (parts.length < 2) return null;
+    let r1F = ($('pivotRows')||{value:'cat1'}).value;
+    let r2F = ($('pivotRows2')||{value:''}).value;
+    let filter = {};
+    if (r1F === 'cat1') filter.cat1 = parts[0];
+    else if (r1F === 'cat2') filter.cat2 = parts[0];
+    if (parts[1] && parts[1] !== '*' && r2F) {
+        if (r2F === 'cat1') filter.cat1 = parts[1];
+        else if (r2F === 'cat2') filter.cat2 = parts[1];
+    }
+    return (filter.cat1 !== undefined || filter.cat2 !== undefined) ? filter : null;
+}
+
+// Retire une transaction du popup "Détail des opérations" déjà ouvert si sa catégorie vient de
+// changer pour une valeur qui ne correspond plus à la cellule du TCD depuis laquelle il a été ouvert.
+window.removeFromTcdDetailsIfMismatch = function(t) {
+    let filter = deriveTcdCatFilterFromKey(window._lastTcdDetailKey);
+    if (!filter) return;
+    let c1 = t.cat1 || '_SANS_CATEGORIE', c2 = t.cat2 || '_SANS_CATEGORIE';
+    let stillMatches = (filter.cat1 === undefined || filter.cat1 === c1) && (filter.cat2 === undefined || filter.cat2 === c2);
+    if (stillMatches) return;
+    window._lastTcdDetailTxs = (window._lastTcdDetailTxs || []).filter(x => String(x.id) !== String(t.id));
+    let row = document.querySelector('#tcdDetailsTbody tr[data-id="' + t.id + '"]');
+    if (row) row.remove();
+};
 
 function computeEclairCategories() { return []; }
 // ════════════════════════════════════════════════════
@@ -3686,8 +3719,8 @@ function parseBankData(rows, type, bName) {
 }
 
 // ==== FENETRES MODALES AFFECTATIONS ====
-window.openCatModal = function(tid, p1, p2, isRule) {
-    catModalTxId=String(tid); let t=transactions.find(x=>String(x.id)===catModalTxId); if(!t)return;
+window.openCatModal = function(tid, p1, p2, isRule, source) {
+    catModalTxId=String(tid); catModalSource=source||null; let t=transactions.find(x=>String(x.id)===catModalTxId); if(!t)return;
     $('catModalTxLabel').textContent=t.label||'Opération'; $('catModalTxDetails').textContent=t.details||''; $('catModalTxAmount').textContent=t.amount+" €"; $('catModalTxAmount').style.color=t.amount>0?'var(--done)':'var(--urgent)';
     catModalSelectedCat1 = t.cat1 || p1 || ''; catModalSelectedCat2 = t.cat2 || p2 || '';
     $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join('');
@@ -3716,7 +3749,9 @@ window.showStep3 = function(c1,c2,isRule) {
 };
 window.validateCategorization = function() {
     let t=transactions.find(x=>String(x.id)===catModalTxId); if(!t)return; t.cat1=catModalSelectedCat1; t.cat2=catModalSelectedCat2; _lastChosenCat={c1:catModalSelectedCat1,c2:catModalSelectedCat2};
-    if($('catModalCreateRule').checked){let p=$('catModalRulePattern').value.trim();if(p)window.addOrMergeRule(p,t.cat1,t.cat2);} triggerSave(true); window.closeCatModal(); window.renderViewsSafe(); showToast("Enregistré ✓");
+    if($('catModalCreateRule').checked){let p=$('catModalRulePattern').value.trim();if(p)window.addOrMergeRule(p,t.cat1,t.cat2);} triggerSave(true); window.closeCatModal();
+    if (catModalSource === 'tcdDetails') window.removeFromTcdDetailsIfMismatch(t);
+    window.renderViewsSafe(); showToast("Enregistré ✓");
 };
 window.closeCatModal = function() { $('catSelectionOverlay').classList.remove('open'); };
 $('catModalBackBtn').addEventListener('click', () => { $('catModalCat1List').innerHTML=Object.keys(categories).sort(customSortCmp).map(c1=>`<button class="cat-step-btn cat1-btn ${c1===catModalSelectedCat1?'selected':''}" data-c1="${escapeHtml(c1)}">${escapeHtml(c1)}</button>`).join(''); $$('.cat1-btn').forEach(b=>b.addEventListener('click', e=>window.selectCat1(e.currentTarget.dataset.c1))); $('catModalStep1').style.display='block'; $('catModalStep2').style.display='none'; });
