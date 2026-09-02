@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.16';
+const APP_VERSION = '3.4.17';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6084,7 +6084,7 @@ window.renderRegul = function() {
                     onfocus="window.onBudgetCellFocus(this)"
                     onblur="window.setRegulCell('${mKey}', '${c.id}', this.textContent)"
                     title="Maj+Entrée pour reporter la valeur sur les mois suivants"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){window.fillRegulColumnDown('${mKey}','${c.id}',this.textContent);}this.blur();}">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){window.fillRegulColumnDown('${mKey}','${c.id}',this.textContent);}else{this.blur();}}">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
             }
         });
         html += '</tr>';
@@ -6191,10 +6191,13 @@ window.fillRegulColumnDown = function(mKey, colId, text) {
     let idx = months.findIndex(mo => `${mo.y}-${mo.m}` === mKey);
     if (idx === -1) return;
     let any = false;
-    for (let i = idx + 1; i < months.length; i++) {
-        if (computeRegulGreyed(bien, months[i])) continue;
-        let belowKey = `${months[i].y}-${months[i].m}`;
-        if (window.setRegulCellSilent(belowKey, colId, text)) any = true;
+    // v3.4.17 : inclut la cellule éditée elle-même (i = idx, pas idx+1) — le keydown appelant
+    // cette fonction ne blur() plus la cellule ensuite (le re-rendu qui suit détruit ce noeud
+    // DOM), donc c'était le seul moyen que sa propre saisie soit réellement enregistrée.
+    for (let i = idx; i < months.length; i++) {
+        if (i > idx && computeRegulGreyed(bien, months[i])) continue;
+        let key = `${months[i].y}-${months[i].m}`;
+        if (window.setRegulCellSilent(key, colId, text)) any = true;
     }
     if (any) { triggerSave(true); window.renderRegul(); showToast('✅ Valeur reportée sur les mois suivants'); }
 };
