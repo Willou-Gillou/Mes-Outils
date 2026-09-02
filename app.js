@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.18';
+const APP_VERSION = '3.4.19';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -5002,14 +5002,14 @@ window.duplicateEcheanceToSelection = function() {
     showToast('✅ Ligne dupliquée sur ' + selectedCount + ' mois sélectionné(s)');
 };
 
-// Calcule le total de la partie "opérations claires" en tête du détail (ex: "760€+50€"),
-// en ignorant tout texte/note qui suit (ex: " (+regule 2025=147€)"). Retourne null si aucune
-// opération claire n'est trouvée en tête.
+// Calcule le total d'un détail d'échéance UNIQUEMENT si celui-ci est une expression
+// arithmétique pure (ex: "760€+50€") : dès qu'il contient du texte ou une parenthèse (ex:
+// une note "760€+50€ (+regule 2025=147€)"), on considère que ce n'est pas clair et on
+// retourne null (pas de total affiché).
 function parseEcheanceDetailMontant(detail) {
     let cleaned = String(detail||'').trim().replace(/€/g, '').replace(/\s+/g, '');
-    let match = cleaned.match(/^[0-9,.]+(?:[+\-][0-9,.]+)*/);
-    if (!match || !match[0]) return null;
-    let normalized = match[0].replace(/,/g, '.');
+    if (!cleaned || !/^[0-9,.]+(?:[+\-][0-9,.]+)*$/.test(cleaned)) return null;
+    let normalized = cleaned.replace(/,/g, '.');
     let parts = normalized.split(/(?=[+\-])/).filter(Boolean);
     let sum = 0;
     let valid = true;
