@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.15';
+const APP_VERSION = '3.4.16';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4610,18 +4610,52 @@ window.closeQuittanceBiensPicker = function() {
     _qPickerMode = null; _qImportParsedBiens = [];
 };
 window.toggleQuittancePickerAll = function(cb) {
-    document.querySelectorAll('.q-picker-cb').forEach(el => { el.checked = cb.checked; });
+    document.querySelectorAll('.q-picker-cb, .q-picker-bien-cb, .q-picker-loc-cb').forEach(el => { el.checked = cb.checked; });
+};
+
+// v3.4.16 : export/suppression descendent jusqu'au niveau des locataires — chaque bien affiche
+// ses locataires (historique) en dessous, sélectionnables indépendamment. Cocher/décocher le
+// bien coche/décoche tous ses locataires ; décocher un locataire décoche le bien (il redevient
+// coché si on en recoche un). L'import reste au niveau du bien (openQuittanceBiensPicker), un
+// fichier important n'a pas vocation à fusionner un locataire isolé dans un bien existant.
+function openQuittanceBienLocPicker(mode, title, actionLabel) {
+    _qPickerMode = mode;
+    $('qPickerTitle').textContent = title;
+    $('qPickerActionBtn').textContent = actionLabel;
+    $('qPickerList').innerHTML = quittancesBiens.map(b => {
+        ensureLocatairesHistory(b);
+        let isCurrent = b.id === currentQuittanceBienId;
+        let sortedRecs = b.locatairesHistory.slice().sort((r1,r2) => (r1.createdAt||0) - (r2.createdAt||0));
+        let locHtml = sortedRecs.map(r =>
+            '<label style="display:flex;align-items:center;gap:8px;padding:4px 8px 4px 28px;font-size:0.88em;cursor:pointer;">'
+            + '<input type="checkbox" class="q-picker-loc-cb" data-bien="' + b.id + '" value="' + r.id + '" checked onclick="window.updateQPickerBienState(\'' + b.id + '\')">'
+            + escapeHtml(computeLocataireLabel(r.locataires)) + '</label>'
+        ).join('');
+        return '<div style="border-bottom:1px solid var(--ink-faint);margin-bottom:4px;">'
+            + '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-weight:600;cursor:pointer;' + (isCurrent ? 'background:var(--pro-soft);' : '') + '">'
+            + '<input type="checkbox" class="q-picker-bien-cb" value="' + b.id + '" checked onclick="window.toggleQPickerBien(this,\'' + b.id + '\')">'
+            + escapeHtml(b.nom) + '</label>' + locHtml + '</div>';
+    }).join('');
+    $('qPickerSelectAll').checked = true;
+    $('quittanceBiensPickerModal').style.display = 'flex';
+}
+window.toggleQPickerBien = function(cb, bienId) {
+    document.querySelectorAll('.q-picker-loc-cb[data-bien="' + bienId + '"]').forEach(el => { el.checked = cb.checked; });
+};
+window.updateQPickerBienState = function(bienId) {
+    let locCbs = document.querySelectorAll('.q-picker-loc-cb[data-bien="' + bienId + '"]');
+    let bienCb = document.querySelector('.q-picker-bien-cb[value="' + bienId + '"]');
+    if (!bienCb) return;
+    bienCb.checked = Array.from(locCbs).some(el => el.checked); // reste coché tant qu'au moins un locataire l'est
 };
 
 window.openQuittanceExportModal = function() {
     if (!quittancesBiens.length) { showToast('⚠️ Aucun bien à exporter'); return; }
-    let items = quittancesBiens.map(b => ({ id: b.id, nom: b.nom, checked: b.id === currentQuittanceBienId }));
-    openQuittanceBiensPicker('export', items, '📤 Exporter des biens', 'Exporter la sélection');
+    openQuittanceBienLocPicker('export', '📤 Exporter des biens/locataires', 'Exporter la sélection');
 };
 window.openQuittanceDeleteModal = function() {
     if (!quittancesBiens.length) { showToast('⚠️ Aucun bien à supprimer'); return; }
-    let items = quittancesBiens.map(b => ({ id: b.id, nom: b.nom, checked: b.id === currentQuittanceBienId }));
-    openQuittanceBiensPicker('delete', items, '🗑️ Supprimer des biens', 'Supprimer la sélection');
+    openQuittanceBienLocPicker('delete', '🗑️ Supprimer des biens/locataires', 'Supprimer la sélection');
 };
 window.openQuittanceImportModal = function() { $('qImportInput').click(); };
 
@@ -4646,32 +4680,75 @@ window.handleQuittanceImportFile = function(input) {
 };
 
 window.confirmQuittanceBiensPicker = function() {
-    let ids = Array.from(document.querySelectorAll('.q-picker-cb:checked')).map(cb => cb.value);
-    if (!ids.length) { showToast('⚠️ Aucune sélection'); return; }
+    if (_qPickerMode === 'import') {
+        let ids = Array.from(document.querySelectorAll('.q-picker-cb:checked')).map(cb => cb.value);
+        if (!ids.length) { showToast('⚠️ Aucune sélection'); return; }
+        let selected = _qImportParsedBiens.filter((b, i) => ids.includes(String(i)));
+        window._importQuittanceBiens(selected);
+        window.closeQuittanceBiensPicker();
+        return;
+    }
+
+    // export / delete : sélection au niveau des locataires, regroupée par bien
+    let selectionByBien = {};
+    document.querySelectorAll('.q-picker-loc-cb:checked').forEach(cb => {
+        let bienId = cb.dataset.bien;
+        if (!selectionByBien[bienId]) selectionByBien[bienId] = [];
+        selectionByBien[bienId].push(cb.value);
+    });
+    let bienIds = Object.keys(selectionByBien);
+    if (!bienIds.length) { showToast('⚠️ Aucune sélection'); return; }
+
     if (_qPickerMode === 'export') {
-        let selected = quittancesBiens.filter(b => ids.includes(b.id));
-        let dataStr = JSON.stringify({ type: 'quittances_export', version: APP_VERSION, biens: selected }, null, 2);
+        let exported = bienIds.map(bienId => {
+            let b = quittancesBiens.find(x => x.id === bienId);
+            if (!b) return null;
+            let selLocIds = selectionByBien[bienId];
+            let allLocIds = (b.locatairesHistory || []).map(r => r.id);
+            if (selLocIds.length === allLocIds.length) return b; // bien complet, tel quel
+            // Sous-ensemble de locataires seulement : bien exporté avec un historique restreint
+            let filteredHistory = b.locatairesHistory.filter(r => selLocIds.includes(r.id));
+            return Object.assign({}, b, {
+                locatairesHistory: filteredHistory,
+                currentLocataireRecordId: filteredHistory[0].id,
+                locataires: filteredHistory[0].locataires
+            });
+        }).filter(Boolean);
+        let dataStr = JSON.stringify({ type: 'quittances_export', version: APP_VERSION, biens: exported }, null, 2);
         let blob = new Blob([dataStr], { type: 'application/json' });
         let url = URL.createObjectURL(blob);
         let a = document.createElement('a');
         a.href = url;
-        a.download = (selected.length === 1 ? 'Quittance_' + selected[0].nom.replace(/\s+/g,'_') : 'Quittances_export_' + selected.length + '_biens') + '.json';
+        a.download = (exported.length === 1 ? 'Quittance_' + exported[0].nom.replace(/\s+/g,'_') : 'Quittances_export_' + exported.length + '_biens') + '.json';
         a.click();
         URL.revokeObjectURL(url);
-        showToast('✅ ' + selected.length + ' bien(s) exporté(s)');
+        showToast('✅ ' + exported.length + ' bien(s) exporté(s)');
         window.closeQuittanceBiensPicker();
     } else if (_qPickerMode === 'delete') {
-        if (!confirm('Supprimer définitivement ' + ids.length + ' bien(s) et toutes leurs données de quittance ?')) return;
-        let removingCurrent = ids.includes(currentQuittanceBienId);
-        quittancesBiens = quittancesBiens.filter(b => !ids.includes(b.id));
-        if (removingCurrent) currentQuittanceBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
+        let totalLoc = bienIds.reduce((s, id) => s + selectionByBien[id].length, 0);
+        if (!confirm('Supprimer définitivement ' + totalLoc + ' locataire(s) sur ' + bienIds.length + ' bien(s) ? Un bien entièrement sélectionné sera supprimé avec toutes ses données de quittance.')) return;
+        let removedCurrentBien = false;
+        bienIds.forEach(bienId => {
+            let b = quittancesBiens.find(x => x.id === bienId);
+            if (!b) return;
+            let selLocIds = selectionByBien[bienId];
+            let allLocIds = (b.locatairesHistory || []).map(r => r.id);
+            if (selLocIds.length === allLocIds.length) {
+                quittancesBiens = quittancesBiens.filter(x => x.id !== bienId);
+                if (bienId === currentQuittanceBienId) removedCurrentBien = true;
+            } else {
+                b.locatairesHistory = b.locatairesHistory.filter(r => !selLocIds.includes(r.id));
+                if (selLocIds.includes(b.currentLocataireRecordId)) {
+                    let fallback = b.locatairesHistory[b.locatairesHistory.length - 1];
+                    b.currentLocataireRecordId = fallback.id;
+                    b.locataires = fallback.locataires;
+                }
+            }
+        });
+        if (removedCurrentBien) currentQuittanceBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
         saveQuittancesBiens();
         window.renderQuittancesView();
-        showToast('✅ ' + ids.length + ' bien(s) supprimé(s)');
-        window.closeQuittanceBiensPicker();
-    } else if (_qPickerMode === 'import') {
-        let selected = _qImportParsedBiens.filter((b, i) => ids.includes(String(i)));
-        window._importQuittanceBiens(selected);
+        showToast('✅ Suppression effectuée');
         window.closeQuittanceBiensPicker();
     }
 };
@@ -5045,11 +5122,18 @@ window.applyRevenuToQuittanceLignes = function(dateIso, montant, dateExpenseIso)
     showToast('✅ Écriture reportée dans ' + updatedCount + ' ligne(s) datée(s)');
 };
 
+let qRevenusMonths = parseInt(localStorage.getItem('q_revenus_months') || '6', 10) || 6;
+window.setQuittanceRevenusMonths = function(v) {
+    qRevenusMonths = parseInt(v, 10) || 6;
+    localStorage.setItem('q_revenus_months', String(qRevenusMonths));
+    window.renderQuittanceRevenusTable();
+};
 window.renderQuittanceRevenusTable = function() {
     let body = $('qRevenusBody');
     if (!body) return;
+    let sel = $('qRevenusMonthsSelect'); if (sel) sel.value = String(qRevenusMonths);
     let today = new Date();
-    let cutoff = new Date(today.getFullYear(), today.getMonth() - 6, today.getDate());
+    let cutoff = new Date(today.getFullYear(), today.getMonth() - qRevenusMonths, today.getDate());
     let norm = s => (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().trim();
     let revenus = (transactions || []).filter(t => {
         let c = norm(t.cat1);
@@ -5072,7 +5156,7 @@ window.renderQuittanceRevenusTable = function() {
         <td colspan="2" title="${escaped}" style="max-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${detailTxt}</td>
         <td style="text-align:right;white-space:nowrap;">${fmtEur(t.amount)}</td>
     </tr>`;
-    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:16px;">Aucun revenu trouvé sur les 6 derniers mois</td></tr>';
+    }).join('') || '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:16px;">Aucun revenu trouvé sur les ' + qRevenusMonths + ' derniers mois</td></tr>';
 };
 
 window.renderQuittanceTableLignes = function() {
@@ -5638,12 +5722,12 @@ window.openQuittanceEmailModal = function(fileIdx) {
     let file = (typeof fileIdx === 'number') ? files[fileIdx] : null;
     if (!file) { alert('Fichier introuvable. Actualisez la liste des fichiers Drive puis réessayez.'); return; }
     let link = file.webViewLink || ('https://drive.google.com/file/d/' + file.id + '/view');
-    let emails = [];
-    if (bien.bailleur.email) emails.push(bien.bailleur.email);
-    (bien.locataires || []).forEach(l => { if (l.email) emails.push(l.email); });
+    // v3.4.16 : destinataires = locataires, Cc = bailleur (au lieu de tout mélanger en destinataires)
+    let locataireEmails = (bien.locataires || []).map(l => l.email).filter(Boolean);
     let moisMatch = (file.name || '').match(/(\d{4}-\d{2})/);
     let moisLabel = moisMatch ? moisMatch[1] : '';
-    $('qEmailDestinataires').value = emails.join(', ');
+    $('qEmailDestinataires').value = locataireEmails.join(', ');
+    $('qEmailCc').value = bien.bailleur.email || '';
     $('qEmailObjet').value = 'Quittance de loyer' + (moisLabel ? (' ' + moisLabel) : '');
     $('qEmailCorps').value = 'Bonjour,\nVeuillez trouver ci-dessous le lien vers votre quittance de loyer.\nCordialement,\n' + (bien.bailleur.nom || '');
     window._quittanceEmailFileLink = link;
@@ -5658,6 +5742,7 @@ window.sendQuittanceEmail = async function() {
     const stripCrlf = s => String(s || '').replace(/[\r\n]+/g, ' ').trim();
     let to = ($('qEmailDestinataires').value || '').split(',').map(s => stripCrlf(s)).filter(Boolean);
     if (!to.length) { alert('Veuillez renseigner au moins un destinataire.'); return; }
+    let cc = ($('qEmailCc') ? $('qEmailCc').value : '').split(',').map(s => stripCrlf(s)).filter(Boolean);
     let subject = stripCrlf($('qEmailObjet').value || '');
     let body = $('qEmailCorps').value || '';
     let link = window._quittanceEmailFileLink;
@@ -5668,11 +5753,14 @@ window.sendQuittanceEmail = async function() {
         let fullBody = body + '\n\nTéléchargez votre quittance ici : ' + link;
         let rawLines = [
             'To: ' + to.join(', '),
+        ];
+        if (cc.length) rawLines.push('Cc: ' + cc.join(', '));
+        rawLines.push(
             'Subject: ' + subject,
             'Content-Type: text/plain; charset=UTF-8',
             '',
             fullBody
-        ];
+        );
         let raw = rawLines.join('\r\n');
         let encodedRaw = btoa(unescape(encodeURIComponent(raw))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 
@@ -5985,17 +6073,18 @@ window.renderRegul = function() {
                 if (isClosed || isGreyed) {
                     flagHtml = ` <span class="regul-flag-badge ${isReal ? 'is-real' : 'is-est'}">${isReal ? '✔︎ Réel' : '~ Estim.'}</span>`;
                 } else {
-                    flagHtml = ` <button type="button" class="regul-flag-toggle ${isReal ? 'is-real' : 'is-est'}" onclick="window.toggleRegulFlag('${mKey}','${c.id}')" title="Cliquer pour basculer Estimation ⇄ Réel">${isReal ? '✔︎ Réel' : '~ Estim.'}</button>`;
+                    flagHtml = ` <button type="button" class="regul-flag-toggle ${isReal ? 'is-real' : 'is-est'}" onclick="window.toggleRegulFlag(event,'${mKey}','${c.id}')" title="Cliquer pour basculer Estimation ⇄ Réel — Maj+clic pour reporter sur les mois suivants">${isReal ? '✔︎ Réel' : '~ Estim.'}</button>`;
                 }
             }
 
             if (isClosed || isGreyed) {
                 html += `<td class="tcd-cell"><span class="budget-val-ro">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
             } else {
-                html += `<td class="tcd-cell"><span class="budget-val" contenteditable="true" 
+                html += `<td class="tcd-cell"><span class="budget-val" contenteditable="true"
                     onfocus="window.onBudgetCellFocus(this)"
                     onblur="window.setRegulCell('${mKey}', '${c.id}', this.textContent)"
-                    onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
+                    title="Maj+Entrée pour reporter la valeur sur les mois suivants"
+                    onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){window.fillRegulColumnDown('${mKey}','${c.id}',this.textContent);}this.blur();}">${!isEmpty ? formatCurrency(actualVal) : ''}</span>${flagHtml}${indHtml}</td>`;
             }
         });
         html += '</tr>';
@@ -6080,6 +6169,59 @@ window.renderRegul = function() {
     });
 };
 
+// v3.4.16 : reproduit la logique de grisage (avant la date d'emménagement) déjà utilisée dans
+// le rendu, pour ne jamais reporter une valeur/statut sur un mois que l'utilisateur ne peut de
+// toute façon pas éditer directement.
+function computeRegulGreyed(bien, mo) {
+    let moveInDate = bien.dateAnniversaire || '';
+    if (!moveInDate) return false;
+    let parts = moveInDate.split('-');
+    let my = parseInt(parts[0], 10), mm = parseInt(parts[1], 10);
+    let moY = parseInt(mo.y, 10), moM = parseInt(mo.m, 10);
+    return (moY < my || (moY === my && moM < mm));
+}
+
+// Shift+Entrée sur une cellule de montant : reporte la même valeur sur les mois suivants
+// (même colonne, même exercice).
+window.fillRegulColumnDown = function(mKey, colId, text) {
+    let bien = getRegulBien(currentRegulBienId); if (!bien) return;
+    let ex = $('regulExerciceSelect').value; if (!ex) return;
+    if (bien.regulClosed && bien.regulClosed[ex]) return;
+    let months = getRegulMonthsForExercice(ex);
+    let idx = months.findIndex(mo => `${mo.y}-${mo.m}` === mKey);
+    if (idx === -1) return;
+    let any = false;
+    for (let i = idx + 1; i < months.length; i++) {
+        if (computeRegulGreyed(bien, months[i])) continue;
+        let belowKey = `${months[i].y}-${months[i].m}`;
+        if (window.setRegulCellSilent(belowKey, colId, text)) any = true;
+    }
+    if (any) { triggerSave(true); window.renderRegul(); showToast('✅ Valeur reportée sur les mois suivants'); }
+};
+
+// Shift+Clic sur le bouton bascule Estimation/Réel : reporte le même statut sur les mois
+// suivants (uniquement là où un montant existe déjà — le bouton n'apparaît pas sinon).
+window.fillRegulFlagDown = function(mKey, colId, flag) {
+    let bien = getRegulBien(currentRegulBienId); if (!bien) return;
+    let ex = $('regulExerciceSelect').value; if (!ex) return;
+    if (bien.regulClosed && bien.regulClosed[ex]) return;
+    let months = getRegulMonthsForExercice(ex);
+    let idx = months.findIndex(mo => `${mo.y}-${mo.m}` === mKey);
+    if (idx === -1) return;
+    if (!bien.regulFlags) bien.regulFlags = {};
+    if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
+    let any = false;
+    for (let i = idx + 1; i < months.length; i++) {
+        if (computeRegulGreyed(bien, months[i])) continue;
+        let belowKey = `${months[i].y}-${months[i].m}`;
+        let hasVal = bien.regulData[ex] && bien.regulData[ex][belowKey] && bien.regulData[ex][belowKey][colId] !== undefined;
+        if (!hasVal) continue;
+        if (!bien.regulFlags[ex][belowKey]) bien.regulFlags[ex][belowKey] = {};
+        if (bien.regulFlags[ex][belowKey][colId] !== flag) { bien.regulFlags[ex][belowKey][colId] = flag; any = true; }
+    }
+    if (any) { triggerSave(true); window.renderRegul(); showToast('✅ Statut reporté sur les mois suivants'); }
+};
+
 window.setRegulCellSilent = function(mKey, colId, text) {
     let bien = getRegulBien(currentRegulBienId);
     let ex = $('regulExerciceSelect').value;
@@ -6112,7 +6254,7 @@ window.setRegulCellSilent = function(mKey, colId, text) {
     return changed;
 };
 
-window.toggleRegulFlag = function(mKey, colId) {
+window.toggleRegulFlag = function(event, mKey, colId) {
     let bien = getRegulBien(currentRegulBienId);
     if (!bien) return;
     let ex = $('regulExerciceSelect').value;
@@ -6121,7 +6263,12 @@ window.toggleRegulFlag = function(mKey, colId) {
     if (!bien.regulFlags[ex]) bien.regulFlags[ex] = {};
     if (!bien.regulFlags[ex][mKey]) bien.regulFlags[ex][mKey] = {};
     let cur = bien.regulFlags[ex][mKey][colId] || 'est';
-    bien.regulFlags[ex][mKey][colId] = (cur === 'est') ? 'real' : 'est';
+    let next = (cur === 'est') ? 'real' : 'est';
+    bien.regulFlags[ex][mKey][colId] = next;
+    if (event && event.shiftKey) {
+        window.fillRegulFlagDown(mKey, colId, next); // sauvegarde + re-rendu déjà inclus
+        return;
+    }
     triggerSave(true);
     window.renderRegul();
 };

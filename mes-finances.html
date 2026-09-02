@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.15</title>
-    <!-- v3.4.15 - Quittances : renommage de bien, ajout depuis la liste, historique des locataires, export/import/suppression multi-sélection ; Régule : liste combinée bien+locataire -->
+    <title>Mes finances - v3.4.16</title>
+    <!-- v3.4.16 - Quittances : export/suppression au niveau locataire, email To=locataires/Cc=bailleur, durée revenus réglable ; Régule : report Maj+Entrée / Maj+clic -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -786,7 +786,16 @@
                             <div id="qDriveFilesList" style="margin-top:14px;overflow-x:auto;overflow-y:auto;max-height:168px;position:relative;"></div>
                         </div>
 
-                        <div style="font-weight:600;font-size:0.9em;margin-bottom:8px;">💰 Revenus enregistrés (6 derniers mois)</div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;">
+                            <div style="font-weight:600;font-size:0.9em;">💰 Revenus enregistrés</div>
+                            <select id="qRevenusMonthsSelect" class="input-text" style="width:auto;font-size:0.82em;" onchange="window.setQuittanceRevenusMonths(this.value)">
+                                <option value="1">1 mois</option>
+                                <option value="2">2 mois</option>
+                                <option value="4">4 mois</option>
+                                <option value="6" selected>6 mois</option>
+                                <option value="12">12 mois</option>
+                            </select>
+                        </div>
                         <div style="overflow:auto;max-height:300px;border:1px solid var(--ink-faint);border-radius:8px;">
                             <table class="std-table" id="qRevenusTable" style="min-width:520px;font-size:0.82em;">
                                 <thead><tr><th>Date écriture</th><th>Date réelle</th><th colspan="2">Détails</th><th style="text-align:right;">Montant</th></tr></thead>
@@ -1164,6 +1173,9 @@
         <div style="display:flex;flex-direction:column;gap:10px;">
             <label style="font-size:0.85em;font-weight:600;">Destinataires (séparés par des virgules)
                 <textarea id="qEmailDestinataires" class="input-text" rows="2" style="width:100%;margin-top:4px;resize:vertical;"></textarea>
+            </label>
+            <label style="font-size:0.85em;font-weight:600;">Cc (séparés par des virgules)
+                <textarea id="qEmailCc" class="input-text" rows="1" style="width:100%;margin-top:4px;resize:vertical;"></textarea>
             </label>
             <label style="font-size:0.85em;font-weight:600;">Objet
                 <input type="text" id="qEmailObjet" class="input-text" style="width:100%;margin-top:4px;">
