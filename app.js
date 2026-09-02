@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.17';
+const APP_VERSION = '3.4.18';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4918,15 +4918,47 @@ window.updateQuittanceEcheance = function(dateIso, field, value) {
         target.montant = parseFloat(value) || 0;
     } else if (field === 'detail') {
         target.detail = value;
-        let parts = String(value).split('+').map(s => parseFloat(s.trim())).filter(n => !isNaN(n));
-        if (parts.length > 0) {
-            target.montant = parts.reduce((a,b) => a+b, 0);
-        }
+        let sum = parseEcheanceDetailMontant(value);
+        if (sum !== null) target.montant = sum;
     } else {
         target[field] = value;
     }
     saveQuittancesBiens();
     window.renderQuittanceEcheancier();
+};
+
+// Shift+Entrée sur le détail d'une échéance : reporte le même texte (et son total) sur les
+// mois suivants de l'année affichée — même logique que le tableau de régule de charge.
+window.fillEcheancierColumnDown = function(dateIso, text) {
+    let bien = getCurrentBien(); if (!bien || !bien.dateAnniversaire) return;
+    let sel = $('qEcheancierYearSelect'); if (!sel || !sel.value) return;
+    let currentSelYear = parseInt(sel.value, 10);
+    let [y, m] = bien.dateAnniversaire.split('-').map(Number);
+    let yearDates = [];
+    for (let i = 0; i < 12; i++) {
+        let totalMonthOffset = (currentSelYear - 1) * 12 + i;
+        let targetY = y + Math.floor((m - 1 + totalMonthOffset) / 12);
+        let targetM = (m - 1 + totalMonthOffset) % 12;
+        yearDates.push(fmtIsoLocal(targetY, targetM, 1));
+    }
+    let idx = yearDates.indexOf(dateIso);
+    if (idx === -1) return;
+    if (!bien.echeancier) bien.echeancier = [];
+    let sum = parseEcheanceDetailMontant(text);
+    let any = false;
+    for (let i = idx; i < 12; i++) {
+        let isoDate = yearDates[i];
+        let target = bien.echeancier.find(e => e.date === isoDate);
+        if (!target) { target = {date: isoDate, detail:'', montant:0, statut:'À venir', selected:false}; bien.echeancier.push(target); }
+        let newMontant = (sum !== null) ? sum : target.montant;
+        if (target.detail !== text || target.montant !== newMontant) { target.detail = text; target.montant = newMontant; any = true; }
+    }
+    if (any) {
+        bien.echeancier.sort((a,b) => a.date.localeCompare(b.date));
+        saveQuittancesBiens();
+        window.renderQuittanceEcheancier();
+        showToast('✅ Valeur reportée sur les mois suivants');
+    }
 };
 
 window.duplicateEcheanceToAll = function() {
@@ -4970,23 +5002,30 @@ window.duplicateEcheanceToSelection = function() {
     showToast('✅ Ligne dupliquée sur ' + selectedCount + ' mois sélectionné(s)');
 };
 
+// Calcule le total de la partie "opérations claires" en tête du détail (ex: "760€+50€"),
+// en ignorant tout texte/note qui suit (ex: " (+regule 2025=147€)"). Retourne null si aucune
+// opération claire n'est trouvée en tête.
+function parseEcheanceDetailMontant(detail) {
+    let cleaned = String(detail||'').trim().replace(/€/g, '').replace(/\s+/g, '');
+    let match = cleaned.match(/^[0-9,.]+(?:[+\-][0-9,.]+)*/);
+    if (!match || !match[0]) return null;
+    let normalized = match[0].replace(/,/g, '.');
+    let parts = normalized.split(/(?=[+\-])/).filter(Boolean);
+    let sum = 0;
+    let valid = true;
+    parts.forEach(p => {
+        let v = parseFloat(p);
+        if (isNaN(v)) { valid = false; return; }
+        sum += v;
+    });
+    return (valid && parts.length) ? sum : null;
+}
+
 function computeEcheanceMontantAffiche(e, fmtEur) {
     let detail = (e.detail||'').trim();
     if (!detail) return fmtEur(e.montant);
-    let cleaned = detail.replace(/€/g, '').replace(/\s+/g, '');
-    if (/^[0-9,.+\-]+$/.test(cleaned)) {
-        let normalized = cleaned.replace(/,/g, '.');
-        let parts = normalized.split(/(?=[+\-])/).filter(Boolean);
-        let sum = 0;
-        let valid = true;
-        parts.forEach(p => {
-            let v = parseFloat(p);
-            if (isNaN(v)) { valid = false; return; }
-            sum += v;
-        });
-        if (valid && parts.length) return fmtEur(sum);
-    }
-    return 'A confirmer';
+    let sum = parseEcheanceDetailMontant(detail);
+    return (sum !== null) ? fmtEur(sum) : 'A confirmer';
 }
 
 function renderEcheanceRow(e, dateIso, showCheckbox) {
@@ -4995,7 +5034,7 @@ function renderEcheanceRow(e, dateIso, showCheckbox) {
     let rowStyle = isPaid ? 'background:#8BC34A;color:#111;' : '';
     return `<tr style="${rowStyle}">
         <td style="color:#111;">${e.date ? new Date(e.date+'T00:00:00').toLocaleDateString('fr-FR') : ''}</td>
-        <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance('${dateIso}','detail',this.value)"></td>
+        <td><input type="text" class="input-text" placeholder="ex: 760+50" value="${(e.detail||'').replace(/"/g,'&quot;')}" title="Maj+Entrée pour reporter la valeur sur les mois suivants" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance('${dateIso}','detail',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();if(event.shiftKey){window.fillEcheancierColumnDown('${dateIso}',this.value);}else{this.blur();}}"></td>
         <td style="text-align:right;white-space:nowrap;color:#111;">${computeEcheanceMontantAffiche(e, fmtEur)}</td>
         <td>
             <select class="input-text" style="color:#111;${isPaid?'background:transparent;border-color:rgba(0,0,0,0.3);':''}" onchange="window.updateQuittanceEcheance('${dateIso}','statut',this.value)">
@@ -5433,7 +5472,9 @@ window._generateQuittanceCore = function(type) {
         let inPeriode = d && periodeStart && periodeEnd && d >= periodeStart && d <= periodeEnd;
         let isPaid = e.statut === 'Payé';
         let bg = isPaid ? 'background:#8BC34A;color:#111;' : (inPeriode ? 'background:#FFF3CD;color:#111;' : 'color:#111;');
-        return `<tr style="${bg}"><td style="padding:4px 8px;border:1px solid #ccc;">${d ? fmtDate(e.date) : ''}</td><td style="padding:4px 8px;border:1px solid #ccc;">${escapeHtml(e.detail||'')}${e.detail?' = ':''}${fmtEur(e.montant)}</td></tr>`;
+        let sum = e.detail ? parseEcheanceDetailMontant(e.detail) : null;
+        let montantHtml = e.detail ? (sum !== null ? (' = ' + fmtEur(sum)) : '') : fmtEur(e.montant);
+        return `<tr style="${bg}"><td style="padding:4px 8px;border:1px solid #ccc;">${d ? fmtDate(e.date) : ''}</td><td style="padding:4px 8px;border:1px solid #ccc;">${escapeHtml(e.detail||'')}${montantHtml}</td></tr>`;
     }
     let echList = [];
     if (type === 'loyer' && bien.dateAnniversaire) {
@@ -5503,6 +5544,11 @@ window._generateQuittanceCore = function(type) {
     $('quittancePreviewContainer').style.display = 'block';
     $('quittancePreviewContainer').scrollIntoView({ behavior: 'smooth', block: 'start' });
 
+    function echDetailPdf(e) {
+        if (!e.detail) return fmtEur(e.montant);
+        let sum = parseEcheanceDetailMontant(e.detail);
+        return e.detail + (sum !== null ? (' = ' + fmtEur(sum)) : '');
+    }
     window._lastQuittanceData = {
         type, bien, debut, fin, fmtDate, fmtEur,
         totalDebit, totalCredit,
@@ -5513,13 +5559,13 @@ window._generateQuittanceCore = function(type) {
         })),
         echeancierA: echList.slice(0,6).map(e => ({
             date: e.date ? fmtDate(e.date) : '',
-            detail: (e.detail||'') + (e.detail?' = ':'') + fmtEur(e.montant),
+            detail: echDetailPdf(e),
             paid: e.statut === 'Payé',
             inPeriode: (() => { let d = e.date ? new Date(e.date+'T00:00:00') : null; return d && periodeStart && periodeEnd && d >= periodeStart && d <= periodeEnd; })()
         })),
         echeancierB: echList.slice(6,12).map(e => ({
             date: e.date ? fmtDate(e.date) : '',
-            detail: (e.detail||'') + (e.detail?' = ':'') + fmtEur(e.montant),
+            detail: echDetailPdf(e),
             paid: e.statut === 'Payé',
             inPeriode: (() => { let d = e.date ? new Date(e.date+'T00:00:00') : null; return d && periodeStart && periodeEnd && d >= periodeStart && d <= periodeEnd; })()
         })),
