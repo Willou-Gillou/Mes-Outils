@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.12';
+const APP_VERSION = '3.4.13';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -205,6 +205,25 @@ function customSortCmp(a, b) {
 
 // ==== REDIMENSIONNEMENT COLONNES ====
 document.addEventListener('DOMContentLoaded', () => { ['uncatTable','dataTable','rulesTable'].forEach(initResizers); });
+
+// v3.4.13 : cliquer une ligne de "À catégoriser" / "Base de données" en dehors des zones de
+// saisie (input, select, bouton...) sélectionne/désélectionne la ligne, comme un clic sur sa
+// case à cocher — attaché une fois sur le <tbody> (délégation), le contenu étant remplacé à
+// chaque rendu mais le <tbody> lui-même reste stable.
+document.addEventListener('DOMContentLoaded', () => {
+    function attachRowSelectClick(tableId, cbSelector) {
+        let tb = document.querySelector('#' + tableId + ' tbody');
+        if (!tb) return;
+        tb.addEventListener('click', function(e) {
+            if (e.target.closest('input, select, button, a, textarea, [contenteditable="true"]')) return;
+            let tr = e.target.closest('tr'); if (!tr) return;
+            let cb = tr.querySelector(cbSelector);
+            if (cb) cb.click();
+        });
+    }
+    attachRowSelectClick('uncatTable', '.uncat-row-cb');
+    attachRowSelectClick('dataTable', '.row-cb');
+});
 function initResizers(tableId) {
     const table = $(tableId); if(!table) return;
     table.querySelectorAll('th').forEach((th, i) => {
@@ -1636,7 +1655,13 @@ window.renderSummary = function(force=false) {
         if (r2F && !collapsed) {
             Object.keys(tree[r1].sub).sort(customSortCmp).forEach(r2 => {
                 html += '<tr class="tcd-row-sub-tr">';
-                html += '<td class="tcd-col-axis"><div class="tcd-row-sub">↳ ' + escapeHtml(r2) + '</div></td>';
+                // v3.4.13 : renommage direct de la Catégorie 2 depuis le Tableau de bord — seulement
+                // quand L1=Catégorie 1 et L2=Catégorie 2, seul cas où "r1"/"r2" désignent bien
+                // une catégorie 1 / catégorie 2 réelles (et pas un libellé ou un autre regroupement).
+                let r2Axis = (r1F === 'cat1' && r2F === 'cat2')
+                    ? '↳ <span class="tcd-row-sub-editable" title="Cliquer pour renommer la catégorie" style="cursor:pointer;border-bottom:1px dashed transparent;" onmouseover="this.style.borderBottomColor=\'var(--ink-faint)\'" onmouseout="this.style.borderBottomColor=\'transparent\'" onclick="window.startRenameCat2(this,\'' + escapeHtml(r1) + '\',\'' + escapeHtml(r2) + '\')">' + escapeHtml(r2) + '</span>'
+                    : '↳ ' + escapeHtml(r2);
+                html += '<td class="tcd-col-axis"><div class="tcd-row-sub">' + r2Axis + '</div></td>';
                 yearsSorted.forEach(y => {
                     let isCol = collapsedYears.has(y);
                     if (!isCol) {
@@ -3736,7 +3761,28 @@ window.openCatModal = function(tid, p1, p2, isRule, source) {
         $('catModalSearchResults').innerHTML='<div style="color:var(--ink-muted);padding:8px 0;">Saisissez un mot-clé…</div>';
     }
     if($('catModalSearchInput') && $('catModalSearchInput').value) window.onCatModalSearch();
+    // v3.4.13 : focus direct sur la recherche par mots-clés à l'ouverture, pour pouvoir taper
+    // sans avoir à cliquer dans le champ au préalable.
+    if ($('catModalSearchInput')) { $('catModalSearchInput').focus(); $('catModalSearchInput').select(); }
 };
+// Si la frappe démarre pendant que le focus est ailleurs dans la modale (ex: après avoir
+// cliqué un bouton de catégorie), on la redirige vers la recherche par mots-clés au lieu de
+// la perdre — sauf si on est déjà en train de saisir dans un autre champ de la modale.
+(function() {
+    let overlay = $('catSelectionOverlay');
+    if (!overlay) return;
+    overlay.addEventListener('keydown', function(e) {
+        let searchInput = $('catModalSearchInput');
+        if (!searchInput) return;
+        let active = document.activeElement;
+        if (active === searchInput || (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA'))) return;
+        if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.value += e.key;
+        window.onCatModalSearch();
+    });
+})();
 window.selectCat1 = function(c1) { 
     catModalSelectedCat1=c1; $('catModalStep1').style.display='none'; $('catModalStep2').style.display='block'; $('catModalStep3').style.display='none'; $('catModalStep2Label').textContent=c1; 
     $('catModalCat2List').innerHTML=(categories[c1]||[]).sort(customSortCmp).map(c2=>`<button class="cat-step-btn cat2-btn ${c2===catModalSelectedCat2?'selected':''}" data-c2="${escapeHtml(c2)}">${escapeHtml(c2)}</button>`).join(''); 
@@ -6751,6 +6797,7 @@ window.deleteAccount = async function(id) {
 // ══════════════════════════════════════════════════════
 // ADMIN DRIVE
 // ══════════════════════════════════════════════════════
+let adminDriveSortCol = 'name', adminDriveSortDir = 1; // 1 = croissant, -1 = décroissant
 window.loadDriveFilesList = async function() {
     let container = document.getElementById('driveFilesList');
     if (!driveAccessToken) { container.innerHTML = '<p style="color:var(--urgent);">Non connecté à Drive.</p>'; return; }
@@ -6760,52 +6807,74 @@ window.loadDriveFilesList = async function() {
             headers: { Authorization: 'Bearer ' + driveAccessToken }
         });
         let d = await r.json();
-        let files = d.files || [];
-        if (!files.length) { container.innerHTML = '<p style="color:var(--ink-soft);">Aucun fichier trouvé.</p>'; return; }
-
-        // v3.4.12 : sépare les sauvegardes (nom contenant "-BackupAAAAMMJJ", cf. backupAdminDriveFile)
-        // des fichiers de production, pour les distinguer visuellement dans la liste.
-        let isBackup = f => f.name.indexOf('-Backup') !== -1;
-        let prodFiles = files.filter(f => !isBackup(f)).sort((a,b) => a.name.localeCompare(b.name));
-        let backupFiles = files.filter(isBackup).sort((a,b) => new Date(b.modifiedTime) - new Date(a.modifiedTime));
-
-        const rowHtml = (f) => {
-            let size = f.size ? Math.round(f.size/1024) + ' Ko' : '—';
-            let date = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString('fr-FR') : '—';
-            let safeId = f.id.replace(/'/g, "\\'");
-            let safeName = (f.name||'').replace(/</g,'&lt;');
-            return '<tr>'
-                + '<td style="text-align:center;"><input type="checkbox" class="admin-drive-cb" value="' + f.id + '" onclick="window.updateAdminDriveBulkActions()"></td>'
-                + '<td>' + safeName + '</td>'
-                + '<td style="text-align:right;">' + size + '</td>'
-                + '<td>' + date + '</td>'
-                + '<td style="display:flex;gap:6px;flex-wrap:wrap;">'
-                + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;" onclick="window.previewAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">👁️ Visualiser</button>'
-                + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;" onclick="window.downloadAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">⬇️ Télécharger</button>'
-                + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;color:var(--done);" onclick="window.backupAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">☁️ Backup Cloud</button>'
-                + '<button class="btn btn-danger" style="padding:3px 8px;font-size:0.82em;" onclick="window.deleteAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">🗑️ Supprimer</button>'
-                + '</td></tr>';
-        };
-        const sectionRow = (label, count) => '<tr><td colspan="5" style="background:var(--bg);font-weight:700;font-size:0.82em;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:6px 10px;">' + label + ' (' + count + ')</td></tr>';
-
-        let html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
-            + '<button class="btn btn-danger" id="adminDriveBulkDeleteBtn" style="display:none;padding:4px 10px;font-size:0.85em;" onclick="window.bulkDeleteAdminDriveFiles()">🗑️ Supprimer la sélection (<span id="adminDriveSelCount">0</span>)</button>'
-            + '</div>';
-        html += '<table class="std-table" style="width:100%;margin-top:8px;"><thead><tr>'
-            + '<th style="width:36px;text-align:center;"><input type="checkbox" id="adminDriveSelectAllCb" onclick="window.toggleSelectAllAdminDrive(this)"></th>'
-            + '<th>Nom</th><th>Taille</th><th>Modifié le</th><th>Action</th></tr></thead><tbody>';
-        html += sectionRow('📁 Production', prodFiles.length);
-        prodFiles.forEach(f => { html += rowHtml(f); });
-        if (backupFiles.length) {
-            html += sectionRow('🗄️ Sauvegardes', backupFiles.length);
-            backupFiles.forEach(f => { html += rowHtml(f); });
-        }
-        html += '</tbody></table>';
-        container.innerHTML = html;
-        window.updateAdminDriveBulkActions();
+        window._adminDriveFiles = d.files || [];
+        window.renderAdminDriveFilesList();
     } catch(e) {
         container.innerHTML = '<p style="color:var(--urgent);">Erreur : ' + e.message + '</p>';
     }
+};
+
+window.sortAdminDriveFiles = function(col) {
+    if (adminDriveSortCol === col) adminDriveSortDir *= -1; else { adminDriveSortCol = col; adminDriveSortDir = 1; }
+    window.renderAdminDriveFilesList();
+};
+
+// v3.4.13 : rendu séparé de loadDriveFilesList() pour pouvoir re-trier (nom / date de
+// modification) sans refaire un appel réseau à chaque changement de tri.
+window.renderAdminDriveFilesList = function() {
+    let container = document.getElementById('driveFilesList');
+    let files = window._adminDriveFiles || [];
+    if (!files.length) { container.innerHTML = '<p style="color:var(--ink-soft);">Aucun fichier trouvé.</p>'; return; }
+
+    // Sépare les sauvegardes (nom contenant "-BackupAAAAMMJJ", cf. backupAdminDriveFile)
+    // des fichiers de production, pour les distinguer visuellement dans la liste.
+    let isBackup = f => f.name.indexOf('-Backup') !== -1;
+    let cmp = (a, b) => {
+        let va = adminDriveSortCol === 'modifiedTime' ? (a.modifiedTime || '') : (a.name || '');
+        let vb = adminDriveSortCol === 'modifiedTime' ? (b.modifiedTime || '') : (b.name || '');
+        return (va < vb ? -1 : va > vb ? 1 : 0) * adminDriveSortDir;
+    };
+    let prodFiles = files.filter(f => !isBackup(f)).sort(cmp);
+    let backupFiles = files.filter(isBackup).sort(cmp);
+
+    const rowHtml = (f) => {
+        let size = f.size ? Math.round(f.size/1024) + ' Ko' : '—';
+        let date = f.modifiedTime ? new Date(f.modifiedTime).toLocaleString('fr-FR') : '—';
+        let safeId = f.id.replace(/'/g, "\\'");
+        let safeName = (f.name||'').replace(/</g,'&lt;');
+        return '<tr>'
+            + '<td style="text-align:center;"><input type="checkbox" class="admin-drive-cb" value="' + f.id + '" onclick="window.updateAdminDriveBulkActions()"></td>'
+            + '<td>' + safeName + '</td>'
+            + '<td style="text-align:right;">' + size + '</td>'
+            + '<td>' + date + '</td>'
+            + '<td style="display:flex;gap:6px;flex-wrap:wrap;">'
+            + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;" onclick="window.previewAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">👁️ Visualiser</button>'
+            + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;" onclick="window.downloadAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">⬇️ Télécharger</button>'
+            + '<button class="btn btn-outline" style="padding:3px 8px;font-size:0.82em;color:var(--done);" onclick="window.backupAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">☁️ Backup Cloud</button>'
+            + '<button class="btn btn-danger" style="padding:3px 8px;font-size:0.82em;" onclick="window.deleteAdminDriveFile(\'' + safeId + '\',\'' + safeName + '\')">🗑️ Supprimer</button>'
+            + '</td></tr>';
+    };
+    const sectionRow = (label, count) => '<tr><td colspan="5" style="background:var(--bg);font-weight:700;font-size:0.82em;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:6px 10px;">' + label + ' (' + count + ')</td></tr>';
+    const arrow = (col) => adminDriveSortCol === col ? (adminDriveSortDir === 1 ? ' ▲' : ' ▼') : ' ⇅';
+
+    let html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
+        + '<button class="btn btn-danger" id="adminDriveBulkDeleteBtn" style="display:none;padding:4px 10px;font-size:0.85em;" onclick="window.bulkDeleteAdminDriveFiles()">🗑️ Supprimer la sélection (<span id="adminDriveSelCount">0</span>)</button>'
+        + '</div>';
+    html += '<table class="std-table" style="width:100%;margin-top:8px;"><thead><tr>'
+        + '<th style="width:36px;text-align:center;"><input type="checkbox" id="adminDriveSelectAllCb" onclick="window.toggleSelectAllAdminDrive(this)"></th>'
+        + '<th style="cursor:pointer;" onclick="window.sortAdminDriveFiles(\'name\')">Nom' + arrow('name') + '</th>'
+        + '<th>Taille</th>'
+        + '<th style="cursor:pointer;" onclick="window.sortAdminDriveFiles(\'modifiedTime\')">Modifié le' + arrow('modifiedTime') + '</th>'
+        + '<th>Action</th></tr></thead><tbody>';
+    html += sectionRow('📁 Production', prodFiles.length);
+    prodFiles.forEach(f => { html += rowHtml(f); });
+    if (backupFiles.length) {
+        html += sectionRow('🗄️ Sauvegardes', backupFiles.length);
+        backupFiles.forEach(f => { html += rowHtml(f); });
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
+    window.updateAdminDriveBulkActions();
 };
 
 window.toggleSelectAllAdminDrive = function(cb) {

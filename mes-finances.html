@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.12</title>
-    <!-- v3.4.12 - Administration Drive : sélection multiple + suppression groupée, aperçu de fichier en popup, séparation Production/Sauvegardes -->
+    <title>Mes finances - v3.4.13</title>
+    <!-- v3.4.13 - Tri Admin Drive, recherche cat. par mots-clés toujours focalisée, clic ligne = sélection, renommage Cat2 depuis le Tableau de bord, A+/A- déplacés dans Paramètres -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -29,10 +29,6 @@
 <header>
     <div class="app-title">
         🔒 Mes Finances <span class="version" id="versionLabel"></span>
-        <div class="font-controls">
-            <button class="font-btn" onclick="window.adjustFont(1)" title="Augmenter la police">A+</button>
-            <button class="font-btn" onclick="window.adjustFont(-1)" title="Réduire la police">A-</button>
-        </div>
         <button id="mobileMenuToggle" class="btn btn-outline" style="display:none;" onclick="window.toggleMobileHeaderMenu()" title="Menu">⋮</button>
     </div>
     <div id="headerControlsRow" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -50,10 +46,6 @@
         <div class="hcr-pair">
             <button class="btn btn-outline" onclick="window.openIdeasPopup()" title="Idées d'amélioration">💡 Idées</button>
             <button class="btn btn-outline" id="importBtnUI">📥 Importer</button>
-        </div>
-        <div class="font-controls-mobile hcr-pair" style="display:none;">
-            <button class="font-btn btn btn-outline" onclick="window.adjustFont(1)" title="Augmenter la police">A+ Agrandir</button>
-            <button class="font-btn btn btn-outline" onclick="window.adjustFont(-1)" title="Réduire la police">A- Réduire</button>
         </div>
         <button class="btn btn-outline hcr-full" id="logoutBtn" style="display:none;">Déconnexion</button>
     </div>
@@ -529,6 +521,12 @@
     <div id="view-settings" class="view">
         <h2 style="margin-bottom:24px;">Paramètres</h2>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+            <div class="summary-card" style="flex:1;min-width:280px;max-width:480px;">
+                <h3 style="margin-bottom:12px;">🔤 Taille de police de l'application</h3>
+                <p style="color:var(--ink-soft);margin-bottom:16px;">Ajuste la taille du texte dans toute l'application (hors tableaux, qui ont leur propre réglage au-dessus d'eux).</p>
+                <button class="btn btn-outline" onclick="window.adjustFont(-1)" title="Réduire la police" style="margin-right:8px;">A- Réduire</button>
+                <button class="btn btn-outline" onclick="window.adjustFont(1)" title="Augmenter la police">A+ Agrandir</button>
+            </div>
             <div class="summary-card" style="flex:1;min-width:280px;max-width:480px;">
                 <h3 style="margin-bottom:12px;">💾 Sauvegarde paramètres</h3>
                 <p style="color:var(--ink-soft); margin-bottom:16px;">Exporte les catégories, règles et paramètres dans un fichier JSON local (hors transactions).</p>
