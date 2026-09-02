@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.14';
+const APP_VERSION = '3.4.15';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4505,7 +4505,7 @@ function newQuittanceBien(nom) {
 
 window.addQuittanceBien = function() {
     let nom = prompt('Nom du bien (ex: Appartement 1) :', 'Appartement ' + (quittancesBiens.length + 1));
-    if (!nom || !nom.trim()) return;
+    if (!nom || !nom.trim()) { window.renderQuittancesView(); return; } // revient sur le bien courant si annulé (le <select> affichait "__new__")
     let bien = newQuittanceBien(nom.trim());
     quittancesBiens.push(bien);
     currentQuittanceBienId = bien.id;
@@ -4513,20 +4513,20 @@ window.addQuittanceBien = function() {
     window.renderQuittancesView();
 };
 
-window.deleteQuittanceBien = function() {
-    if (!currentQuittanceBienId) return;
-    let bien = quittancesBiens.find(b => b.id === currentQuittanceBienId);
-    if (!bien) return;
-    if (!confirm('Supprimer définitivement le bien "' + bien.nom + '" et toutes ses données de quittance ?')) return;
-    quittancesBiens = quittancesBiens.filter(b => b.id !== currentQuittanceBienId);
-    currentQuittanceBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
-    saveQuittancesBiens();
+window.selectQuittanceBien = function(id) {
+    if (id === '__new__') { window.addQuittanceBien(); return; }
+    currentQuittanceBienId = id;
     window.renderQuittancesView();
 };
 
-window.selectQuittanceBien = function(id) {
-    currentQuittanceBienId = id;
+window.renameQuittanceBien = function() {
+    let bien = getCurrentBien(); if (!bien) return;
+    let name = prompt('Nouveau nom du bien :', bien.nom);
+    if (!name || !name.trim() || name.trim() === bien.nom) return;
+    bien.nom = name.trim();
+    saveQuittancesBiens();
     window.renderQuittancesView();
+    showToast('✅ Bien renommé');
 };
 
 function getCurrentBien() {
@@ -4589,44 +4589,113 @@ window.copySignatureFromBien = function(sourceId) {
     showToast('✅ Signature copiée depuis "' + source.nom + '"');
 };
 
-window.exportQuittanceBien = function() {
-    let bien = getCurrentBien(); if (!bien) return;
-    let dataStr = JSON.stringify(bien, null, 2);
-    let blob = new Blob([dataStr], { type: 'application/json' });
-    let url = URL.createObjectURL(blob);
-    let a = document.createElement('a');
-    a.href = url;
-    a.download = 'Quittance_' + bien.nom.replace(/\s+/g,'_') + '.json';
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast('✅ Bien exporté');
+// ── v3.4.15 : export / import / suppression à sélection multiple (tout ou partie des biens) ──
+let _qPickerMode = null;          // 'export' | 'delete' | 'import'
+let _qImportParsedBiens = [];     // mode import uniquement : biens bruts trouvés dans le fichier
+
+function openQuittanceBiensPicker(mode, items, title, actionLabel) {
+    _qPickerMode = mode;
+    $('qPickerTitle').textContent = title;
+    $('qPickerActionBtn').textContent = actionLabel;
+    $('qPickerList').innerHTML = items.map(it =>
+        '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--ink-faint);cursor:pointer;">'
+        + '<input type="checkbox" class="q-picker-cb" value="' + it.id + '" ' + (it.checked ? 'checked' : '') + '>'
+        + escapeHtml(it.nom) + '</label>'
+    ).join('');
+    $('qPickerSelectAll').checked = items.every(it => it.checked);
+    $('quittanceBiensPickerModal').style.display = 'flex';
+}
+window.closeQuittanceBiensPicker = function() {
+    $('quittanceBiensPickerModal').style.display = 'none';
+    _qPickerMode = null; _qImportParsedBiens = [];
+};
+window.toggleQuittancePickerAll = function(cb) {
+    document.querySelectorAll('.q-picker-cb').forEach(el => { el.checked = cb.checked; });
 };
 
-window.importQuittanceBien = function(input) {
+window.openQuittanceExportModal = function() {
+    if (!quittancesBiens.length) { showToast('⚠️ Aucun bien à exporter'); return; }
+    let items = quittancesBiens.map(b => ({ id: b.id, nom: b.nom, checked: b.id === currentQuittanceBienId }));
+    openQuittanceBiensPicker('export', items, '📤 Exporter des biens', 'Exporter la sélection');
+};
+window.openQuittanceDeleteModal = function() {
+    if (!quittancesBiens.length) { showToast('⚠️ Aucun bien à supprimer'); return; }
+    let items = quittancesBiens.map(b => ({ id: b.id, nom: b.nom, checked: b.id === currentQuittanceBienId }));
+    openQuittanceBiensPicker('delete', items, '🗑️ Supprimer des biens', 'Supprimer la sélection');
+};
+window.openQuittanceImportModal = function() { $('qImportInput').click(); };
+
+window.handleQuittanceImportFile = function(input) {
     let file = input.files[0]; if (!file) return;
     let reader = new FileReader();
     reader.onload = function(e) {
-        try {
-            let imported = JSON.parse(e.target.result);
-            imported.id = 'bien_' + Date.now() + '_' + Math.floor(Math.random()*1000);
-            if (!imported.nom) imported.nom = 'Bien importé';
-            else imported.nom = imported.nom + ' (importé)';
-            if (!imported.locataires) imported.locataires = [{ nom:'', email:'', tel:'' }];
-            if (!imported.designation) imported.designation = { texte:'', adresse:'' };
-            if (!imported.lignesQuittance) imported.lignesQuittance = [];
-            if (!imported.echeancier) imported.echeancier = [];
-            imported.signatureDate = new Date().toISOString().slice(0,10);
-            quittancesBiens.push(imported);
-            currentQuittanceBienId = imported.id;
-            saveQuittancesBiens();
-            window.renderQuittancesView();
-            showToast('✅ Bien importé : ' + imported.nom);
-        } catch (err) {
-            alert('Fichier invalide ou corrompu.');
-        }
         input.value = '';
+        let parsed;
+        try { parsed = JSON.parse(e.target.result); } catch (err) { alert('Fichier invalide ou corrompu.'); return; }
+        let biensFound = Array.isArray(parsed) ? parsed
+            : (parsed && Array.isArray(parsed.biens)) ? parsed.biens
+            : (parsed && parsed.nom !== undefined) ? [parsed]
+            : null;
+        if (!biensFound || !biensFound.length) { alert('Aucun bien reconnu dans ce fichier.'); return; }
+        if (biensFound.length === 1) { window._importQuittanceBiens(biensFound); return; }
+        _qImportParsedBiens = biensFound;
+        let items = biensFound.map((b, i) => ({ id: String(i), nom: b.nom || ('Bien ' + (i+1)), checked: true }));
+        openQuittanceBiensPicker('import', items, '📥 Importer des biens', 'Importer la sélection');
     };
     reader.readAsText(file);
+};
+
+window.confirmQuittanceBiensPicker = function() {
+    let ids = Array.from(document.querySelectorAll('.q-picker-cb:checked')).map(cb => cb.value);
+    if (!ids.length) { showToast('⚠️ Aucune sélection'); return; }
+    if (_qPickerMode === 'export') {
+        let selected = quittancesBiens.filter(b => ids.includes(b.id));
+        let dataStr = JSON.stringify({ type: 'quittances_export', version: APP_VERSION, biens: selected }, null, 2);
+        let blob = new Blob([dataStr], { type: 'application/json' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = (selected.length === 1 ? 'Quittance_' + selected[0].nom.replace(/\s+/g,'_') : 'Quittances_export_' + selected.length + '_biens') + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('✅ ' + selected.length + ' bien(s) exporté(s)');
+        window.closeQuittanceBiensPicker();
+    } else if (_qPickerMode === 'delete') {
+        if (!confirm('Supprimer définitivement ' + ids.length + ' bien(s) et toutes leurs données de quittance ?')) return;
+        let removingCurrent = ids.includes(currentQuittanceBienId);
+        quittancesBiens = quittancesBiens.filter(b => !ids.includes(b.id));
+        if (removingCurrent) currentQuittanceBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
+        saveQuittancesBiens();
+        window.renderQuittancesView();
+        showToast('✅ ' + ids.length + ' bien(s) supprimé(s)');
+        window.closeQuittanceBiensPicker();
+    } else if (_qPickerMode === 'import') {
+        let selected = _qImportParsedBiens.filter((b, i) => ids.includes(String(i)));
+        window._importQuittanceBiens(selected);
+        window.closeQuittanceBiensPicker();
+    }
+};
+
+window._importQuittanceBiens = function(biensArr) {
+    let count = 0;
+    biensArr.forEach((src, i) => {
+        let imported = Object.assign({}, src);
+        imported.id = 'bien_' + Date.now() + '_' + i + '_' + Math.floor(Math.random()*100000);
+        imported.nom = imported.nom ? (imported.nom + ' (importé)') : 'Bien importé';
+        if (!imported.locataires) imported.locataires = [{ nom:'', email:'', tel:'' }];
+        if (!imported.designation) imported.designation = { texte:'', adresse:'' };
+        if (!imported.lignesQuittance) imported.lignesQuittance = [];
+        if (!imported.echeancier) imported.echeancier = [];
+        // L'historique des locataires est reconstruit pour ce nouvel id (migration lazy).
+        delete imported.locatairesHistory; delete imported.currentLocataireRecordId;
+        imported.signatureDate = new Date().toISOString().slice(0,10);
+        quittancesBiens.push(imported);
+        currentQuittanceBienId = imported.id;
+        count++;
+    });
+    saveQuittancesBiens();
+    window.renderQuittancesView();
+    showToast('✅ ' + count + ' bien(s) importé(s)');
 };
 
 function populateCopySelectors() {
@@ -4642,6 +4711,7 @@ window.addQuittanceLocataire = function() {
     bien.locataires.push({ nom:'', email:'', tel:'' });
     saveQuittancesBiens();
     window.renderQuittanceLocataires();
+    window.renderQuittanceLocataireSelector();
 };
 window.removeQuittanceLocataire = function(idx) {
     let bien = getCurrentBien(); if (!bien) return;
@@ -4649,11 +4719,69 @@ window.removeQuittanceLocataire = function(idx) {
     bien.locataires.splice(idx, 1);
     saveQuittancesBiens();
     window.renderQuittanceLocataires();
+    window.renderQuittanceLocataireSelector();
 };
 window.updateQuittanceLocataire = function(idx, field, value) {
     let bien = getCurrentBien(); if (!bien) return;
     bien.locataires[idx][field] = value;
     saveQuittancesBiens();
+    if (field === 'nom') window.renderQuittanceLocataireSelector();
+};
+
+// ── v3.4.15 : historique des locataires par bien ──────────────────────────
+// bien.locataires reste TOUJOURS le jeu de locataires actif (rien d'autre dans l'app n'a
+// besoin de changer : génération de quittance, PDF, email... continuent de le lire tel quel).
+// bien.locatairesHistory mémorise les jeux successifs pour pouvoir naviguer/revenir dessus.
+function computeLocataireLabel(locataires) {
+    let names = (locataires || []).map(l => ((l && l.nom) || '').trim()).filter(Boolean);
+    return names.length ? names.join(' / ') : 'nom loc à définir';
+}
+function ensureLocatairesHistory(bien) {
+    if (!Array.isArray(bien.locatairesHistory) || !bien.locatairesHistory.length) {
+        // Migration en douceur : le jeu de locataires déjà présent devient le 1er historique.
+        let rec = { id: 'loc_' + Date.now() + '_' + Math.floor(Math.random()*1000), createdAt: Date.now(),
+            locataires: (bien.locataires && bien.locataires.length) ? bien.locataires : [{nom:'',email:'',tel:''}] };
+        bien.locatairesHistory = [rec];
+        bien.currentLocataireRecordId = rec.id;
+        bien.locataires = rec.locataires;
+    }
+    if (!bien.currentLocataireRecordId || !bien.locatairesHistory.find(r => r.id === bien.currentLocataireRecordId)) {
+        let last = bien.locatairesHistory[bien.locatairesHistory.length - 1];
+        bien.currentLocataireRecordId = last.id;
+        bien.locataires = last.locataires;
+    }
+}
+window.selectQuittanceLocataireRecord = function(val) {
+    let bien = getCurrentBien(); if (!bien) return;
+    ensureLocatairesHistory(bien);
+    let cur = bien.locatairesHistory.find(r => r.id === bien.currentLocataireRecordId);
+    if (cur) cur.locataires = bien.locataires; // fige la saisie en cours dans l'enregistrement qu'on quitte
+    if (val === '__new__') {
+        let rec = { id: 'loc_' + Date.now() + '_' + Math.floor(Math.random()*1000), createdAt: Date.now(), locataires: [{nom:'',email:'',tel:''}] };
+        bien.locatairesHistory.push(rec);
+        bien.currentLocataireRecordId = rec.id;
+        bien.locataires = rec.locataires;
+    } else {
+        let target = bien.locatairesHistory.find(r => r.id === val);
+        if (!target) return;
+        bien.currentLocataireRecordId = target.id;
+        bien.locataires = target.locataires;
+    }
+    saveQuittancesBiens();
+    window.renderQuittanceLocataires();
+    window.renderQuittanceLocataireSelector();
+};
+window.renderQuittanceLocataireSelector = function() {
+    let sel = $('quittanceLocataireSelector');
+    if (!sel) return;
+    let bien = getCurrentBien();
+    if (!bien) { sel.innerHTML = ''; return; }
+    ensureLocatairesHistory(bien);
+    let cur = bien.locatairesHistory.find(r => r.id === bien.currentLocataireRecordId);
+    if (cur) cur.locataires = bien.locataires; // libellé synchro avec la saisie en cours
+    let sorted = bien.locatairesHistory.slice().sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
+    sel.innerHTML = sorted.map(r => `<option value="${r.id}" ${r.id===bien.currentLocataireRecordId?'selected':''}>${escapeHtml(computeLocataireLabel(r.locataires))}</option>`).join('')
+        + '<option value="__new__">+ Ajouter nouv. loc</option>';
 };
 window.renderQuittanceLocataires = function() {
     let bien = getCurrentBien(); if (!bien) return;
@@ -5141,13 +5269,15 @@ window.moveQuittanceLigne = function(idx, direction) {
 // ── Rendu global de la vue ──
 window.renderQuittancesView = function() {
     let sel = $('quittanceBienSelector');
-    sel.innerHTML = quittancesBiens.map(b => `<option value="${b.id}" ${b.id===currentQuittanceBienId?'selected':''}>${b.nom}</option>`).join('');
+    sel.innerHTML = quittancesBiens.map(b => `<option value="${b.id}" ${b.id===currentQuittanceBienId?'selected':''}>${escapeHtml(b.nom)}</option>`).join('')
+        + '<option value="__new__">+ Ajouter nouv. bien</option>';
 
     let empty = $('quittanceEmptyState'), form = $('quittanceFormWrapper');
     let bien = getCurrentBien();
     if (!bien) {
         empty.style.display = 'block';
         form.style.display = 'none';
+        let locSel = $('quittanceLocataireSelector'); if (locSel) locSel.innerHTML = '';
         return;
     }
     empty.style.display = 'none';
@@ -5169,6 +5299,7 @@ window.renderQuittancesView = function() {
 
     populateCopySelectors();
     window.renderQuittanceLocataires();
+    window.renderQuittanceLocataireSelector();
     window.renderQuittanceDesignations();
     window.renderQuittanceEcheancier();
     window.renderQuittanceTableLignes();
@@ -5682,7 +5813,14 @@ window.renderRegulBiens = function() {
     if (quittancesBiens.length > 0 && (!currentRegulBienId || !quittancesBiens.find(b => b.id === currentRegulBienId))) {
         currentRegulBienId = quittancesBiens[0].id;
     }
-    sel.innerHTML = quittancesBiens.map(b => `<option value="${b.id}" ${b.id===currentRegulBienId?'selected':''}>${escapeHtml(b.nom)}</option>`).join('');
+    // v3.4.15 : le libellé affiche "Bien — Locataire(s)" pour mieux distinguer plusieurs
+    // biens/locataires, mais la valeur reste l'id du bien (currentRegulBienId, regulData...
+    // inchangés) : aucune migration, aucune donnée de régule existante ne bouge.
+    sel.innerHTML = quittancesBiens.map(b => {
+        ensureLocatairesHistory(b);
+        let locLabel = computeLocataireLabel(b.locataires);
+        return `<option value="${b.id}" ${b.id===currentRegulBienId?'selected':''}>${escapeHtml(b.nom)} — ${escapeHtml(locLabel)}</option>`;
+    }).join('');
 };
 window.populateRegulExerciceSelect = function() {
     let sel = $('regulExerciceSelect');

@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.14</title>
-    <!-- v3.4.14 - Fix : encadré résiduel après renommage Cat2 sans changement ; boutons A+/A- (tous) sans badge "Sauvegarde en cours" -->
+    <title>Mes finances - v3.4.15</title>
+    <!-- v3.4.15 - Quittances : renommage de bien, ajout depuis la liste, historique des locataires, export/import/suppression multi-sélection ; Régule : liste combinée bien+locataire -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -620,11 +620,12 @@
             <h2 style="margin:0;">🧾 Quittances de loyer</h2>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 <select id="quittanceBienSelector" class="input-text" style="width:auto;" onchange="window.selectQuittanceBien(this.value)"></select>
-                <button class="btn btn-outline" onclick="window.addQuittanceBien()">+ Nouveau bien</button>
-                <button class="btn btn-outline" onclick="window.exportQuittanceBien()">📤 Exporter</button>
-                <button class="btn btn-outline" onclick="$('qImportInput').click()">📥 Importer</button>
-                <input type="file" id="qImportInput" accept=".json" style="display:none;" onchange="window.importQuittanceBien(this)">
-                <button class="btn btn-danger" onclick="window.deleteQuittanceBien()">🗑️ Supprimer ce bien</button>
+                <button class="btn btn-outline" onclick="window.renameQuittanceBien()" title="Renommer ce bien">✏️ Renommer</button>
+                <select id="quittanceLocataireSelector" class="input-text" style="width:auto;" title="Locataire(s) (historique)" onchange="window.selectQuittanceLocataireRecord(this.value)"></select>
+                <button class="btn btn-outline" onclick="window.openQuittanceExportModal()">📤 Exporter</button>
+                <button class="btn btn-outline" onclick="window.openQuittanceImportModal()">📥 Importer</button>
+                <input type="file" id="qImportInput" accept=".json" style="display:none;" onchange="window.handleQuittanceImportFile(this)">
+                <button class="btn btn-danger" onclick="window.openQuittanceDeleteModal()">🗑️ Supprimer...</button>
             </div>
         </div>
 
@@ -1175,6 +1176,20 @@
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
             <button class="btn btn-outline" onclick="window.closeQuittanceEmailModal()">Annuler</button>
             <button class="btn btn-primary" onclick="window.sendQuittanceEmail()">✉️ Envoyer l'email</button>
+        </div>
+    </div>
+</div>
+
+<div id="quittanceBiensPickerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:white;border-radius:10px;padding:24px;max-width:420px;width:92%;max-height:85vh;overflow:auto;">
+        <h3 style="margin-bottom:14px;" id="qPickerTitle">Sélection des biens</h3>
+        <label style="display:flex;align-items:center;gap:8px;padding:6px 8px;font-weight:600;border-bottom:2px solid var(--ink-faint);margin-bottom:4px;cursor:pointer;">
+            <input type="checkbox" id="qPickerSelectAll" onclick="window.toggleQuittancePickerAll(this)"> Tout sélectionner
+        </label>
+        <div id="qPickerList" style="max-height:50vh;overflow-y:auto;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+            <button class="btn btn-outline" onclick="window.closeQuittanceBiensPicker()">Annuler</button>
+            <button class="btn btn-primary" id="qPickerActionBtn" onclick="window.confirmQuittanceBiensPicker()">Confirmer</button>
         </div>
     </div>
 </div>
