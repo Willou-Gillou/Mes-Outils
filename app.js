@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.13';
+const APP_VERSION = '3.4.14';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -86,7 +86,7 @@ window.adjustFont = function(dir) {
     if(currentFontSize < 10) currentFontSize = 10;
     if(currentFontSize > 24) currentFontSize = 24;
     document.documentElement.style.setProperty('--font-size', currentFontSize + 'px');
-    localStorage.setItem('f_fontSize', currentFontSize); triggerSave(false);
+    localStorage.setItem('f_fontSize', currentFontSize); triggerSave(false, true);
 };
 
 // Appliquer couleur TCD sauvegardée immédiatement (avant rendu)
@@ -3428,8 +3428,11 @@ window.startRenameCat1 = function(el, oldName) {
 };
 
 window.renameCategory1 = function(oldName, newName) {
-    if (!newName || newName === oldName) { window.renderCategories(); return; }
-    if (categories[newName]) { showToast('⚠️ Cette catégorie existe déjà.'); window.renderCategories(); return; }
+    // v3.4.14 : renderViewsSafe() (pas seulement renderCategories()) même quand rien ne change,
+    // car cette fonction peut désormais être appelée depuis le Tableau de bord — sinon l'input
+    // de saisie qui a remplacé le libellé au clic n'est jamais remis en état.
+    if (!newName || newName === oldName) { window.renderViewsSafe(); return; }
+    if (categories[newName]) { showToast('⚠️ Cette catégorie existe déjà.'); window.renderViewsSafe(); return; }
     categories[newName] = categories[oldName];
     delete categories[oldName];
     transactions.forEach(t => { if (t.cat1 === oldName) t.cat1 = newName; });
@@ -3456,11 +3459,11 @@ window.startRenameCat2 = function(el, c1, oldName) {
 };
 
 window.renameCategory2 = function(c1, oldName, newName) {
-    if (!newName || newName === oldName) { window.renderCategories(); return; }
-    if (!categories[c1]) { window.renderCategories(); return; }
-    if (categories[c1].includes(newName)) { showToast('⚠️ Cette sous-catégorie existe déjà.'); window.renderCategories(); return; }
+    if (!newName || newName === oldName) { window.renderViewsSafe(); return; }
+    if (!categories[c1]) { window.renderViewsSafe(); return; }
+    if (categories[c1].includes(newName)) { showToast('⚠️ Cette sous-catégorie existe déjà.'); window.renderViewsSafe(); return; }
     let idx = categories[c1].indexOf(oldName);
-    if (idx === -1) { window.renderCategories(); return; }
+    if (idx === -1) { window.renderViewsSafe(); return; }
     categories[c1][idx] = newName;
     categories[c1].sort(customSortCmp);
     transactions.forEach(t => { if (t.cat1 === c1 && t.cat2 === oldName) t.cat2 = newName; });
@@ -4061,7 +4064,7 @@ window.adjustTcdFont = function(dir) {
     let cur = parseInt(localStorage.getItem('f_tcd_fontsize') || '13', 10);
     cur = Math.min(24, Math.max(8, cur + dir));
     let px = cur + 'px';
-    localStorage.setItem('f_tcd_fontsize', String(cur)); triggerSave(false);
+    localStorage.setItem('f_tcd_fontsize', String(cur)); triggerSave(false, true);
     // Appliquer sur la table native
     document.querySelectorAll('#summaryGrid .tcd-native th, #summaryGrid .tcd-native td').forEach(el => {
         el.style.fontSize = px;
@@ -4075,7 +4078,7 @@ window.adjustBudgetFont = function(dir) {
     let cur = parseInt(localStorage.getItem('f_budget_fontsize') || '13', 10);
     cur = Math.min(24, Math.max(8, cur + dir));
     let px = cur + 'px';
-    localStorage.setItem('f_budget_fontsize', String(cur)); triggerSave(false);
+    localStorage.setItem('f_budget_fontsize', String(cur)); triggerSave(false, true);
     document.querySelectorAll('#budgetGrid .tcd-native th, #budgetGrid .tcd-native td').forEach(el => {
         el.style.fontSize = px;
     });
@@ -6652,7 +6655,7 @@ window.adjustRegulFont = function(dir) {
     let cur = parseInt(localStorage.getItem('f_regul_fontsize') || '13', 10);
     cur = Math.min(24, Math.max(8, cur + dir));
     let px = cur + 'px';
-    localStorage.setItem('f_regul_fontsize', String(cur)); triggerSave(false);
+    localStorage.setItem('f_regul_fontsize', String(cur)); triggerSave(false, true);
     document.querySelectorAll('#regulGrid .tcd-native th, #regulGrid .tcd-native td').forEach(el => {
         el.style.fontSize = px;
     });
