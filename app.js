@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.0.1';
+const APP_VERSION = '4.0.2';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -906,6 +906,19 @@ window.setBudgetCell = function(ex, c1, c2, month, val) {
     window.renderBudget();
 };
 
+// v3.4.22 : un mois est "passé" (ligne bleue, budget-col-past) uniquement s'il est strictement
+// antérieur au mois en cours et appartient à l'intervalle standard de l'exercice (les colonnes
+// "hors exercice", préfixées "X", ne sont jamais bleues). Logique dupliquée hors de renderBudget
+// pour rester utilisable par le report en masse Maj+triple-clic ci-dessous.
+function isBudgetMonthPast(ex, m) {
+    if (String(m||'')[0] === 'X') return false;
+    let mi = parseInt(m, 10);
+    if (isNaN(mi)) return false;
+    let yFiscalStart = parseInt(String(ex).split('-')[0], 10);
+    let yReal = (mi >= fiscalStartMonth) ? yFiscalStart : yFiscalStart + 1;
+    let now = new Date(), nowY = now.getFullYear(), nowM = now.getMonth() + 1;
+    return (yReal < nowY) || (yReal === nowY && mi < nowM);
+}
 window.onIndicatorTripleClick = function(event, el) {
     if (event.detail < 3) return;
     event.preventDefault();
@@ -919,9 +932,10 @@ window.onIndicatorTripleClick = function(event, el) {
         indicators.forEach(ind => {
             let tex = ind.getAttribute('data-ex');
             if (tex !== ex) return;
+            let tm = ind.getAttribute('data-m');
+            if (!isBudgetMonthPast(tex, tm)) return; // uniquement les mois passés (lignes bleues)
             let tc1 = ind.getAttribute('data-c1');
             let tc2 = ind.getAttribute('data-c2');
-            let tm = ind.getAttribute('data-m');
             let trv = ind.getAttribute('data-real');
             let cleaned = String(trv||'').replace(/[\s  €a-zA-Z]/g,'').replace(',', '.').trim();
             let n = parseFloat(cleaned);
@@ -1147,13 +1161,7 @@ window.renderBudget = function() {
     };
     // v3.4.9 : montants du tableau Budget/Projection en bleu pour les mois strictement passés,
     // en noir (couleur par défaut) pour le mois en cours ET les mois futurs.
-    const isPastMonth = (m) => {
-        if (extraMonthsMap[m]) return false;
-        let mi = parseInt(m, 10);
-        let yFiscalStart = parseInt(ex.split('-')[0], 10);
-        let yReal = (mi >= fiscalStartMonth) ? yFiscalStart : yFiscalStart + 1;
-        return (yReal < nowY) || (yReal === nowY && mi < nowM);
-    };
+    const isPastMonth = (m) => isBudgetMonthPast(ex, m);
     const monthColorClass = (m) => isPastMonth(m) ? 'budget-col-past' : '';
     const biCfg = window.budgetIndicatorConfig || DEFAULT_BUDGET_INDICATOR_CONFIG;
     const indicatorState = (bVal, rVal) => {
