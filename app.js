@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.0.0';
+const APP_VERSION = '4.0.1';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -914,7 +914,7 @@ window.onIndicatorTripleClick = function(event, el) {
     if (budgetData[ex] && budgetData[ex].__closed) return;
 
     if (event.shiftKey) {
-        let indicators = document.querySelectorAll('.budget-indicator[data-real]');
+        let indicators = document.querySelectorAll('.budget-sync-cell[data-real]');
         let updated = false;
         indicators.forEach(ind => {
             let tex = ind.getAttribute('data-ex');
@@ -1170,7 +1170,7 @@ window.renderBudget = function() {
         if (biCfg.style === 'couleur') return ''; // le fond de la cellule porte déjà l'information
         if (state === 'ok') return `<span class="budget-indicator" style="color:${biCfg.colors.ok};">${escapeHtml(biCfg.icons.ok)}</span>`;
         let dataAttrs = `data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}" data-real="${rVal}"`;
-        return `<span class="budget-indicator" style="color:${biCfg.colors[state]};cursor:pointer;" ${dataAttrs} onclick="window.onIndicatorTripleClick(event, this)">${escapeHtml(biCfg.icons[state])}</span>`;
+        return `<span class="budget-indicator budget-sync-cell" style="color:${biCfg.colors[state]};cursor:pointer;" ${dataAttrs} onclick="window.onIndicatorTripleClick(event, this)">${escapeHtml(biCfg.icons[state])}</span>`;
     };
     let budgetLocked = !!(budgetData[ex] && budgetData[ex].__closed);
     const budgetEditableCell = (c1, c2, m) => {
@@ -1179,10 +1179,18 @@ window.renderBudget = function() {
         let colClass = monthColorClass(m);
         let state = !isFutureMonth(m) ? indicatorState(bVal, rVal) : null;
         let cellStyle = (biCfg.style === 'couleur' && state) ? ` style="background:${biCfg.colors[state]};"` : '';
-        if (budgetLocked) {
-            return `<td class="tcd-cell budget-editable-cell ${colClass}"${cellStyle}><span class="budget-val">${bVal ? formatCurrency(bVal) : ''}</span>${indicatorHtml(bVal, rVal, c1, c2, m)}</td>`;
+        // v3.4.22 : en mode "Couleur des cellules" il n'y a plus de pastille cliquable — le
+        // triple-clic sur la cellule elle-même récupère le réel (même logique que la pastille).
+        let cellClass = `tcd-cell budget-editable-cell ${colClass}`;
+        let cellClickAttrs = '';
+        if (biCfg.style === 'couleur' && (state === 'warn' || state === 'bad')) {
+            cellClass += ' budget-sync-cell';
+            cellClickAttrs = ` data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}" data-real="${rVal}" onclick="window.onIndicatorTripleClick(event, this)"`;
         }
-        return `<td class="tcd-cell budget-editable-cell ${colClass}"${cellStyle}>
+        if (budgetLocked) {
+            return `<td class="${cellClass}"${cellStyle}${cellClickAttrs}><span class="budget-val">${bVal ? formatCurrency(bVal) : ''}</span>${indicatorHtml(bVal, rVal, c1, c2, m)}</td>`;
+        }
+        return `<td class="${cellClass}"${cellStyle}${cellClickAttrs}>
             <span class="budget-val" contenteditable="true" data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}"
                 onfocus="window.onBudgetCellFocus(this)"
                 onblur="window.setBudgetCell('${escapeHtml(ex)}','${escapeHtml(c1)}','${escapeHtml(c2)}','${m}',this.textContent)"
@@ -1826,8 +1834,10 @@ window.renderSummary = function(force=false) {
                         '<span class="tcd-clickable" data-k="' + escapeHtml(`${r1}::${r2}::${y}::ALL`) + '">' + formatCurrency(ytVal) + '</span>' : '') + '</td>';
                 });
                 let gtVal = tree[r1].sub[r2].total;
-                html += '<td class="tcd-cell tcd-sub-amount tcd-total-col tcd-grand">' + (gtVal ?
-                    '<span class="tcd-clickable" data-k="' + escapeHtml(`${r1}::${r2}::ALL::ALL`) + '">' + formatCurrency(gtVal) + '</span>' : '') + '</td>';
+                let gtKey = `${r1}::${r2}::ALL::ALL`;
+                let gtHasTxs = tcdMap[gtKey] && tcdMap[gtKey].length > 0;
+                html += '<td class="tcd-cell tcd-sub-amount tcd-total-col tcd-grand">' + (gtHasTxs ?
+                    '<span class="tcd-clickable" data-k="' + escapeHtml(gtKey) + '">' + formatCurrency(gtVal) + '</span>' : formatCurrency(gtVal)) + '</td>';
                 html += '</tr>';
             });
         }
