@@ -712,6 +712,11 @@ label:has(input:disabled) { opacity: 0.45; cursor: not-allowed !important; }
 #uncatTable thead .col-filter::placeholder, #dataTable thead .col-filter::placeholder { color: rgba(255,255,255,0.7); }
 #uncatTable thead #fltNoteNotEmptyBtn, #dataTable thead #fltNoteNotEmptyBtn { background: rgba(255,255,255,0.15) !important; border-color: rgba(255,255,255,0.4) !important; color: #fff !important; }
 #uncatTable tbody tr:hover td, #dataTable tbody tr:hover td { background: rgba(100,140,210,0.13) !important; }
+/* v3.4.21 : la 1ère colonne (figée) doit rester totalement opaque même en hover — sinon,
+   étant sticky, le fond semi-transparent du hover laisse apparaître ce qui défile derrière. */
+#uncatTable tbody tr:hover td:first-child, #dataTable tbody tr:hover td:first-child {
+    background: color-mix(in srgb, var(--surface, #fff) 87%, rgb(100,140,210) 13%) !important;
+}
 @media (min-width: 769px) {
     #mobileMenuToggle { display: none !important; }
 }

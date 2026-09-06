@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.20';
+const APP_VERSION = '4.0.0';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -53,6 +53,57 @@ var chartsEnabled = true;
 var diagEnabled = localStorage.getItem('f_diag_enabled') === '1';
 var fiscalStartMonthSyndic = 10;
 var budgetData = {}; // { [fiscalYearLabel]: { [cat1]: { [cat2]: { [month01..12]: montant } } } }// [{id, nom, bailleur:{nom,adresse,email,tel,signatureTexte,logoDataUrl}, locataires:[{nom,adresse}], designations:[{texte}], echeancier:[{date,libelle,montant,statut}], commentaires, faitA}]
+// v3.4.21 : indicateurs Budget/Projection (pastilles ou couleur des cellules), personnalisables
+// et stockés dans le vault (settings.budgetIndicatorConfig) pour suivre le compte partout.
+const DEFAULT_BUDGET_INDICATOR_CONFIG = {
+    style: 'pastille', // 'pastille' | 'couleur'
+    icons: { ok: '✔︎', warn: '⚠️', bad: '●' },
+    colors: { ok: '#86efac', warn: '#fdba74', bad: '#fca5a5' }
+};
+function mergeBudgetIndicatorConfig(raw) {
+    let cfg = { style: 'pastille', icons: Object.assign({}, DEFAULT_BUDGET_INDICATOR_CONFIG.icons), colors: Object.assign({}, DEFAULT_BUDGET_INDICATOR_CONFIG.colors) };
+    if (raw) {
+        if (raw.style === 'pastille' || raw.style === 'couleur') cfg.style = raw.style;
+        if (raw.icons) Object.assign(cfg.icons, raw.icons);
+        if (raw.colors) Object.assign(cfg.colors, raw.colors);
+    }
+    return cfg;
+}
+function loadBudgetIndicatorConfig() {
+    let raw = null;
+    try { raw = JSON.parse(localStorage.getItem('f_budget_indicator_config') || 'null'); } catch(e) {}
+    window.budgetIndicatorConfig = mergeBudgetIndicatorConfig(raw);
+}
+loadBudgetIndicatorConfig();
+window.populateBudgetIndicatorSettingsUI = function() {
+    let cfg = window.budgetIndicatorConfig;
+    let sel = $('budgetIndicatorStyleSelect'); if (sel) sel.value = cfg.style;
+    ['ok','warn','bad'].forEach(k => {
+        let iconEl = $('biIcon' + k.charAt(0).toUpperCase() + k.slice(1));
+        let colorEl = $('biColor' + k.charAt(0).toUpperCase() + k.slice(1));
+        if (iconEl) iconEl.value = cfg.icons[k];
+        if (colorEl) colorEl.value = cfg.colors[k];
+    });
+};
+window.setBudgetIndicatorStyle = function(v) {
+    window.budgetIndicatorConfig.style = (v === 'couleur') ? 'couleur' : 'pastille';
+    localStorage.setItem('f_budget_indicator_config', JSON.stringify(window.budgetIndicatorConfig));
+    triggerSave(true);
+    if (typeof window.renderBudget === 'function') window.renderBudget();
+};
+window.setBudgetIndicatorIcon = function(state, v) {
+    window.budgetIndicatorConfig.icons[state] = String(v||'').trim() || DEFAULT_BUDGET_INDICATOR_CONFIG.icons[state];
+    localStorage.setItem('f_budget_indicator_config', JSON.stringify(window.budgetIndicatorConfig));
+    triggerSave(true);
+    window.populateBudgetIndicatorSettingsUI();
+    if (typeof window.renderBudget === 'function') window.renderBudget();
+};
+window.setBudgetIndicatorColor = function(state, v) {
+    window.budgetIndicatorConfig.colors[state] = v;
+    localStorage.setItem('f_budget_indicator_config', JSON.stringify(window.budgetIndicatorConfig));
+    triggerSave(true);
+    if (typeof window.renderBudget === 'function') window.renderBudget();
+};
 var currentQuittanceBienId = null;
 let _lastR1Keys = [];
 let selectedUncatTxId = null;
@@ -339,6 +390,7 @@ const buildEncryptedPayload = () => {
         budgetFilter: { cat1:[...budgetFilter.cat1], cat2:[...budgetFilter.cat2] },
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
         lastImportDate: lastImportDate,
+        budgetIndicatorConfig: window.budgetIndicatorConfig,
         settingsTs: Date.now(),
     };
     return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
@@ -452,6 +504,11 @@ function decryptPayload(remoteData) {
             if(s.regulFontSize) { localStorage.setItem('f_regul_fontsize', s.regulFontSize); }
             if(s.fontSize) { localStorage.setItem('f_fontSize', s.fontSize); currentFontSize=parseInt(s.fontSize)||14; document.documentElement.style.setProperty('--font-size', currentFontSize+'px'); }
             if(s.lastImportDate && (!lastImportDate || s.lastImportDate > lastImportDate)) lastImportDate = s.lastImportDate;
+            if(s.budgetIndicatorConfig) {
+                window.budgetIndicatorConfig = mergeBudgetIndicatorConfig(s.budgetIndicatorConfig);
+                localStorage.setItem('f_budget_indicator_config', JSON.stringify(window.budgetIndicatorConfig));
+                if (typeof window.populateBudgetIndicatorSettingsUI === 'function') window.populateBudgetIndicatorSettingsUI();
+            }
             // Paramètres vue TCD : appliquer seulement si Drive est plus récent
             if(driveFresher) {
                 if(s.pivot) { localStorage.setItem('f_pivot_v2', s.pivot); try { let c=JSON.parse(s.pivot); if(c.r1){let el=$('pivotRows');if(el)el.value=c.r1;} if(c.r2!==undefined){let el=$('pivotRows2');if(el)el.value=c.r2;} if(c.axe){let el=$('timeAxe');if(el)el.value=c.axe;} } catch(e){} }
@@ -894,6 +951,7 @@ window.onIndicatorTripleClick = function(event, el) {
 // v3.4.20 : ajout manuel d'un mois "hors exercice" (fenêtre de +/- 6 mois autour de
 // l'exercice actif) — permet de planifier un montant budgétaire sur un mois qui ne
 // correspond à aucune transaction réelle existante.
+const FR_MONTH_NAMES = ['','Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 function getBudgetExerciceBounds(ex) {
     let yFiscalStart = parseInt(ex.split('-')[0], 10);
     let exStart = new Date(yFiscalStart, fiscalStartMonth - 1, 1);
@@ -905,11 +963,16 @@ window.openAjoutMoisHorsExercice = function() {
     if (!sel || !sel.value) return;
     let ex = sel.value;
     let { exStart, exEnd } = getBudgetExerciceBounds(ex);
-    let minDate = new Date(exStart.getFullYear(), exStart.getMonth() - 6, 1);
-    let maxDate = new Date(exEnd.getFullYear(), exEnd.getMonth() + 6, 1);
-    let fmtMonthInput = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    // v3.4.21 : menu déroulant simple listant uniquement les 6 mois avant et les 6 mois
+    // après l'exercice (les mois de l'exercice lui-même ont déjà leur colonne normale).
+    let opts = [];
+    for (let i = 6; i >= 1; i--) opts.push(new Date(exStart.getFullYear(), exStart.getMonth() - i, 1));
+    for (let i = 1; i <= 6; i++) opts.push(new Date(exEnd.getFullYear(), exEnd.getMonth() + i, 1));
     let mi = $('hmMonthInput');
-    mi.value = ''; mi.min = fmtMonthInput(minDate); mi.max = fmtMonthInput(maxDate);
+    mi.innerHTML = '<option value="">-- Choisir --</option>' + opts.map(d => {
+        let y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0');
+        return `<option value="${y}-${m}">${FR_MONTH_NAMES[d.getMonth()+1]} ${y}</option>`;
+    }).join('');
     $('hmMontantInput').value = '';
     $('hmCat1Select').innerHTML = getC1Opts();
     window.updateHmCat2();
@@ -931,12 +994,6 @@ window.confirmAjoutMoisHorsExercice = function() {
     let c1 = $('hmCat1Select').value, c2 = $('hmCat2Select').value;
     if (!c1 || !c2) { showToast('⚠️ Sélectionnez une catégorie'); return; }
     let [y, m] = monthVal.split('-');
-    let { exStart, exEnd } = getBudgetExerciceBounds(ex);
-    let target = new Date(parseInt(y,10), parseInt(m,10) - 1, 1);
-    let minDate = new Date(exStart.getFullYear(), exStart.getMonth() - 6, 1);
-    let maxDate = new Date(exEnd.getFullYear(), exEnd.getMonth() + 6, 1);
-    if (target >= exStart && target <= exEnd) { showToast('⚠️ Ce mois appartient déjà à l\'exercice — utilisez sa colonne normale'); return; }
-    if (target < minDate || target > maxDate) { showToast('⚠️ Mois hors de la fenêtre autorisée (+/- 6 mois)'); return; }
     let key = 'X' + y + m;
     if (!budgetData[ex]) budgetData[ex] = {};
     if (!budgetData[ex][c1]) budgetData[ex][c1] = {};
@@ -1088,27 +1145,44 @@ window.renderBudget = function() {
         let yReal = (mi >= fiscalStartMonth) ? yFiscalStart : yFiscalStart + 1;
         return (yReal > nowY) || (yReal === nowY && mi > nowM);
     };
-    // v3.4.9 : montants du tableau Budget/Projection en bleu pour les mois passés/en cours,
-    // en noir (couleur par défaut) pour les mois futurs — même logique que isFutureMonth().
-    const monthColorClass = (m) => isFutureMonth(m) ? '' : 'budget-col-past';
+    // v3.4.9 : montants du tableau Budget/Projection en bleu pour les mois strictement passés,
+    // en noir (couleur par défaut) pour le mois en cours ET les mois futurs.
+    const isPastMonth = (m) => {
+        if (extraMonthsMap[m]) return false;
+        let mi = parseInt(m, 10);
+        let yFiscalStart = parseInt(ex.split('-')[0], 10);
+        let yReal = (mi >= fiscalStartMonth) ? yFiscalStart : yFiscalStart + 1;
+        return (yReal < nowY) || (yReal === nowY && mi < nowM);
+    };
+    const monthColorClass = (m) => isPastMonth(m) ? 'budget-col-past' : '';
+    const biCfg = window.budgetIndicatorConfig || DEFAULT_BUDGET_INDICATOR_CONFIG;
+    const indicatorState = (bVal, rVal) => {
+        let bEmpty = !bVal, rEmpty = !rVal;
+        if (bEmpty && rEmpty) return null;
+        if (!bEmpty && bVal !== rVal) return 'warn';
+        if (bEmpty && !rEmpty) return 'bad';
+        return 'ok';
+    };
     const indicatorHtml = (bVal, rVal, c1, c2, m) => {
         if (isFutureMonth(m)) return '';
-        let bEmpty = !bVal, rEmpty = !rVal;
-        if (bEmpty && rEmpty) return '';
+        let state = indicatorState(bVal, rVal);
+        if (!state) return '';
+        if (biCfg.style === 'couleur') return ''; // le fond de la cellule porte déjà l'information
+        if (state === 'ok') return `<span class="budget-indicator" style="color:${biCfg.colors.ok};">${escapeHtml(biCfg.icons.ok)}</span>`;
         let dataAttrs = `data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}" data-real="${rVal}"`;
-        if (!bEmpty && bVal !== rVal) return `<span class="budget-indicator ind-warn" ${dataAttrs} onclick="window.onIndicatorTripleClick(event, this)">⚠️</span>`;
-        if (bEmpty && !rEmpty) return `<span class="budget-indicator ind-dot-red" ${dataAttrs} onclick="window.onIndicatorTripleClick(event, this)"></span>`;
-        return '<span class="budget-indicator ind-check">✔︎</span>';
+        return `<span class="budget-indicator" style="color:${biCfg.colors[state]};cursor:pointer;" ${dataAttrs} onclick="window.onIndicatorTripleClick(event, this)">${escapeHtml(biCfg.icons[state])}</span>`;
     };
     let budgetLocked = !!(budgetData[ex] && budgetData[ex].__closed);
     const budgetEditableCell = (c1, c2, m) => {
         let bVal = getBudget(c1, c2, m);
         let rVal = realByC1C2Month[`${c1}::${c2}::${m}`] || 0;
         let colClass = monthColorClass(m);
+        let state = !isFutureMonth(m) ? indicatorState(bVal, rVal) : null;
+        let cellStyle = (biCfg.style === 'couleur' && state) ? ` style="background:${biCfg.colors[state]};"` : '';
         if (budgetLocked) {
-            return `<td class="tcd-cell budget-editable-cell ${colClass}"><span class="budget-val">${bVal ? formatCurrency(bVal) : ''}</span>${indicatorHtml(bVal, rVal, c1, c2, m)}</td>`;
+            return `<td class="tcd-cell budget-editable-cell ${colClass}"${cellStyle}><span class="budget-val">${bVal ? formatCurrency(bVal) : ''}</span>${indicatorHtml(bVal, rVal, c1, c2, m)}</td>`;
         }
-        return `<td class="tcd-cell budget-editable-cell ${colClass}">
+        return `<td class="tcd-cell budget-editable-cell ${colClass}"${cellStyle}>
             <span class="budget-val" contenteditable="true" data-ex="${escapeHtml(ex)}" data-c1="${escapeHtml(c1)}" data-c2="${escapeHtml(c2)}" data-m="${m}"
                 onfocus="window.onBudgetCellFocus(this)"
                 onblur="window.setBudgetCell('${escapeHtml(ex)}','${escapeHtml(c1)}','${escapeHtml(c2)}','${m}',this.textContent)"
@@ -4424,6 +4498,7 @@ function applyBudgetOptionState() {
     let cb = $('optBudgetCb');
     if (cb) cb.checked = enabled;
     if (enabled) window.populateBudgetExerciceSelect();
+    window.populateBudgetIndicatorSettingsUI();
 }
 
 // ── v3.3.6 : Diagnostic intégré (réglage global, sans distinction de compte) ──

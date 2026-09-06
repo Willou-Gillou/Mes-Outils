@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.20</title>
-    <!-- v3.4.20 - Fix import Caisse d'Épargne (décalage OUI/NON) ; alignement cellule figée Base de données ; date du dernier import affichée ; Budget/Projection : ajout d'un mois hors exercice (+/- 6 mois) -->
+    <title>Mes finances - v4.0.0</title>
+    <!-- v4.0.0 - Base de données : 1ère colonne toujours opaque au survol ; Budget/Projection : liste déroulante simple pour "Ajouter un mois hors exercice", mois en cours en noir comme les mois à venir, indicateurs (pastilles ou couleur des cellules) personnalisables depuis Paramètres et stockés dans le vault -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -558,6 +558,31 @@
                 Budget / Projection (réaliser un budget et comparer forecast vs. réel)
             </label>
             <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié pour saisir un budget prévisionnel par exercice et le comparer aux montants réels.</p>
+            <div style="margin-top:12px;padding:12px;background:var(--bg);border-radius:8px;">
+                <label style="font-size:0.85em;color:var(--ink-soft);display:block;margin-bottom:6px;font-weight:600;">Indicateurs Budget / Projection :</label>
+                <select id="budgetIndicatorStyleSelect" class="input-text" style="width:auto;" onchange="window.setBudgetIndicatorStyle(this.value)">
+                    <option value="pastille">Pastilles</option>
+                    <option value="couleur">Couleur des cellules</option>
+                </select>
+                <p style="color:var(--ink-soft);margin-top:8px;font-size:0.82em;">Un indicateur apparaît dans une cellule dès qu'un budget et/ou un montant réel existe pour le mois : <strong>✔︎</strong> le réel correspond au budget saisi, <strong>⚠️</strong> le réel diffère du budget saisi, <strong>●</strong> un montant réel existe sans budget saisi. En mode "Couleur des cellules", ces 3 états colorent directement le fond de la cellule (au lieu d'afficher une pastille/icône).</p>
+                <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:10px;">
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="text" id="biIconOk" class="input-text" style="width:44px;text-align:center;padding:6px;" maxlength="2" onchange="window.setBudgetIndicatorIcon('ok', this.value)">
+                        <input type="color" id="biColorOk" style="width:32px;height:32px;padding:0;border:none;cursor:pointer;" onchange="window.setBudgetIndicatorColor('ok', this.value)">
+                        <span style="font-size:0.8em;color:var(--ink-soft);">Correspond</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="text" id="biIconWarn" class="input-text" style="width:44px;text-align:center;padding:6px;" maxlength="2" onchange="window.setBudgetIndicatorIcon('warn', this.value)">
+                        <input type="color" id="biColorWarn" style="width:32px;height:32px;padding:0;border:none;cursor:pointer;" onchange="window.setBudgetIndicatorColor('warn', this.value)">
+                        <span style="font-size:0.8em;color:var(--ink-soft);">Écart budget/réel</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px;">
+                        <input type="text" id="biIconBad" class="input-text" style="width:44px;text-align:center;padding:6px;" maxlength="2" onchange="window.setBudgetIndicatorIcon('bad', this.value)">
+                        <input type="color" id="biColorBad" style="width:32px;height:32px;padding:0;border:none;cursor:pointer;" onchange="window.setBudgetIndicatorColor('bad', this.value)">
+                        <span style="font-size:0.8em;color:var(--ink-soft);">Réel sans budget</span>
+                    </div>
+                </div>
+            </div>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optRegulCb" style="width:18px;height:18px;" onchange="window.toggleRegulOption(this.checked)">
                 Régularisation de charges (suivi et calcul)
@@ -990,7 +1015,7 @@
             <div style="display:flex;flex-direction:column;gap:10px;">
                 <div>
                     <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Mois</label>
-                    <input type="month" id="hmMonthInput" class="input-text" style="width:100%;box-sizing:border-box;">
+                    <select id="hmMonthInput" class="input-text" style="width:100%;box-sizing:border-box;"></select>
                 </div>
                 <div>
                     <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Catégorie 1</label>
