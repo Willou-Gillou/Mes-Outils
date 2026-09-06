@@ -280,7 +280,7 @@
   z-index: 6 !important;
   background: var(--tcd-header-color, #2d3748) !important;
   background-clip: padding-box !important;
-  border-color: var(--tcd-header-color, #2d3748) !important;
+  border-color: var(--ink-faint) !important;
 }
 #dataTable tr.selected-row td:first-child,
 #uncatTable tr.selected-row td:first-child {

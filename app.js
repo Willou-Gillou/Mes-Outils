@@ -1,13 +1,13 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '3.4.19';
+const APP_VERSION = '3.4.20';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
 const DRIVE_LS = 'finances_drive_';
 
-var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBankForImport="";
+var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBankForImport="", lastImportDate="";
 let dbSortCol='dateOp', dbSortDir=-1, catModalTxId=null, catModalSelectedCat1=null, catModalSelectedCat2=null, catModalSource=null;
 var driveAccessToken=null, driveFileId=null, driveTokenClient=null, saveTimer=null, saveMaxWaitTimer=null;
 var driveDataLoaded = false; // true uniquement après chargement confirmé depuis Drive
@@ -338,6 +338,7 @@ const buildEncryptedPayload = () => {
         tcdFilter: { cat1:[...tcdFilter.cat1], cat2:[...tcdFilter.cat2], yearsOp:[...tcdFilter.yearsOp], yearsExpense:[...tcdFilter.yearsExpense], months:[...tcdFilter.months] },
         budgetFilter: { cat1:[...budgetFilter.cat1], cat2:[...budgetFilter.cat2] },
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
+        lastImportDate: lastImportDate,
         settingsTs: Date.now(),
     };
     return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
@@ -449,7 +450,9 @@ function decryptPayload(remoteData) {
             if(s.tcdFontSize) { localStorage.setItem('f_tcd_fontsize', s.tcdFontSize); let px=s.tcdFontSize+'px'; document.querySelectorAll('#summaryGrid .tcd-native th, #summaryGrid .tcd-native td').forEach(el=>{el.style.fontSize=px;el.style.height=px;}); }
             if(s.budgetFontSize) { localStorage.setItem('f_budget_fontsize', s.budgetFontSize); }
             if(s.regulFontSize) { localStorage.setItem('f_regul_fontsize', s.regulFontSize); }
-            if(s.fontSize) { localStorage.setItem('f_fontSize', s.fontSize); currentFontSize=parseInt(s.fontSize)||14; document.documentElement.style.setProperty('--font-size', currentFontSize+'px'); }            // Paramètres vue TCD : appliquer seulement si Drive est plus récent
+            if(s.fontSize) { localStorage.setItem('f_fontSize', s.fontSize); currentFontSize=parseInt(s.fontSize)||14; document.documentElement.style.setProperty('--font-size', currentFontSize+'px'); }
+            if(s.lastImportDate && (!lastImportDate || s.lastImportDate > lastImportDate)) lastImportDate = s.lastImportDate;
+            // Paramètres vue TCD : appliquer seulement si Drive est plus récent
             if(driveFresher) {
                 if(s.pivot) { localStorage.setItem('f_pivot_v2', s.pivot); try { let c=JSON.parse(s.pivot); if(c.r1){let el=$('pivotRows');if(el)el.value=c.r1;} if(c.r2!==undefined){let el=$('pivotRows2');if(el)el.value=c.r2;} if(c.axe){let el=$('timeAxe');if(el)el.value=c.axe;} } catch(e){} }
                 if(s.collapsedGroups) { collapsedGroups = new Set(s.collapsedGroups); localStorage.setItem('tcd_cg', JSON.stringify(s.collapsedGroups)); }
@@ -888,6 +891,63 @@ window.onIndicatorTripleClick = function(event, el) {
 };
 
 
+// v3.4.20 : ajout manuel d'un mois "hors exercice" (fenêtre de +/- 6 mois autour de
+// l'exercice actif) — permet de planifier un montant budgétaire sur un mois qui ne
+// correspond à aucune transaction réelle existante.
+function getBudgetExerciceBounds(ex) {
+    let yFiscalStart = parseInt(ex.split('-')[0], 10);
+    let exStart = new Date(yFiscalStart, fiscalStartMonth - 1, 1);
+    let exEnd = new Date(yFiscalStart, fiscalStartMonth - 1 + 11, 1);
+    return { exStart, exEnd };
+}
+window.openAjoutMoisHorsExercice = function() {
+    let sel = $('budgetExerciceSelect');
+    if (!sel || !sel.value) return;
+    let ex = sel.value;
+    let { exStart, exEnd } = getBudgetExerciceBounds(ex);
+    let minDate = new Date(exStart.getFullYear(), exStart.getMonth() - 6, 1);
+    let maxDate = new Date(exEnd.getFullYear(), exEnd.getMonth() + 6, 1);
+    let fmtMonthInput = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    let mi = $('hmMonthInput');
+    mi.value = ''; mi.min = fmtMonthInput(minDate); mi.max = fmtMonthInput(maxDate);
+    $('hmMontantInput').value = '';
+    $('hmCat1Select').innerHTML = getC1Opts();
+    window.updateHmCat2();
+    $('hmModal').classList.add('open');
+};
+window.updateHmCat2 = function() {
+    $('hmCat2Select').innerHTML = getC2Opts($('hmCat1Select').value);
+};
+window.closeAjoutMoisHorsExercice = function() {
+    $('hmModal').classList.remove('open');
+};
+window.confirmAjoutMoisHorsExercice = function() {
+    let sel = $('budgetExerciceSelect');
+    let ex = sel ? sel.value : ''; if (!ex) return;
+    let monthVal = $('hmMonthInput').value;
+    let cleaned = String($('hmMontantInput').value||'').replace(/[\s  €a-zA-Z]/g,'').replace(',', '.').trim();
+    let montant = parseFloat(cleaned);
+    if (!monthVal || isNaN(montant) || montant === 0) return;
+    let c1 = $('hmCat1Select').value, c2 = $('hmCat2Select').value;
+    if (!c1 || !c2) { showToast('⚠️ Sélectionnez une catégorie'); return; }
+    let [y, m] = monthVal.split('-');
+    let { exStart, exEnd } = getBudgetExerciceBounds(ex);
+    let target = new Date(parseInt(y,10), parseInt(m,10) - 1, 1);
+    let minDate = new Date(exStart.getFullYear(), exStart.getMonth() - 6, 1);
+    let maxDate = new Date(exEnd.getFullYear(), exEnd.getMonth() + 6, 1);
+    if (target >= exStart && target <= exEnd) { showToast('⚠️ Ce mois appartient déjà à l\'exercice — utilisez sa colonne normale'); return; }
+    if (target < minDate || target > maxDate) { showToast('⚠️ Mois hors de la fenêtre autorisée (+/- 6 mois)'); return; }
+    let key = 'X' + y + m;
+    if (!budgetData[ex]) budgetData[ex] = {};
+    if (!budgetData[ex][c1]) budgetData[ex][c1] = {};
+    if (!budgetData[ex][c1][c2]) budgetData[ex][c1][c2] = {};
+    budgetData[ex][c1][c2][key] = montant;
+    triggerSave(true);
+    window.closeAjoutMoisHorsExercice();
+    window.renderBudget();
+    showToast('✅ Mois hors exercice ajouté');
+};
+
 window.renderBudget = function() {
     let sel = $('budgetExerciceSelect');
     let container = $('budgetGrid');
@@ -949,6 +1009,22 @@ window.renderBudget = function() {
 
     Object.keys(realByC1C2Month).forEach(k => realByC1C2Month[k] = Number(realByC1C2Month[k].toFixed(2)));
     Object.keys(realByC1Month).forEach(k => realByC1Month[k] = Number(realByC1Month[k].toFixed(2)));
+
+    // v3.4.20 : les mois "hors exercice" ajoutés manuellement (sans transaction réelle) via
+    // "Ajouter un mois hors exercice" n'apparaissent que dans budgetData — on les détecte ici
+    // pour qu'ils forment aussi une colonne additionnelle, comme les mois issus de transactions.
+    const collectExtraMonthKeys = root => {
+        if (!root) return;
+        Object.keys(root).forEach(c1k => {
+            if (c1k === '__validated' || c1k === '__closed') return;
+            Object.keys(root[c1k] || {}).forEach(c2k => {
+                Object.keys(root[c1k][c2k] || {}).forEach(mk => {
+                    if (mk[0] === 'X' && !extraMonthsMap[mk]) extraMonthsMap[mk] = { m: mk.slice(5,7), y: mk.slice(1,5) };
+                });
+            });
+        });
+    };
+    if (budgetData[ex]) { collectExtraMonthKeys(budgetData[ex]); collectExtraMonthKeys(budgetData[ex].__validated); }
 
     let yFiscalStartForSort = parseInt(ex.split('-')[0], 10);
     months = months.concat(Object.keys(extraMonthsMap)).sort((a, b) => {
@@ -3199,6 +3275,8 @@ window.renderDataTable = function() {
           + '</div>' : '';
     let _pnav=$('dbPaginationNav'); if(_pnav) _pnav.innerHTML = nav;
     $('dataCountLabel').textContent = flt.length + (dbPageCount > 1 ? ' · p.'+(dbPage+1)+'/'+dbPageCount : '');
+    let _liEl = $('lastImportDateLabel');
+    if (_liEl) _liEl.textContent = lastImportDate ? (' · Dernier import : ' + lastImportDate.split('-').reverse().join('/')) : '';
     tb.innerHTML = fltPage.map(t => `<tr data-id="${t.id}">
         <td style="text-align:center;"><input type="checkbox" class="row-cb" value="${t.id}" onclick="window.updateBulkActions()"></td>
         <td><input type="date" class="inline-edit" data-id="${t.id}" data-field="dateOp" value="${t.dateOp}"></td>
@@ -3565,7 +3643,7 @@ $('backupBtn').addEventListener('click',()=>{let a=document.createElement('a');a
 $('deleteAllBtn').addEventListener('click', async () => {
     let _acName=accounts.find(a=>a.id===currentAccountId)?.name||currentAccountId;
     if (!confirm(`⚠️ EFFACEMENT du compte "${_acName}" — données, catégories, règles et fichier Drive. Confirmer ?`)) return;
-    transactions = []; rules = []; categories = {};
+    transactions = []; rules = []; categories = {}; lastImportDate = '';
     driveFileId = null;
     delete driveFileIdMap[currentAccountId];
     if (driveAccessToken) {
@@ -3625,6 +3703,7 @@ $('bankFileInput').addEventListener('change',e=>{
             }
             let res = parseBankData(rows, bankType, selectedBankForImport);
             if(res.add>0){
+                lastImportDate = new Date().toISOString().slice(0,10);
                 triggerSave(true); window.renderViewsSafe(); showToast(res.add+' importés');
                 // Export CSV coloré
                 exportImportResult(rawRows, res.importedIdx, res.skippedIdx, bankType);
@@ -4154,7 +4233,7 @@ window.switchAccount = async function(newId) {
     currentAccountId = newId;
     localStorage.setItem('f_current_account', newId);
     window._isFirstTcdScrollRestored = false;
-    transactions = []; rules = []; categories = {}; savedCharts = [];
+    transactions = []; rules = []; categories = {}; savedCharts = []; lastImportDate = '';
     quittancesBiens = []; currentQuittanceBienId = null;
     budgetData = {};
     budgetFilter.cat1.clear(); budgetFilter.cat2.clear(); loadBudgetFilter();
@@ -7691,7 +7770,7 @@ function exportImportResult(rawRows, importedIdx, skippedIdx, bankType) {
     try {
         let importedSet = new Set(importedIdx);
         let skippedSet  = new Set(skippedIdx);
-        let dataOffset  = (bankType==='SOGE') ? 3 : (bankType==='FORT' ? 1 : 0);
+        let dataOffset  = (bankType==='SOGE') ? 3 : (bankType==='FORT' || bankType==='CE') ? 1 : 0;
 
         // Construire les données avec colonne "Résultat import" ajoutée à droite
         let outputRows = [];

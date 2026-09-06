@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v3.4.19</title>
-    <!-- v3.4.19 - Fix : l'échéancier de quittance ne doit montrer le total que si le détail est une expression arithmétique pure (aucun texte ni parenthèse) -->
+    <title>Mes finances - v3.4.20</title>
+    <!-- v3.4.20 - Fix import Caisse d'Épargne (décalage OUI/NON) ; alignement cellule figée Base de données ; date du dernier import affichée ; Budget/Projection : ajout d'un mois hors exercice (+/- 6 mois) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -211,7 +211,7 @@
             <div id="dbHeaderNormal" style="display:flex; justify-content:space-between; align-items:center; width:100%; height:100%; position:absolute; top:0; left:0; z-index:1;">
                 <h2 style="margin:0;">Toutes les transactions</h2>
                 <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                  <span style="color:var(--ink-soft); font-size:0.8em;"><span id="dataCountLabel">0</span> ligne(s) · Synchro auto Drive</span>
+                  <span style="color:var(--ink-soft); font-size:0.8em;"><span id="dataCountLabel">0</span> ligne(s)<span id="lastImportDateLabel"></span> · Synchro auto Drive</span>
                   <button class="btn btn-outline" id="exportDbBtn" style="font-size:0.82em; padding:4px 10px;" title="Export chiffré → .json | SHIFT = aussi export clair → .xlsx">📤 Exporter (chiffré)</button>
                   <button class="btn btn-outline" id="dupBtn" onclick="window.toggleDuplicateFilter()" style="font-size:0.82em; padding:4px 10px;" title="Rechercher les doublons (date + détails + montant)">🔍 Doublons</button>
                   <button class="btn btn-outline" id="importDbBtn" style="font-size:0.82em; padding:4px 10px;">📥 Importer</button>
@@ -475,6 +475,7 @@
             <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateBudget()">✅ Valider budget</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelBudgetValidation()">↩️ Annuler budget</button>
             <button id="btnCloturerExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerBtnClick(event)">🔒 Clôturer exercice</button>
+            <button id="btnAjouterMoisHorsExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.openAjoutMoisHorsExercice()">📅 Ajouter un mois hors exercice</button>
             <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
             <span style="font-size:0.82em;font-weight:600;color:var(--ink-soft);">Taille éléments tableau :</span>
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(1)">+</button>
@@ -976,6 +977,37 @@
             <div style="text-align:right;">
                 <button class="btn btn-outline" onclick="window.closeDistributeCostsModal()">Annuler</button>
                 <button class="btn btn-primary" onclick="window.applyDistributeCosts()">Appliquer</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="hmModal">
+        <div class="modal" style="max-width:440px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                <h2 style="margin:0;font-size:1.1em;">Ajouter un mois hors exercice</h2>
+                <button class="btn btn-outline" onclick="window.closeAjoutMoisHorsExercice()" style="padding:4px 10px;border-radius:20px;">✕</button>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;">
+                <div>
+                    <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Mois</label>
+                    <input type="month" id="hmMonthInput" class="input-text" style="width:100%;box-sizing:border-box;">
+                </div>
+                <div>
+                    <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Catégorie 1</label>
+                    <select id="hmCat1Select" class="input-text" style="width:100%;box-sizing:border-box;" onchange="window.updateHmCat2()"></select>
+                </div>
+                <div>
+                    <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Catégorie 2</label>
+                    <select id="hmCat2Select" class="input-text" style="width:100%;box-sizing:border-box;"></select>
+                </div>
+                <div>
+                    <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Montant</label>
+                    <input type="text" id="hmMontantInput" class="input-text" style="width:100%;box-sizing:border-box;" placeholder="Ex : 150">
+                </div>
+            </div>
+            <div style="margin-top:20px;text-align:right;">
+                <button class="btn btn-outline" onclick="window.closeAjoutMoisHorsExercice()">Annuler</button>
+                <button class="btn btn-primary" onclick="window.confirmAjoutMoisHorsExercice()">Ajouter</button>
             </div>
         </div>
     </div>
