@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.0.2';
+const APP_VERSION = '4.0.3';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -906,17 +906,22 @@ window.setBudgetCell = function(ex, c1, c2, month, val) {
     window.renderBudget();
 };
 
-// v3.4.22 : un mois est "passé" (ligne bleue, budget-col-past) uniquement s'il est strictement
-// antérieur au mois en cours et appartient à l'intervalle standard de l'exercice (les colonnes
-// "hors exercice", préfixées "X", ne sont jamais bleues). Logique dupliquée hors de renderBudget
-// pour rester utilisable par le report en masse Maj+triple-clic ci-dessous.
+// v3.4.22 : un mois est "passé" (ligne bleue, budget-col-past) s'il est strictement antérieur
+// au mois en cours — qu'il appartienne à l'intervalle standard de l'exercice ou soit une colonne
+// "hors exercice" (préfixée "X" + année + mois, ex: "X202503"). Logique dupliquée hors de
+// renderBudget pour rester utilisable par le report en masse Maj+triple-clic ci-dessous.
 function isBudgetMonthPast(ex, m) {
-    if (String(m||'')[0] === 'X') return false;
-    let mi = parseInt(m, 10);
+    let ms = String(m||'');
+    let now = new Date(), nowY = now.getFullYear(), nowM = now.getMonth() + 1;
+    if (ms[0] === 'X') {
+        let y = parseInt(ms.slice(1,5), 10), mi = parseInt(ms.slice(5,7), 10);
+        if (isNaN(y) || isNaN(mi)) return false;
+        return (y < nowY) || (y === nowY && mi < nowM);
+    }
+    let mi = parseInt(ms, 10);
     if (isNaN(mi)) return false;
     let yFiscalStart = parseInt(String(ex).split('-')[0], 10);
     let yReal = (mi >= fiscalStartMonth) ? yFiscalStart : yFiscalStart + 1;
-    let now = new Date(), nowY = now.getFullYear(), nowM = now.getMonth() + 1;
     return (yReal < nowY) || (yReal === nowY && mi < nowM);
 }
 window.onIndicatorTripleClick = function(event, el) {
