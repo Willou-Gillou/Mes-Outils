@@ -577,6 +577,10 @@
 .budget-indicator { font-size: 0.85em; margin-left: 4px; display: inline-block; vertical-align: middle; }
 .budget-indicator.ind-check { color: var(--good, #16a34a); }
 th.tcd-th-extra { background: var(--pro-soft, #eef2ff); }
+/* v3.4.27 : dans Budget/Projection, le fond des en-têtes de mois est normalement sombre
+   (--tcd-header-color) — un simple ".tcd-th-extra" n'y suffit pas (spécificité), il faut
+   cibler explicitement .budget-table pour que le bleu clair des mois hors exercice ressorte. */
+.budget-table thead th.tcd-th-extra { background: var(--pro-soft, #eef2ff) !important; color: var(--ink) !important; }
 .budget-indicator.ind-dot-red { width: 8px; height: 8px; border-radius: 50%; background: var(--urgent, #dc2626); cursor: pointer; }
 .budget-indicator.ind-warn { cursor: pointer; }
 

@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.0.6';
+const APP_VERSION = '4.0.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1099,12 +1099,17 @@ window.renderBudget = function() {
         months.push(String(mi).padStart(2,'0'));
     }
     const monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+    // v3.4.27 : format "Jan 26" (mois + année sur 2 chiffres) pour les mois standards de
+    // l'exercice, aligné sur celui déjà utilisé pour les colonnes "hors exercice".
     const monthLabel = (m, extraMap) => {
         if (extraMap && extraMap[m]) {
             let ex2 = extraMap[m];
-            return `${monthNames[parseInt(ex2.m)]} ${ex2.y}`;
+            return `${monthNames[parseInt(ex2.m)]} ${String(ex2.y).slice(-2)}`;
         }
-        return monthNames[parseInt(m)];
+        let mi = parseInt(m, 10);
+        let yFiscalStart = parseInt(ex.split('-')[0], 10);
+        let yReal = (mi >= fiscalStartMonth) ? yFiscalStart : yFiscalStart + 1;
+        return `${monthNames[mi]} ${String(yReal).slice(-2)}`;
     };
 
     let realByC1C2Month = {}, realByC1Month = {};
