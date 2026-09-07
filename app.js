@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.0.4';
+const APP_VERSION = '4.0.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -38,6 +38,7 @@ let duplicateIds = new Set();
 let uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty: false, noteNotEmpty: false};
 var tcdFilter = { cat1: new Set(), cat2: new Set(), yearsOp: new Set(), yearsExpense: new Set(), fiscalYearsOp: new Set(), fiscalYearsExpense: new Set(), months: new Set() }; // sets = éléments EXCLUS
 var budgetFilter = { cat1: new Set(), cat2: new Set() }; // sets = éléments EXCLUS (filtre onglet Budget)
+var budgetCompactView = false; // v3.4.24 : affichage réduit (masque les lignes à 0€ sur l'exercice) — par compte
 // ── v3.0.8 : Quittances ──────────────────────────────────────────────────────
 var quittancesEnabled = false;
 var quittancesBiens = []; 
@@ -388,6 +389,7 @@ const buildEncryptedPayload = () => {
         collapsedYears:  [...collapsedYears],
         tcdFilter: { cat1:[...tcdFilter.cat1], cat2:[...tcdFilter.cat2], yearsOp:[...tcdFilter.yearsOp], yearsExpense:[...tcdFilter.yearsExpense], months:[...tcdFilter.months] },
         budgetFilter: { cat1:[...budgetFilter.cat1], cat2:[...budgetFilter.cat2] },
+        budgetCompactView: budgetCompactView,
         tcdRedCells: (window.appState && window.appState.tcdRedCells) ? window.appState.tcdRedCells : {},
         lastImportDate: lastImportDate,
         budgetIndicatorConfig: window.budgetIndicatorConfig,
@@ -534,6 +536,10 @@ function decryptPayload(remoteData) {
                     budgetFilter.cat1 = new Set(bf.cat1 || []);
                     budgetFilter.cat2 = new Set(bf.cat2 || []);
                     localStorage.setItem('budget_filter_' + currentAccountId, JSON.stringify(bf));
+                }
+                if(s.budgetCompactView !== undefined) {
+                    budgetCompactView = !!s.budgetCompactView;
+                    localStorage.setItem('budget_compact_' + currentAccountId, budgetCompactView ? '1' : '0');
                 }
             }
         }
@@ -1299,6 +1305,17 @@ window.renderBudget = function() {
     c1Sorted.forEach(c1 => {
         let c1BudgetByMonth = {}, c1RealByMonth = {}, c1ValidatedByMonth = {};
         let c2List = [...allCats[c1]].sort(customSortCmp);
+        if (budgetCompactView) {
+            // v3.4.24 : masque les lignes de Catégorie 2 dont budget ET réel sont nuls sur
+            // toute la période affichée (mois standards + colonnes hors exercice) ; si toutes
+            // les sous-catégories d'une Catégorie 1 sont masquées, la ligne parente l'est aussi.
+            c2List = c2List.filter(c2 => {
+                let hasB = months.some(m => getBudget(c1, c2, m) !== 0);
+                if (hasB) return true;
+                return months.some(m => (realByC1C2Month[`${c1}::${c2}::${m}`] || 0) !== 0);
+            });
+            if (c2List.length === 0) return;
+        }
 
         htmlBudget += `<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(c1)}</div></td>`;
         htmlReal += `<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(c1)}</div></td>`;
@@ -1412,6 +1429,9 @@ window.renderBudget = function() {
     let reprBtn = $('btnReprendreN1');
     if (reprBtn) reprBtn.style.display = (hasValidated || isClosed) ? 'none' : '';
 
+    let compactBtn = $('btnBudgetCompactView');
+    if (compactBtn) compactBtn.textContent = budgetCompactView ? '🔍 Agrandir' : '🔎 Réduire';
+
     container.innerHTML = `
         <div class="budget-block-title">💰 Budget / Projection <span class="budget-badge badge-budget">Éditable</span></div>
         <div class="budget-mirror-wrap">${htmlBudget}</div>
@@ -1520,6 +1540,22 @@ function hasBudgetFilter() {
     return budgetFilter.cat1.size > 0 || budgetFilter.cat2.size > 0;
 }
 loadBudgetFilter();
+
+// v3.4.24 : affichage réduit/agrandi du tableau Budget/Projection (par compte, synchronisé
+// dans le vault comme le reste des réglages Budget).
+function saveBudgetCompactView() {
+    localStorage.setItem('budget_compact_' + currentAccountId, budgetCompactView ? '1' : '0');
+    triggerSave(false);
+}
+function loadBudgetCompactView() {
+    budgetCompactView = localStorage.getItem('budget_compact_' + currentAccountId) === '1';
+}
+window.toggleBudgetCompactView = function() {
+    budgetCompactView = !budgetCompactView;
+    saveBudgetCompactView();
+    window.renderBudget();
+};
+loadBudgetCompactView();
 
 // ═══ Validation du budget ═══
 window.validateBudget = function() {
@@ -4391,6 +4427,7 @@ window.switchAccount = async function(newId) {
     quittancesBiens = []; currentQuittanceBienId = null;
     budgetData = {};
     budgetFilter.cat1.clear(); budgetFilter.cat2.clear(); loadBudgetFilter();
+    loadBudgetCompactView();
     loadFiscalStartMonth();
     loadFiscalStartMonthSyndic(); applyFiscalStartMonthState();
     budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';

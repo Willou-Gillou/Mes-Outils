@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.0.4</title>
-    <!-- v4.0.4 - Budget/Projection : l'exercice suivant le plus récent est toujours sélectionnable pour préparer sa projection ; bouton "Reprendre éléments n-1" pour copier le réel de l'exercice précédent comme base du budget (tant qu'il n'est pas validé) -->
+    <title>Mes finances - v4.0.5</title>
+    <!-- v4.0.5 - Budget/Projection : bouton Réduire/Agrandir pour masquer les lignes à 0€ (budget et réel) sur toute la période de l'exercice, état mémorisé par compte -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -477,6 +477,7 @@
             <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelBudgetValidation()">↩️ Annuler budget</button>
             <button id="btnCloturerExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerBtnClick(event)">🔒 Clôturer exercice</button>
             <button id="btnAjouterMoisHorsExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.openAjoutMoisHorsExercice()">📅 Ajouter un mois hors exercice</button>
+            <button id="btnBudgetCompactView" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.toggleBudgetCompactView()" title="Affichage réduit : masque les lignes dont le budget et le réel sont à 0€ sur toute la période de l'exercice">🔎 Réduire</button>
             <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
             <span style="font-size:0.82em;font-weight:600;color:var(--ink-soft);">Taille éléments tableau :</span>
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(1)">+</button>
