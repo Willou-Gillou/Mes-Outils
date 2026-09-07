@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.0.5';
+const APP_VERSION = '4.0.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1306,14 +1306,16 @@ window.renderBudget = function() {
         let c1BudgetByMonth = {}, c1RealByMonth = {}, c1ValidatedByMonth = {};
         let c2List = [...allCats[c1]].sort(customSortCmp);
         if (budgetCompactView) {
-            // v3.4.24 : masque les lignes de Catégorie 2 dont budget ET réel sont nuls sur
-            // toute la période affichée (mois standards + colonnes hors exercice) ; si toutes
-            // les sous-catégories d'une Catégorie 1 sont masquées, la ligne parente l'est aussi.
-            c2List = c2List.filter(c2 => {
-                let hasB = months.some(m => getBudget(c1, c2, m) !== 0);
-                if (hasB) return true;
-                return months.some(m => (realByC1C2Month[`${c1}::${c2}::${m}`] || 0) !== 0);
-            });
+            // v3.4.26 : masque les lignes de Catégorie 2 dont budget, budget validé (projection
+            // figée) ET réel sont tous nuls sur toute la période affichée (mois standards +
+            // colonnes hors exercice) — un seul mois non nul sur l'un des trois suffit à garder
+            // la ligne visible. Si toutes les sous-catégories d'une Catégorie 1 sont masquées,
+            // la ligne parente l'est aussi.
+            c2List = c2List.filter(c2 => months.some(m =>
+                getBudget(c1, c2, m) !== 0 ||
+                getValidatedBudget(c1, c2, m) !== 0 ||
+                (realByC1C2Month[`${c1}::${c2}::${m}`] || 0) !== 0
+            ));
             if (c2List.length === 0) return;
         }
 
