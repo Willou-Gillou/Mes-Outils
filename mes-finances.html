@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.0.3</title>
-    <!-- v4.0.3 - Budget/Projection : les mois hors exercice strictement passés (colonnes additionnelles) sont désormais aussi en bleu, comme les mois passés de l'exercice -->
+    <title>Mes finances - v4.0.4</title>
+    <!-- v4.0.4 - Budget/Projection : l'exercice suivant le plus récent est toujours sélectionnable pour préparer sa projection ; bouton "Reprendre éléments n-1" pour copier le réel de l'exercice précédent comme base du budget (tant qu'il n'est pas validé) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -472,6 +472,7 @@
                 </select>
             </div>
             
+            <button id="btnReprendreN1" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.reprendreElementsN1()" title="Copie le réel de l'exercice précédent dans la projection de l'exercice sélectionné, comme base de départ du budget">↺ Reprendre éléments n-1</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateBudget()">✅ Valider budget</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelBudgetValidation()">↩️ Annuler budget</button>
             <button id="btnCloturerExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerBtnClick(event)">🔒 Clôturer exercice</button>

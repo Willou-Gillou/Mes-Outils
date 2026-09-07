@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.0.3';
+const APP_VERSION = '4.0.4';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -863,6 +863,17 @@ window.setFiscalStartMonth = function(v) {
     showToast('Exercice fiscal mis à jour ✓');
 };
 
+// v3.4.23 : décale un libellé d'exercice fiscal de `delta` années, en préservant son format
+// ("2025" → "2026", ou "2025-2026" → "2026-2027" pour un exercice décalé).
+function shiftExerciceLabel(ex, delta) {
+    if (!ex) return ex;
+    let parts = String(ex).split('-');
+    let y0 = parseInt(parts[0], 10) + delta;
+    if (parts.length === 1) return String(y0);
+    let y1 = parseInt(parts[1], 10) + delta;
+    return `${y0}-${y1}`;
+}
+
 // ── v3.0.8 : Budget / Projection — logique ──────────────────────────────────
 window.populateBudgetExerciceSelect = function() {
     let sel = $('budgetExerciceSelect');
@@ -881,11 +892,54 @@ window.populateBudgetExerciceSelect = function() {
         let y = String(now.getFullYear()), m = String(now.getMonth()+1).padStart(2,'0');
         sorted = [getFiscalYearLabel(y, m, fiscalStartMonth)];
     }
+    // v3.4.23 : toujours proposer l'exercice suivant le plus récent connu, pour pouvoir préparer
+    // sa projection avant même la moindre transaction ou donnée budgétaire sur cet exercice.
+    let nextEx = shiftExerciceLabel(sorted[sorted.length-1], 1);
+    if (!sorted.includes(nextEx)) sorted.push(nextEx);
+    sorted.sort();
     let prevVal = sel.value;
     sel.innerHTML = sorted.map(ex => `<option value="${ex}">${ex}</option>`).join('');
     if (sorted.includes(prevVal)) sel.value = prevVal;
     else sel.value = sorted[sorted.length-1];
     window.renderBudget();
+};
+
+// v3.4.23 : reprend le RÉEL de l'exercice précédent (n-1) comme base de la projection de
+// l'exercice sélectionné — seulement disponible tant que ce dernier n'est pas encore validé.
+// Remplace entièrement le budget existant de l'exercice sélectionné (hors validation/clôture,
+// qui n'existent pas encore puisque le bouton n'est visible que dans ce cas).
+window.reprendreElementsN1 = function() {
+    let sel = $('budgetExerciceSelect');
+    if (!sel || !sel.value) return;
+    let ex = sel.value;
+    if (budgetData[ex] && budgetData[ex].__validated) return;
+    if (budgetData[ex] && budgetData[ex].__closed) { alert(`L'exercice ${ex} est clos.`); return; }
+    let prevEx = shiftExerciceLabel(ex, -1);
+    if (!confirm(`Remplacer le budget de l'exercice ${ex} par le réel de l'exercice ${prevEx} ?`)) return;
+    let newBudget = {};
+    transactions.forEach(t => {
+        if (t.amount === 0) return;
+        let dRealStr = String(t.dateExpense || t.dateOp || '');
+        if (dRealStr.length < 7) return;
+        let yReal = dRealStr.substring(0,4), mReal = dRealStr.substring(5,7);
+        if (getFiscalYearLabel(yReal, mReal, fiscalStartMonth) !== prevEx) return;
+        let dOpStr = String(t.dateOp || t.dateExpense || '');
+        if (dOpStr.length < 7) return;
+        let yOp = dOpStr.substring(0,4), mOp = dOpStr.substring(5,7);
+        // Les mois "hors exercice" de n-1 n'ont pas de correspondance directe dans le nouvel
+        // exercice : on ne reprend que les mois appartenant à l'intervalle standard.
+        if (getFiscalYearLabel(yOp, mOp, fiscalStartMonth) !== prevEx) return;
+        let c1 = t.cat1 || '_SANS_CATEGORIE', c2 = t.cat2 || '_SANS_CATEGORIE';
+        if (budgetFilter.cat1.has(c1) || budgetFilter.cat2.has(c2)) return;
+        if (!newBudget[c1]) newBudget[c1] = {};
+        if (!newBudget[c1][c2]) newBudget[c1][c2] = {};
+        newBudget[c1][c2][mOp] = Number(((newBudget[c1][c2][mOp]||0) + Number(t.amount)).toFixed(2));
+    });
+    if (Object.keys(newBudget).length === 0) { showToast('⚠️ Aucun réel trouvé sur l\'exercice ' + prevEx); return; }
+    budgetData[ex] = newBudget;
+    triggerSave(true);
+    window.renderBudget();
+    showToast('✅ Réel de ' + prevEx + ' repris comme base de la projection ' + ex);
 };
 
 window.setBudgetCell = function(ex, c1, c2, month, val) {
@@ -1354,6 +1408,9 @@ window.renderBudget = function() {
         notesWrap.style.display = 'none';
         if (closeBtn) closeBtn.textContent = '🔒 Clôturer exercice';
     }
+
+    let reprBtn = $('btnReprendreN1');
+    if (reprBtn) reprBtn.style.display = (hasValidated || isClosed) ? 'none' : '';
 
     container.innerHTML = `
         <div class="budget-block-title">💰 Budget / Projection <span class="budget-badge badge-budget">Éditable</span></div>
