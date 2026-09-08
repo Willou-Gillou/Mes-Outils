@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.2.1';
+const APP_VERSION = '4.2.2';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6230,9 +6230,34 @@ function applyRentabiliteOptionState() {
 // "2 - Charges déductibles"), même convention de préfixe numérique déjà utilisée ailleurs dans
 // l'app pour distinguer recettes/charges (cf. banner de validation Budget/Projection).
 
-// Rentabilité brute = Revenus locatifs annuels / Total investi (tous biens). Rentabilité nette =
-// (Revenus - Charges) / Total investi. Regroupées par exercice fiscal (fiscalStartMonth, réglage
-// "Exercice fiscal" de Paramètres) — même découpage que le Tableau de bord et Budget/Projection.
+// v3.4.34 : le montant investi pris en compte pour un exercice donné est proraté sur l'année
+// d'achat (le bien ne compte qu'à partir de sa date d'achat, au prorata du nombre de jours
+// possédés dans l'exercice) et exclu totalement des exercices antérieurs à l'achat — sinon le
+// % de rentabilité de l'année d'achat (et des années précédentes) n'est pas cohérent.
+function computeInvestiForExercice(ex) {
+    let yFiscalStart = parseInt(ex.split('-')[0], 10);
+    let exStart = new Date(yFiscalStart, fiscalStartMonth - 1, 1);
+    let exEnd = new Date(yFiscalStart, fiscalStartMonth - 1 + 12, 0); // dernier jour du 12e mois
+    let msPerDay = 86400000;
+    let total = 0;
+    quittancesBiens.forEach(b => {
+        let val = (Number(b.montantAchat)||0) + (Number(b.montantRenovation)||0);
+        if (val === 0) return;
+        let achat = b.dateAchat ? new Date(b.dateAchat + 'T00:00:00') : null;
+        if (!achat || isNaN(achat.getTime())) { total += val; return; } // pas de date renseignée : compte pleinement
+        if (achat > exEnd) return; // pas encore acheté durant cet exercice
+        if (achat <= exStart) { total += val; return; } // possédé sur tout l'exercice
+        let daysInEx = Math.round((exEnd - exStart) / msPerDay) + 1;
+        let daysOwned = Math.round((exEnd - achat) / msPerDay) + 1;
+        total += val * (daysOwned / daysInEx);
+    });
+    return total;
+}
+
+// Rentabilité brute = Revenus locatifs annuels / Total investi proraté sur l'exercice.
+// Rentabilité nette = (Revenus - Charges) / même base. Regroupées par exercice fiscal
+// (fiscalStartMonth, réglage "Exercice fiscal" de Paramètres) — même découpage que le Tableau
+// de bord et Budget/Projection.
 window.renderRentabilite = function() {
     let container = $('rentabiliteGrid');
     let empty = $('rentabiliteEmptyState');
@@ -6291,22 +6316,25 @@ window.renderRentabilite = function() {
         let charges = Math.abs(byEx[ex].charges);
         grandRevenus += revenus; grandCharges += charges;
         let resultat = revenus - charges;
-        let brute = grandTotalInvesti > 0 ? (revenus / grandTotalInvesti) * 100 : 0;
-        let nette = grandTotalInvesti > 0 ? (resultat / grandTotalInvesti) * 100 : 0;
+        let investiEx = computeInvestiForExercice(ex);
+        let brute = investiEx > 0 ? (revenus / investiEx) * 100 : 0;
+        let nette = investiEx > 0 ? (resultat / investiEx) * 100 : 0;
         return `<tr class="tcd-row-main-tr">
             <td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(ex)}</div></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(revenus)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(charges)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(resultat)}</span></td>
-            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? brute.toFixed(2)+' %' : '-'}</span></td>
-            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? nette.toFixed(2)+' %' : '-'}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(investiEx)}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${investiEx>0 ? brute.toFixed(2)+' %' : '-'}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${investiEx>0 ? nette.toFixed(2)+' %' : '-'}</span></td>
         </tr>`;
-    }).join('') || '<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
+    }).join('') || '<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
     if (exs.length) {
         rentaRowsHtml += `<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL</div></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandRevenus)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandCharges)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandRevenus - grandCharges)}</span></td>
+            <td class="tcd-cell"></td>
             <td class="tcd-cell"></td>
             <td class="tcd-cell"></td>
         </tr>`;
@@ -6316,13 +6344,14 @@ window.renderRentabilite = function() {
         <div class="budget-block-title">📦 Récap des montants investis</div>
         <div class="budget-mirror-wrap">${recapHtml}</div>
         <div class="budget-block-title" style="margin-top:24px;">📈 Rentabilité globale par exercice</div>
-        <p style="color:var(--ink-soft);font-size:0.82em;margin:0 0 8px 0;">Revenus = transactions dont la Catégorie 1 commence par "1" · Charges = Catégorie 1 commençant par "2" · Rapportées au total investi de tous les biens (${formatCurrency(grandTotalInvesti)}).</p>
+        <p style="color:var(--ink-soft);font-size:0.82em;margin:0 0 8px 0;">Revenus = transactions dont la Catégorie 1 commence par "1" · Charges = Catégorie 1 commençant par "2" · Rapportées au montant investi de l'exercice, proraté sur l'année d'achat (un bien ne compte qu'à partir de sa date d'achat, au prorata du nombre de jours possédés).</p>
         <div class="budget-mirror-wrap">
             <table class="tcd-native budget-table" cellspacing="0" cellpadding="0"><thead><tr>
                 <th class="tcd-col-axis" style="text-align:center;">Exercice</th>
                 <th class="tcd-th-month">Revenus</th>
                 <th class="tcd-th-month">Charges</th>
                 <th class="tcd-th-month">Résultat annuel</th>
+                <th class="tcd-th-month">Investi (proraté)</th>
                 <th class="tcd-th-month">Rentabilité Brute</th>
                 <th class="tcd-th-month">Rentabilité Nette</th>
             </tr></thead><tbody>${rentaRowsHtml}</tbody></table>
