@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.1.3';
+const APP_VERSION = '4.1.4';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6252,8 +6252,8 @@ function applyRentabiliteOptionState() {
 // l'app pour distinguer recettes/charges (cf. banner de validation Budget/Projection).
 
 // Rentabilité brute = Revenus locatifs annuels / Total investi (tous biens). Rentabilité nette =
-// (Revenus - Charges) / Total investi. Regroupées par exercice "syndic" (fiscalStartMonthSyndic),
-// comme le tableau de Régularisation de charges.
+// (Revenus - Charges) / Total investi. Regroupées par exercice fiscal (fiscalStartMonth, réglage
+// "Exercice fiscal" de Paramètres) — même découpage que le Tableau de bord et Budget/Projection.
 window.renderRentabilite = function() {
     let container = $('rentabiliteGrid');
     let empty = $('rentabiliteEmptyState');
@@ -6300,7 +6300,7 @@ window.renderRentabilite = function() {
         if (!isRev && !isChg) return;
         let dStr = String(t.dateExpense || t.dateOp || '');
         if (dStr.length < 7) return;
-        let ex = getFiscalYearLabel(dStr.substring(0,4), dStr.substring(5,7), fiscalStartMonthSyndic);
+        let ex = getFiscalYearLabel(dStr.substring(0,4), dStr.substring(5,7), fiscalStartMonth);
         if (!byEx[ex]) byEx[ex] = { revenus: 0, charges: 0 };
         if (isRev) byEx[ex].revenus += Number(t.amount);
         if (isChg) byEx[ex].charges += Number(t.amount);
