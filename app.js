@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.1.0';
+const APP_VERSION = '4.1.1';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6248,15 +6248,52 @@ function applyRentabiliteOptionState() {
     if (enabled && typeof window.renderRentabilite === 'function') window.renderRentabilite();
 }
 
-// Coche/décoche une Catégorie 1 comme comptant pour les revenus ou les charges d'un bien.
-window.toggleRentaCat = function(bienId, kind, cat1, checked) {
+// v3.4.29 : sélection au niveau Catégorie 2 (clé "cat1::cat2", "_SANS_CATEGORIE" si vide),
+// avec une case Catégorie 1 qui coche/décoche toutes ses Catégorie 2 d'un coup.
+function rentaCatKey(cat1, cat2) { return cat1 + '::' + (cat2 || '_SANS_CATEGORIE'); }
+function getRentaC2List(cat1) { let l = categories[cat1] || []; return l.length ? l : ['_SANS_CATEGORIE']; }
+// Migration v4.1.0→v3.4.29 : les entrées existantes sans "::" (ancienne sélection "toute la
+// Catégorie 1") sont éclatées en une entrée par Catégorie 2 actuelle.
+function migrateRentaCatList(bien, field) {
+    let list = bien[field];
+    if (!list || !list.length) return;
+    let changed = false, out = [];
+    list.forEach(entry => {
+        if (entry.indexOf('::') === -1) {
+            changed = true;
+            getRentaC2List(entry).forEach(c2 => { let k = rentaCatKey(entry, c2); if (out.indexOf(k) === -1) out.push(k); });
+        } else if (out.indexOf(entry) === -1) {
+            out.push(entry);
+        }
+    });
+    if (changed) { bien[field] = out; saveQuittancesBiens(); }
+}
+
+// Coche/décoche une Catégorie 2 comme comptant pour les revenus ou les charges d'un bien.
+window.toggleRentaCat = function(bienId, kind, cat1, cat2, checked) {
     let bien = quittancesBiens.find(b => b.id === bienId);
     if (!bien) return;
     let field = kind === 'revenus' ? 'rentaCatRevenus' : 'rentaCatCharges';
     if (!bien[field]) bien[field] = [];
-    let idx = bien[field].indexOf(cat1);
-    if (checked && idx === -1) bien[field].push(cat1);
+    let key = rentaCatKey(cat1, cat2);
+    let idx = bien[field].indexOf(key);
+    if (checked && idx === -1) bien[field].push(key);
     else if (!checked && idx !== -1) bien[field].splice(idx, 1);
+    saveQuittancesBiens();
+    window.renderRentabilite();
+};
+// Coche/décoche en une fois toutes les Catégorie 2 d'une Catégorie 1.
+window.toggleRentaCatAll = function(bienId, kind, cat1, checked) {
+    let bien = quittancesBiens.find(b => b.id === bienId);
+    if (!bien) return;
+    let field = kind === 'revenus' ? 'rentaCatRevenus' : 'rentaCatCharges';
+    if (!bien[field]) bien[field] = [];
+    getRentaC2List(cat1).forEach(c2 => {
+        let key = rentaCatKey(cat1, c2);
+        let idx = bien[field].indexOf(key);
+        if (checked && idx === -1) bien[field].push(key);
+        else if (!checked && idx !== -1) bien[field].splice(idx, 1);
+    });
     saveQuittancesBiens();
     window.renderRentabilite();
 };
@@ -6306,21 +6343,33 @@ window.renderRentabilite = function() {
     let configHtml = quittancesBiens.map(b => {
         if (!b.rentaCatRevenus) b.rentaCatRevenus = [];
         if (!b.rentaCatCharges) b.rentaCatCharges = [];
-        const checklist = (kind, list) => catKeys.length ? catKeys.map(c1 =>
-            `<label style="display:flex;align-items:center;gap:6px;font-size:0.82em;">
-                <input type="checkbox" ${list.includes(c1)?'checked':''} onchange="window.toggleRentaCat('${escapeHtml(b.id)}','${kind}','${escapeHtml(c1)}',this.checked)">
-                ${escapeHtml(c1)}
-            </label>`).join('') : '<span style="color:var(--ink-soft);font-size:0.82em;">Aucune catégorie</span>';
+        migrateRentaCatList(b, 'rentaCatRevenus');
+        migrateRentaCatList(b, 'rentaCatCharges');
+        const checklist = (kind, list) => catKeys.length ? catKeys.map(c1 => {
+            let c2List = getRentaC2List(c1);
+            let allChecked = c2List.every(c2 => list.includes(rentaCatKey(c1, c2)));
+            let c2Html = c2List.map(c2 => `<label style="display:flex;align-items:center;gap:6px;font-size:0.8em;padding-left:20px;">
+                <input type="checkbox" ${list.includes(rentaCatKey(c1,c2))?'checked':''} onchange="window.toggleRentaCat('${escapeHtml(b.id)}','${kind}','${escapeHtml(c1)}','${escapeHtml(c2)}',this.checked)">
+                ${escapeHtml(c2 === '_SANS_CATEGORIE' ? '(sans sous-catégorie)' : c2)}
+            </label>`).join('');
+            return `<div style="margin-bottom:2px;">
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.82em;font-weight:600;">
+                    <input type="checkbox" ${allChecked?'checked':''} onchange="window.toggleRentaCatAll('${escapeHtml(b.id)}','${kind}','${escapeHtml(c1)}',this.checked)">
+                    ${escapeHtml(c1)}
+                </label>
+                ${c2Html}
+            </div>`;
+        }).join('') : '<span style="color:var(--ink-soft);font-size:0.82em;">Aucune catégorie</span>';
         return `<div class="summary-card" style="margin-top:12px;">
             <h3 style="margin-bottom:10px;">${escapeHtml(b.nom)}</h3>
             <div style="display:flex;gap:24px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:220px;">
                     <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;color:var(--good,#16a34a);">Catégories de revenus</div>
-                    <div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;">${checklist('revenus', b.rentaCatRevenus)}</div>
+                    <div style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;">${checklist('revenus', b.rentaCatRevenus)}</div>
                 </div>
                 <div style="flex:1;min-width:220px;">
                     <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;color:var(--urgent,#dc2626);">Catégories de charges</div>
-                    <div style="display:flex;flex-direction:column;gap:4px;max-height:160px;overflow-y:auto;">${checklist('charges', b.rentaCatCharges)}</div>
+                    <div style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;">${checklist('charges', b.rentaCatCharges)}</div>
                 </div>
             </div>
         </div>`;
@@ -6332,8 +6381,9 @@ window.renderRentabilite = function() {
         let byEx = {};
         transactions.forEach(t => {
             if (t.amount === 0) return;
-            let isRev = (b.rentaCatRevenus||[]).includes(t.cat1);
-            let isChg = (b.rentaCatCharges||[]).includes(t.cat1);
+            let key = rentaCatKey(t.cat1 || '_SANS_CATEGORIE', t.cat2);
+            let isRev = (b.rentaCatRevenus||[]).includes(key);
+            let isChg = (b.rentaCatCharges||[]).includes(key);
             if (!isRev && !isChg) return;
             let dStr = String(t.dateExpense || t.dateOp || '');
             if (dStr.length < 7) return;
