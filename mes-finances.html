@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.1</title>
-    <!-- v4.3.1 - Budget/Projection : titre "📊 Budget / Projection" en 1ère ligne ; exercice par défaut = exercice en cours ; Rentabilité : "(estim.)" sur les % de l'exercice en cours et suivants ; Immobilier/Régule : exercice syndic par défaut = le plus ancien non clôturé -->
+    <title>Mes finances - v4.3.2</title>
+    <!-- v4.3.2 - Budget/Projection : titre aligné sur la ligne de la barre d'outils (Exercice → Taille éléments) au lieu d'une ligne à part ; un seul ascenseur vertical fixe (titre + barre d'outils) allant jusqu'en bas de la page, incluant la section Rentabilité -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -464,10 +464,9 @@
     </div>
 
     <div id="view-budget" class="view">
-        <div style="padding:10px 16px 0 16px;">
-            <h2 style="margin:0 0 4px 0;">📊 Budget / Projection</h2>
-        </div>
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;justify-content:center;">
+            <h2 style="margin:0;">📊 Budget / Projection</h2>
+            <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
             <div class="pivot-select-group">
                 <label style="font-weight:700;font-size:0.85em;">Exercice</label>
                 <select id="budgetExerciceSelect" class="input-text" style="width:auto;" onchange="window.onBudgetExerciceChange()">
@@ -485,13 +484,14 @@
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(1)">+</button>
             <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(-1)">−</button>
         </div>
+        <div style="overflow:auto;max-height:calc(100vh - 160px);">
         <div id="budgetValidatedBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--pro-soft);border-radius:8px;color:var(--pro);"></div>
         <div id="budgetCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;color:var(--ink);"></div>
         <div id="budgetCloseNotesWrap" style="display:none;margin:0 16px 8px 16px;">
             <label style="font-weight:700;font-size:0.85em;display:block;margin-bottom:4px;">Notes :</label>
             <textarea id="budgetCloseNotes" class="input-text" style="width:100%;min-height:60px;font-size:0.85em;" onblur="window.onBudgetCloseNotesBlur()"></textarea>
         </div>
-        <div id="budgetGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
+        <div id="budgetGrid" style="padding:0 16px 24px 16px;"></div>
 
         <div style="padding:10px 16px;margin-top:20px;border-top:1px solid var(--ink-faint);">
             <h2 style="margin:16px 0 4px 0;">💹 Rentabilité</h2>
@@ -500,7 +500,8 @@
         <div id="rentabiliteEmptyState" style="display:none;text-align:center;padding:40px;color:var(--ink-soft);">
             <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien n'est configuré. Allez dans l'onglet Immobilier pour en créer un.</p>
         </div>
-        <div id="rentabiliteGrid" style="overflow-x:auto;padding:0 16px 24px 16px;"></div>
+        <div id="rentabiliteGrid" style="padding:0 16px 24px 16px;"></div>
+        </div>
     </div>
     <div id="view-settings" class="view">
         <h2 style="margin-bottom:24px;">Paramètres</h2>
