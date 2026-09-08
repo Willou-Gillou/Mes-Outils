@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.1.5';
+const APP_VERSION = '4.2.0';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -46,7 +46,8 @@ var quittancesBiens = [];
 var fiscalStartMonth = 1; // 1=Janvier (par défaut), 1-12
 // ── v3.0.8 : Budget / Projection (par compte) ──────────────────────────────────
 var budgetEnabled = false;
-var regulEnabled = false;
+// v3.4.32 : Suivi & Régule de charges n'est plus une option indépendante — intégré à l'onglet
+// Immobilier (ex-Quittances), sous le bien actuellement sélectionné.
 var currentRegulBienId = null;
 // v3.4.28 : Rentabilité (par compte)
 var rentabiliteEnabled = false;
@@ -397,7 +398,7 @@ const buildEncryptedPayload = () => {
         budgetIndicatorConfig: window.budgetIndicatorConfig,
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,regulEnabled:regulEnabled,rentabiliteEnabled:rentabiliteEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,rentabiliteEnabled:rentabiliteEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -459,12 +460,6 @@ function decryptPayload(remoteData) {
             localStorage.setItem('f_budget_enabled_' + currentAccountId, budgetEnabled ? '1' : '0');
         }
         if (typeof applyBudgetOptionState === 'function') applyBudgetOptionState();
-    regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
-    applyRegulOptionState();
-        if (typeof p.regulEnabled === 'boolean') {
-            regulEnabled = p.regulEnabled;
-            localStorage.setItem('f_regul_enabled_' + currentAccountId, regulEnabled ? '1' : '0');
-        }
         rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
         applyRentabiliteOptionState();
         if (typeof p.rentabiliteEnabled === 'boolean') {
@@ -482,7 +477,6 @@ function decryptPayload(remoteData) {
         }
         if (typeof applyFiscalStartMonthState === 'function') applyFiscalStartMonthState();
         currentRegulBienId = quittancesBiens.length ? quittancesBiens[0].id : null;
-        if (typeof applyRegulOptionState === 'function') applyRegulOptionState();
         // Fusionner la liste des comptes depuis Drive avec la liste locale (jamais de remplacement pur)
         // Chaque fichier de compte ne contient qu'un instantané de la liste à sa dernière sauvegarde ;
         // remplacer purement ferait disparaître les comptes créés après cet instantané.
@@ -821,11 +815,9 @@ function triggerSave(reRenderDbView = false, quiet = false) {
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
     try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyChartsOptionState(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
-    regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
-    applyRegulOptionState();
     rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
     applyRentabiliteOptionState();
-    if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget(); if (regulEnabled && typeof window.renderRegul === 'function') window.renderRegul(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
+    if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
 };
 
 window.toggleGroup = function(r1) { tcdSaveScroll(); if(collapsedGroups.has(r1)) collapsedGroups.delete(r1); else collapsedGroups.add(r1); tcdSaveCollapsed(); window.renderSummary(); };
@@ -4451,8 +4443,6 @@ window.switchAccount = async function(newId) {
     loadFiscalStartMonthSyndic(); applyFiscalStartMonthState();
     budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
     applyBudgetOptionState();
-    regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
-    applyRegulOptionState();
     rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
     applyRentabiliteOptionState();
     chartsEnabled = localStorage.getItem('f_charts_enabled_' + currentAccountId) !== '0'; // activé par défaut
@@ -4546,7 +4536,6 @@ window.addAccount = async function() {
                 quittancesEnabled: false,
                 budgetData: {},
                 budgetEnabled: false,
-                regulEnabled: false,
                 fiscalStartMonthSyndic: 10,
                 fiscalStartMonth: 1,
                 activeTab: 'view-summary',
@@ -4752,8 +4741,8 @@ window.runDiagnostics = function() {
         ['Rendu Graphiques', window.renderCharts],
     ];
     if (budgetEnabled && typeof window.renderBudget === 'function') renderChecks.push(['Rendu Budget/Projection', window.renderBudget]);
-    if (regulEnabled && typeof window.renderRegul === 'function') renderChecks.push(['Rendu Suivi & Régule', window.renderRegul]);
-    if (quittancesEnabled && typeof window.renderQuittancesView === 'function') renderChecks.push(['Rendu Quittances', window.renderQuittancesView]);
+    if (quittancesEnabled && typeof window.renderQuittancesView === 'function') renderChecks.push(['Rendu Immobilier', window.renderQuittancesView]);
+    if (quittancesEnabled && typeof window.renderRegul === 'function') renderChecks.push(['Rendu Suivi & Régule', window.renderRegul]);
     renderChecks.forEach(([name, fn]) => t(name, () => { fn(); return true; }));
 
     // --- Rendu du rapport ---
@@ -4840,8 +4829,11 @@ window.saveQuittanceField = function() {
     bien.signatureDate = $('qSignatureDate').value || new Date().toISOString().slice(0,10);
     bien.commentaires = $('qCommentaires').value;
     bien.dateAchat = $('qDateAchat').value;
-    bien.montantAchat = parseFloat($('qMontantAchat').value) || 0;
-    bien.montantRenovation = parseFloat($('qMontantRenovation').value) || 0;
+    const cleanMontant = v => parseFloat(String(v||'').replace(/[\s  €a-zA-Z]/g,'').replace(',', '.')) || 0;
+    bien.montantAchat = cleanMontant($('qMontantAchat').value);
+    bien.montantRenovation = cleanMontant($('qMontantRenovation').value);
+    $('qMontantAchat').value = bien.montantAchat ? formatCurrency(bien.montantAchat) : '';
+    $('qMontantRenovation').value = bien.montantRenovation ? formatCurrency(bien.montantRenovation) : '';
     let oldFolderId = bien.driveFolderId;
     bien.driveFolderId = ($('qDriveFolderId').value || '').trim();
     saveQuittancesBiens();
@@ -5713,8 +5705,8 @@ window.renderQuittancesView = function() {
     $('qSignatureDate').value = bien.signatureDate || new Date().toISOString().slice(0,10);
     $('qCommentaires').value = bien.commentaires || '';
     $('qDateAchat').value = bien.dateAchat || '';
-    $('qMontantAchat').value = bien.montantAchat || '';
-    $('qMontantRenovation').value = bien.montantRenovation || '';
+    $('qMontantAchat').value = bien.montantAchat ? formatCurrency(bien.montantAchat) : '';
+    $('qMontantRenovation').value = bien.montantRenovation ? formatCurrency(bien.montantRenovation) : '';
     $('qDriveFolderId').value = bien.driveFolderId || '';
     window.updateQuittanceDriveLink();
     if (bien.logoDataUrl) { $('qLogoPreview').src = bien.logoDataUrl; $('qLogoPreview').style.display = 'inline-block'; }
@@ -5729,6 +5721,11 @@ window.renderQuittancesView = function() {
     window.renderQuittanceTableLignes();
     window.renderQuittanceRevenusTable();
     $('quittancePreviewContainer').style.display = 'none';
+
+    // v3.4.32 : Suivi & Régule de charges est désormais intégré à l'onglet Immobilier, sous le
+    // bien actuellement sélectionné (plus de sélecteur de bien indépendant pour la régule).
+    currentRegulBienId = bien.id;
+    if (typeof window.populateRegulExerciceSelect === 'function') window.populateRegulExerciceSelect();
 };
 
 // ── Génération de la quittance (affichage) + téléchargement PDF séparé ──
@@ -6197,32 +6194,6 @@ window.setFiscalStartMonthSyndic = function(v) {
     if (typeof window.populateRegulExerciceSelect === 'function') window.populateRegulExerciceSelect();
     showToast('Exercice syndic mis à jour ✓');
 };
-window.toggleRegulOption = function(checked) {
-    regulEnabled = checked;
-    localStorage.setItem('f_regul_enabled_' + currentAccountId, checked ? '1' : '0');
-    let tab = $('tabRegul'); if(tab) tab.style.display = checked ? '' : 'none';
-    let grp = $('regulSettingsGroup'); if(grp) grp.style.display = checked ? 'block' : 'none';
-    if (!checked) {
-        let activeTab = document.querySelector('.tab-btn.active');
-        if (activeTab && activeTab.dataset.target === 'view-regul') {
-            let sumTab = document.querySelector('.tab-btn[data-target="view-summary"]');
-            if (sumTab) sumTab.click();
-        }
-    }
-    triggerSave(false);
-};
-function applyRegulOptionState() {
-    let enabled = regulEnabled;
-    let tab = $('tabRegul'); if (tab) tab.style.display = enabled ? '' : 'none';
-    let cb = $('optRegulCb'); if (cb) cb.checked = enabled;
-    let grp = $('regulSettingsGroup'); if (grp) grp.style.display = enabled ? 'block' : 'none';
-    let sel = $('fiscalStartMonthSyndicSelect'); if (sel) sel.value = String(fiscalStartMonthSyndic);
-    if (enabled) {
-        window.renderRegulBiens();
-        window.populateRegulExerciceSelect();
-    }
-}
-
 // ── v3.4.28 : Rentabilité ────────────────────────────────────────────────────
 window.toggleRentabiliteOption = function(checked) {
     rentabiliteEnabled = checked;
@@ -6367,36 +6338,16 @@ function getRegulBien(id) {
     }
     return b;
 }
-window.selectRegulBien = function(id) {
-    currentRegulBienId = id;
-    window.populateRegulExerciceSelect();
-};
-window.renderRegulBiens = function() {
-    let sel = $('regulBienSelect');
-    if (!sel) return;
-    if (quittancesBiens.length > 0 && (!currentRegulBienId || !quittancesBiens.find(b => b.id === currentRegulBienId))) {
-        currentRegulBienId = quittancesBiens[0].id;
-    }
-    // v3.4.15 : le libellé affiche "Bien — Locataire(s)" pour mieux distinguer plusieurs
-    // biens/locataires, mais la valeur reste l'id du bien (currentRegulBienId, regulData...
-    // inchangés) : aucune migration, aucune donnée de régule existante ne bouge.
-    sel.innerHTML = quittancesBiens.map(b => {
-        ensureLocatairesHistory(b);
-        let locLabel = computeLocataireLabel(b.locataires);
-        return `<option value="${b.id}" ${b.id===currentRegulBienId?'selected':''}>${escapeHtml(b.nom)} — ${escapeHtml(locLabel)}</option>`;
-    }).join('');
-};
 window.populateRegulExerciceSelect = function() {
     let sel = $('regulExerciceSelect');
     let bien = getRegulBien(currentRegulBienId);
     if (!sel) return;
+    let fsmSel = $('fiscalStartMonthSyndicSelect'); if (fsmSel) fsmSel.value = String(fiscalStartMonthSyndic);
     if (!bien) {
         $('regulGrid').innerHTML = '';
-        $('regulEmptyState').style.display = 'block';
         return;
     }
-    $('regulEmptyState').style.display = 'none';
-    
+
     let startY = new Date().getFullYear();
     let moveInDate = bien.dateAnniversaire || '';
     if (moveInDate) {
@@ -7439,8 +7390,6 @@ document.addEventListener('DOMContentLoaded', function() {
             applyFiscalStartMonthState();
             budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
             applyBudgetOptionState();
-    regulEnabled = localStorage.getItem('f_regul_enabled_' + currentAccountId) === '1';
-    applyRegulOptionState();
     rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
     applyRentabiliteOptionState();
         } catch(e) {}
@@ -7507,7 +7456,6 @@ window.importAccountFromDat = async function(input) {
             quittancesEnabled: !!decrypted.quittancesEnabled,
             budgetData: (decrypted.budgetData && typeof decrypted.budgetData === 'object') ? decrypted.budgetData : {},
             budgetEnabled: !!decrypted.budgetEnabled,
-            regulEnabled: !!decrypted.regulEnabled,
             fiscalStartMonthSyndic: parseInt(decrypted.fiscalStartMonthSyndic) || 10,
             fiscalStartMonth: parseInt(decrypted.fiscalStartMonth) || 1,
             activeTab: decrypted.activeTab || 'view-summary',

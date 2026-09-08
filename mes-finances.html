@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.1.5</title>
-    <!-- v4.1.5 - Rentabilité : ajout de la colonne "Résultat annuel" (revenus - charges) ; retrait du total sur les colonnes en % (non pertinent en somme) -->
+    <title>Mes finances - v4.2.0</title>
+    <!-- v4.2.0 - Onglet "Quittances" renommé "Immobilier" ; Suivi & Régule de charges intégré dedans, sous l'échéancier de facturation (fin du sélecteur de bien séparé et du réglage indépendant dans Paramètres, exercice fiscal syndic déplacé au-dessus du tableau) ; montants d'achat/rénovation affichés en euros formatés (espace milliers) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -58,9 +58,8 @@
     <button class="tab-btn" data-target="view-categories">Catégories</button>
     <button class="tab-btn" data-target="view-rules">Règles</button>
     <button class="tab-btn" data-target="view-charts" id="tabCharts">📈 Graphiques</button>
-    <button class="tab-btn" data-target="view-quittances" id="tabQuittances" style="display:none;">🧾 Quittances</button>
+    <button class="tab-btn" data-target="view-quittances" id="tabQuittances" style="display:none;">🏠 Immobilier</button>
     <button class="tab-btn" data-target="view-budget" id="tabBudget" style="display:none;">📊 Budget / Projection</button>
-    <button class="tab-btn" data-target="view-regul" id="tabRegul" style="display:none;">⚖️ Suivi & Régule charges</button>
     <button class="tab-btn" data-target="view-rentabilite" id="tabRentabilite" style="display:none;">💹 Rentabilité</button>
     <button class="tab-btn" data-target="view-settings">Paramètres</button>
     <button class="tab-btn" data-target="view-diagnostic" id="tabDiagnostic" style="display:none;">🧪 Diagnostic</button>
@@ -493,43 +492,13 @@
         <div id="budgetGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
     </div>
 
-    
-    <div id="view-regul" class="view">
-        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;justify-content:center;">
-             <div class="pivot-select-group">
-                <label style="font-weight:700;font-size:0.85em;">Bien (depuis Quittances)</label>
-                <select id="regulBienSelect" class="input-text" style="width:auto;" onchange="window.selectRegulBien(this.value)"></select>
-            </div>
-
-            <div class="pivot-select-group">
-                <label style="font-weight:700;font-size:0.85em;">Exercice syndic</label>
-                <select id="regulExerciceSelect" class="input-text" style="width:auto;" onchange="window.renderRegul()"></select>
-            </div>
-            <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateRegul()">✅ Valider</button>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelRegulValidation()">↩️ Annuler</button>
-            <button id="btnCloturerRegul" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerRegulBtnClick(event)">🔒 Clôturer</button>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.openRegulColsModal()">⚙️ Colonnes</button>
-            <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
-            <span style="font-size:0.82em;font-weight:600;color:var(--ink-soft);">Taille éléments tableau :</span>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustRegulFont(1)">+</button>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustRegulFont(-1)">−</button>
-        </div>
-        <div id="regulEmptyState" style="display:none;text-align:center;padding:40px;color:var(--ink-soft);">
-            <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien n'est configuré. Allez dans l'onglet Quittances pour en créer un.</p>
-        </div>
-        <div id="regulValidatedBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--pro-soft);border-radius:8px;color:var(--pro);"></div>
-        <div id="regulCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;color:var(--ink);"></div>
-        <div id="regulGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
-    </div>
-
     <div id="view-rentabilite" class="view">
         <div style="padding:10px 16px;">
             <h2 style="margin:0 0 4px 0;">💹 Rentabilité</h2>
-            <p style="color:var(--ink-soft);font-size:0.85em;margin:0;">Montants investis (Quittances → Info investissement) et rentabilité brute/nette par bien et par exercice, calculées à partir des catégories de transactions cochées ci-dessous.</p>
+            <p style="color:var(--ink-soft);font-size:0.85em;margin:0;">Montants investis (Immobilier → Info investissement) et rentabilité brute/nette globale par exercice.</p>
         </div>
         <div id="rentabiliteEmptyState" style="display:none;text-align:center;padding:40px;color:var(--ink-soft);">
-            <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien n'est configuré. Allez dans l'onglet Quittances pour en créer un.</p>
+            <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien n'est configuré. Allez dans l'onglet Immobilier pour en créer un.</p>
         </div>
         <div id="rentabiliteGrid" style="overflow-x:auto;padding:0 16px 24px 16px;"></div>
     </div>
@@ -564,9 +533,9 @@
             <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active l'onglet "📈 Graphiques". Activé par défaut.</p>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optQuittancesCb" style="width:18px;height:18px;" onchange="window.toggleQuittancesOption(this.checked)">
-                Quittances (générer des quittances de loyer en PDF)
+                Immobilier (quittances de loyer, échéancier, suivi & régule de charges)
             </label>
-            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié pour créer et gérer les quittances de loyer par bien/locataire.</p>
+            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié pour gérer chaque bien : quittances de loyer, échéancier de facturation et suivi & régularisation de charges.</p>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optBudgetCb" style="width:18px;height:18px;" onchange="window.toggleBudgetOption(this.checked)">
                 Budget / Projection (réaliser un budget et comparer forecast vs. réel)
@@ -598,20 +567,10 @@
                 </div>
             </div>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
-                <input type="checkbox" id="optRegulCb" style="width:18px;height:18px;" onchange="window.toggleRegulOption(this.checked)">
-                Régularisation de charges (suivi et calcul)
-            </label>
-            <div id="regulSettingsGroup" style="display:none; margin-top:12px; padding-top:12px; border-top:1px solid var(--ink-faint);">
-                <label style="font-size:0.85em;color:var(--ink-soft);display:block;margin-bottom:4px;">Exercice fiscal syndic (mois de début) :</label>
-                <select id="fiscalStartMonthSyndicSelect" class="input-text" style="width:auto;" onchange="window.setFiscalStartMonthSyndic(this.value)">
-                    <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option><option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
-                </select>
-            </div>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optRentabiliteCb" style="width:18px;height:18px;" onchange="window.toggleRentabiliteOption(this.checked)">
-                Rentabilité (investissement, rentabilité brute/nette par bien)
+                Rentabilité (investissement, rentabilité brute/nette globale)
             </label>
-            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié récapitulant les montants investis (Quittances → Info investissement) et calculant la rentabilité brute et nette de chaque bien, par exercice.</p>
+            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié récapitulant les montants investis (Immobilier → Info investissement) et calculant la rentabilité brute et nette globale, par exercice.</p>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optDiagCb" style="width:18px;height:18px;" onchange="window.toggleDiagOption(this.checked)">
                 Diagnostic intégré (tests automatisés après mise à jour)
@@ -662,7 +621,7 @@
     </div>
     <div id="view-quittances" class="view">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
-            <h2 style="margin:0;">🧾 Quittances de loyer</h2>
+            <h2 style="margin:0;">🏠 Immobilier</h2>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
                 <select id="quittanceBienSelector" class="input-text" style="width:auto;" onchange="window.selectQuittanceBien(this.value)"></select>
                 <button class="btn btn-outline" onclick="window.renameQuittanceBien()" title="Renommer ce bien">✏️ Renommer</button>
@@ -725,10 +684,10 @@
                             <input type="date" id="qDateAchat" class="input-text" style="flex:1;" onchange="window.saveQuittanceField()">
                         </label>
                         <label style="font-size:0.85em;display:flex;align-items:center;gap:8px;">Montant d'achat
-                            <input type="number" id="qMontantAchat" class="input-text" style="flex:1;" placeholder="€" onchange="window.saveQuittanceField()">
+                            <input type="text" inputmode="decimal" id="qMontantAchat" class="input-text" style="flex:1;" placeholder="€" onchange="window.saveQuittanceField()">
                         </label>
                         <label style="font-size:0.85em;display:flex;align-items:center;gap:8px;">Montant rénovation
-                            <input type="number" id="qMontantRenovation" class="input-text" style="flex:1;" placeholder="€" onchange="window.saveQuittanceField()">
+                            <input type="text" inputmode="decimal" id="qMontantRenovation" class="input-text" style="flex:1;" placeholder="€" onchange="window.saveQuittanceField()">
                         </label>
                     </div>
                 </div>
@@ -785,6 +744,33 @@
                     <button class="btn btn-outline" onclick="window.duplicateEcheanceToAll()">📋 Dupliquer la 1ère ligne sur tous les mois</button>
                     <button class="btn btn-outline" style="display:none;" onclick="window.duplicateEcheanceToSelection()">📋 Dupliquer la 1ère ligne sur la sélection</button>
                 </div>
+            </div>
+
+            <div class="summary-card" style="margin-top:20px;">
+                <h3 style="margin-bottom:12px;">⚖️ Suivi & Régule de charges</h3>
+                <label style="font-size:0.85em;display:block;margin-bottom:14px;">Exercice fiscal syndic (mois de début)
+                    <select id="fiscalStartMonthSyndicSelect" class="input-text" style="width:auto;display:inline-block;margin-left:8px;" onchange="window.setFiscalStartMonthSyndic(this.value)">
+                        <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option><option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
+                    </select>
+                </label>
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:14px;">
+                    <div class="pivot-select-group">
+                        <label style="font-weight:700;font-size:0.85em;">Exercice syndic</label>
+                        <select id="regulExerciceSelect" class="input-text" style="width:auto;" onchange="window.renderRegul()"></select>
+                    </div>
+                    <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
+                    <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateRegul()">✅ Valider</button>
+                    <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelRegulValidation()">↩️ Annuler</button>
+                    <button id="btnCloturerRegul" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerRegulBtnClick(event)">🔒 Clôturer</button>
+                    <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.openRegulColsModal()">⚙️ Colonnes</button>
+                    <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
+                    <span style="font-size:0.82em;font-weight:600;color:var(--ink-soft);">Taille éléments tableau :</span>
+                    <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustRegulFont(1)">+</button>
+                    <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustRegulFont(-1)">−</button>
+                </div>
+                <div id="regulValidatedBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 0 8px 0;background:var(--pro-soft);border-radius:8px;color:var(--pro);"></div>
+                <div id="regulCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 0 8px 0;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;color:var(--ink);"></div>
+                <div id="regulGrid" style="overflow-x:auto;overflow-y:auto;max-height:70vh;"></div>
             </div>
 
             <div class="summary-card" style="margin-top:20px;">
