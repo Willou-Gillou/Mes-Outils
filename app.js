@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.0';
+const APP_VERSION = '4.3.1';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -902,7 +902,12 @@ window.populateBudgetExerciceSelect = function() {
     // d'onglet ou une réouverture de l'app, au lieu de retomber sur le plus récent à chaque fois.
     let prevVal = sel.value || localStorage.getItem('f_budget_exercice_' + currentAccountId) || '';
     sel.innerHTML = sorted.map(ex => `<option value="${ex}">${ex}</option>`).join('');
+    // v3.4.36 : à défaut de choix mémorisé, l'exercice en cours par défaut — pas le plus récent
+    // (qui inclut désormais toujours l'exercice suivant, encore vide).
+    let now = new Date();
+    let currentEx = getFiscalYearLabel(String(now.getFullYear()), String(now.getMonth()+1).padStart(2,'0'), fiscalStartMonth);
     if (sorted.includes(prevVal)) sel.value = prevVal;
+    else if (sorted.includes(currentEx)) sel.value = currentEx;
     else sel.value = sorted[sorted.length-1];
     localStorage.setItem('f_budget_exercice_' + currentAccountId, sel.value);
     window.renderBudget();
@@ -6292,6 +6297,11 @@ window.renderRentabilite = function() {
         if (revenus !== 0 || charges !== 0) byEx[ex] = { revenus, charges };
     });
     let exs = Object.keys(byEx).sort();
+    // v3.4.36 : l'exercice en cours (et tout exercice suivant déjà défini) mélange réel et
+    // budget — son % de rentabilité est marqué "(estim.)" pour ne pas le confondre avec un
+    // résultat définitif.
+    let nowD = new Date();
+    let currentExLabel = getFiscalYearLabel(String(nowD.getFullYear()), String(nowD.getMonth()+1).padStart(2,'0'), fiscalStartMonth);
     let grandRevenus = 0, grandCharges = 0;
     let rentaRowsHtml = exs.map(ex => {
         let revenus = byEx[ex].revenus;
@@ -6301,14 +6311,15 @@ window.renderRentabilite = function() {
         let investiEx = computeInvestiForExercice(ex);
         let brute = investiEx > 0 ? (revenus / investiEx) * 100 : 0;
         let nette = investiEx > 0 ? (resultat / investiEx) * 100 : 0;
+        let estimSuffix = ex >= currentExLabel ? ' <span style="color:var(--ink-soft);font-weight:400;">(estim.)</span>' : '';
         return `<tr class="tcd-row-main-tr">
             <td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(ex)}</div></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(revenus)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(charges)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(resultat)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(investiEx)}</span></td>
-            <td class="tcd-cell"><span class="budget-val-ro">${investiEx>0 ? brute.toFixed(2)+' %' : '-'}</span></td>
-            <td class="tcd-cell"><span class="budget-val-ro">${investiEx>0 ? nette.toFixed(2)+' %' : '-'}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${investiEx>0 ? brute.toFixed(2)+' %'+estimSuffix : '-'}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${investiEx>0 ? nette.toFixed(2)+' %'+estimSuffix : '-'}</span></td>
         </tr>`;
     }).join('') || '<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
     if (exs.length) {
@@ -6401,9 +6412,15 @@ window.populateRegulExerciceSelect = function() {
     }
     
     sel.innerHTML = opts;
-    if (sortedExs.includes(prevVal)) sel.value = prevVal;
-    else sel.value = sortedExs[sortedExs.length - 1];
-    
+    if (sortedExs.includes(prevVal)) {
+        sel.value = prevVal;
+    } else {
+        // v3.4.36 : à défaut de sélection valide, l'exercice le plus ancien NON clôturé par
+        // défaut (celui qui reste à traiter), plutôt que le plus récent.
+        let oldestOpen = sortedExs.find(ex => !(bien.regulClosed && bien.regulClosed[ex]));
+        sel.value = oldestOpen !== undefined ? oldestOpen : sortedExs[sortedExs.length - 1];
+    }
+
     window.renderRegul();
 };
 function getRegulMonthsForExercice(ex) {
