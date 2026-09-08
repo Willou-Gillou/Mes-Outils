@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.2</title>
-    <!-- v4.3.2 - Budget/Projection : titre aligné sur la ligne de la barre d'outils (Exercice → Taille éléments) au lieu d'une ligne à part ; un seul ascenseur vertical fixe (titre + barre d'outils) allant jusqu'en bas de la page, incluant la section Rentabilité -->
+    <title>Mes finances - v4.3.3</title>
+    <!-- v4.3.3 - Budget/Projection : titre remis à gauche (comme les autres onglets) avec la barre d'outils à droite ; passage à un layout flexbox (au lieu d'un max-height estimé) pour n'avoir qu'un seul ascenseur vertical, celui du contenu sous le titre toujours visible -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -464,27 +464,27 @@
     </div>
 
     <div id="view-budget" class="view">
-        <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;justify-content:center;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 16px;flex-shrink:0;">
             <h2 style="margin:0;">📊 Budget / Projection</h2>
-            <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
-            <div class="pivot-select-group">
-                <label style="font-weight:700;font-size:0.85em;">Exercice</label>
-                <select id="budgetExerciceSelect" class="input-text" style="width:auto;" onchange="window.onBudgetExerciceChange()">
-                </select>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                <div class="pivot-select-group">
+                    <label style="font-weight:700;font-size:0.85em;">Exercice</label>
+                    <select id="budgetExerciceSelect" class="input-text" style="width:auto;" onchange="window.onBudgetExerciceChange()">
+                    </select>
+                </div>
+                <button id="btnReprendreN1" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.reprendreElementsN1()" title="Copie le réel de l'exercice précédent dans la projection de l'exercice sélectionné, comme base de départ du budget">↺ Reprendre éléments n-1</button>
+                <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateBudget()">✅ Valider budget</button>
+                <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelBudgetValidation()">↩️ Annuler budget</button>
+                <button id="btnCloturerExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerBtnClick(event)">🔒 Clôturer exercice</button>
+                <button id="btnAjouterMoisHorsExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.openAjoutMoisHorsExercice()">📅 Ajouter un mois hors exercice</button>
+                <button id="btnBudgetCompactView" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.toggleBudgetCompactView()" title="Affichage réduit : masque les lignes dont le budget et le réel sont à 0€ sur toute la période de l'exercice">🔎 Réduire</button>
+                <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
+                <span style="font-size:0.82em;font-weight:600;color:var(--ink-soft);">Taille éléments tableau :</span>
+                <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(1)">+</button>
+                <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(-1)">−</button>
             </div>
-            
-            <button id="btnReprendreN1" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.reprendreElementsN1()" title="Copie le réel de l'exercice précédent dans la projection de l'exercice sélectionné, comme base de départ du budget">↺ Reprendre éléments n-1</button>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateBudget()">✅ Valider budget</button>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelBudgetValidation()">↩️ Annuler budget</button>
-            <button id="btnCloturerExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.onCloturerBtnClick(event)">🔒 Clôturer exercice</button>
-            <button id="btnAjouterMoisHorsExercice" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.openAjoutMoisHorsExercice()">📅 Ajouter un mois hors exercice</button>
-            <button id="btnBudgetCompactView" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.toggleBudgetCompactView()" title="Affichage réduit : masque les lignes dont le budget et le réel sont à 0€ sur toute la période de l'exercice">🔎 Réduire</button>
-            <span style="width:1px;height:24px;background:var(--ink-faint);margin:0 4px;"></span>
-            <span style="font-size:0.82em;font-weight:600;color:var(--ink-soft);">Taille éléments tableau :</span>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(1)">+</button>
-            <button class="btn btn-outline" style="font-size:0.82em;padding:3px 8px;" onclick="window.adjustBudgetFont(-1)">−</button>
         </div>
-        <div style="overflow:auto;max-height:calc(100vh - 160px);">
+        <div style="overflow:auto;flex:1;min-height:0;">
         <div id="budgetValidatedBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--pro-soft);border-radius:8px;color:var(--pro);"></div>
         <div id="budgetCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;color:var(--ink);"></div>
         <div id="budgetCloseNotesWrap" style="display:none;margin:0 16px 8px 16px;">
