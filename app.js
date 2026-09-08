@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.1.1';
+const APP_VERSION = '4.1.2';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4794,9 +4794,7 @@ function newQuittanceBien(nom) {
         logoDataUrl: '',
         dateAchat: '',
         montantAchat: 0,
-        montantRenovation: 0,
-        rentaCatRevenus: [],
-        rentaCatCharges: []
+        montantRenovation: 0
     };
 }
 
@@ -6248,59 +6246,17 @@ function applyRentabiliteOptionState() {
     if (enabled && typeof window.renderRentabilite === 'function') window.renderRentabilite();
 }
 
-// v3.4.29 : sélection au niveau Catégorie 2 (clé "cat1::cat2", "_SANS_CATEGORIE" si vide),
-// avec une case Catégorie 1 qui coche/décoche toutes ses Catégorie 2 d'un coup.
-function rentaCatKey(cat1, cat2) { return cat1 + '::' + (cat2 || '_SANS_CATEGORIE'); }
-function getRentaC2List(cat1) { let l = categories[cat1] || []; return l.length ? l : ['_SANS_CATEGORIE']; }
-// Migration v4.1.0→v3.4.29 : les entrées existantes sans "::" (ancienne sélection "toute la
-// Catégorie 1") sont éclatées en une entrée par Catégorie 2 actuelle.
-function migrateRentaCatList(bien, field) {
-    let list = bien[field];
-    if (!list || !list.length) return;
-    let changed = false, out = [];
-    list.forEach(entry => {
-        if (entry.indexOf('::') === -1) {
-            changed = true;
-            getRentaC2List(entry).forEach(c2 => { let k = rentaCatKey(entry, c2); if (out.indexOf(k) === -1) out.push(k); });
-        } else if (out.indexOf(entry) === -1) {
-            out.push(entry);
-        }
-    });
-    if (changed) { bien[field] = out; saveQuittancesBiens(); }
+// v3.4.30 : rentabilité globale (tous biens confondus), calculée à partir de deux catégories
+// fixes : les revenus dans "1 - Revenus", les charges dans "2 - Charges deductibles". Comparaison
+// insensible aux accents/casse/espaces pour tolérer de petites variations d'orthographe.
+function normalizeCatName(s) {
+    return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
 }
+const RENTA_CAT_REVENUS = normalizeCatName('1 - Revenus');
+const RENTA_CAT_CHARGES = normalizeCatName('2 - Charges deductibles');
 
-// Coche/décoche une Catégorie 2 comme comptant pour les revenus ou les charges d'un bien.
-window.toggleRentaCat = function(bienId, kind, cat1, cat2, checked) {
-    let bien = quittancesBiens.find(b => b.id === bienId);
-    if (!bien) return;
-    let field = kind === 'revenus' ? 'rentaCatRevenus' : 'rentaCatCharges';
-    if (!bien[field]) bien[field] = [];
-    let key = rentaCatKey(cat1, cat2);
-    let idx = bien[field].indexOf(key);
-    if (checked && idx === -1) bien[field].push(key);
-    else if (!checked && idx !== -1) bien[field].splice(idx, 1);
-    saveQuittancesBiens();
-    window.renderRentabilite();
-};
-// Coche/décoche en une fois toutes les Catégorie 2 d'une Catégorie 1.
-window.toggleRentaCatAll = function(bienId, kind, cat1, checked) {
-    let bien = quittancesBiens.find(b => b.id === bienId);
-    if (!bien) return;
-    let field = kind === 'revenus' ? 'rentaCatRevenus' : 'rentaCatCharges';
-    if (!bien[field]) bien[field] = [];
-    getRentaC2List(cat1).forEach(c2 => {
-        let key = rentaCatKey(cat1, c2);
-        let idx = bien[field].indexOf(key);
-        if (checked && idx === -1) bien[field].push(key);
-        else if (!checked && idx !== -1) bien[field].splice(idx, 1);
-    });
-    saveQuittancesBiens();
-    window.renderRentabilite();
-};
-
-// Rentabilité brute = Revenus locatifs annuels / Total investi. Rentabilité nette = (Revenus -
-// Charges) / Total investi. "Revenus"/"Charges" = transactions dont la Catégorie 1 est cochée
-// pour ce bien (§ Config ci-dessous), regroupées par exercice "syndic" (fiscalStartMonthSyndic),
+// Rentabilité brute = Revenus locatifs annuels / Total investi (tous biens). Rentabilité nette =
+// (Revenus - Charges) / Total investi. Regroupées par exercice "syndic" (fiscalStartMonthSyndic),
 // comme le tableau de Régularisation de charges.
 window.renderRentabilite = function() {
     let container = $('rentabiliteGrid');
@@ -6315,7 +6271,7 @@ window.renderRentabilite = function() {
 
     let fmtDateFr = s => { if (!s) return '-'; let p = s.split('-'); return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : '-'; };
 
-    // ── Récap des montants investis ──
+    // ── Récap des montants investis par bien + total ──
     let recapRows = quittancesBiens.map(b => ({ b, total: (Number(b.montantAchat)||0) + (Number(b.montantRenovation)||0) }));
     let grandTotalInvesti = recapRows.reduce((s,r) => s + r.total, 0);
     let recapHtml = `<table class="tcd-native budget-table" cellspacing="0" cellpadding="0"><thead><tr>
@@ -6338,86 +6294,46 @@ window.renderRentabilite = function() {
         <td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td>
         <td class="tcd-cell tcd-total-col tcd-grand"><span class="budget-val-ro">${formatCurrency(grandTotalInvesti)}</span></td></tr></tbody></table>`;
 
-    // ── Config des catégories comptant pour revenus/charges, par bien ──
-    let catKeys = Object.keys(categories).sort(customSortCmp);
-    let configHtml = quittancesBiens.map(b => {
-        if (!b.rentaCatRevenus) b.rentaCatRevenus = [];
-        if (!b.rentaCatCharges) b.rentaCatCharges = [];
-        migrateRentaCatList(b, 'rentaCatRevenus');
-        migrateRentaCatList(b, 'rentaCatCharges');
-        const checklist = (kind, list) => catKeys.length ? catKeys.map(c1 => {
-            let c2List = getRentaC2List(c1);
-            let allChecked = c2List.every(c2 => list.includes(rentaCatKey(c1, c2)));
-            let c2Html = c2List.map(c2 => `<label style="display:flex;align-items:center;gap:6px;font-size:0.8em;padding-left:20px;">
-                <input type="checkbox" ${list.includes(rentaCatKey(c1,c2))?'checked':''} onchange="window.toggleRentaCat('${escapeHtml(b.id)}','${kind}','${escapeHtml(c1)}','${escapeHtml(c2)}',this.checked)">
-                ${escapeHtml(c2 === '_SANS_CATEGORIE' ? '(sans sous-catégorie)' : c2)}
-            </label>`).join('');
-            return `<div style="margin-bottom:2px;">
-                <label style="display:flex;align-items:center;gap:6px;font-size:0.82em;font-weight:600;">
-                    <input type="checkbox" ${allChecked?'checked':''} onchange="window.toggleRentaCatAll('${escapeHtml(b.id)}','${kind}','${escapeHtml(c1)}',this.checked)">
-                    ${escapeHtml(c1)}
-                </label>
-                ${c2Html}
-            </div>`;
-        }).join('') : '<span style="color:var(--ink-soft);font-size:0.82em;">Aucune catégorie</span>';
-        return `<div class="summary-card" style="margin-top:12px;">
-            <h3 style="margin-bottom:10px;">${escapeHtml(b.nom)}</h3>
-            <div style="display:flex;gap:24px;flex-wrap:wrap;">
-                <div style="flex:1;min-width:220px;">
-                    <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;color:var(--good,#16a34a);">Catégories de revenus</div>
-                    <div style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;">${checklist('revenus', b.rentaCatRevenus)}</div>
-                </div>
-                <div style="flex:1;min-width:220px;">
-                    <div style="font-weight:600;font-size:0.85em;margin-bottom:6px;color:var(--urgent,#dc2626);">Catégories de charges</div>
-                    <div style="display:flex;flex-direction:column;gap:4px;max-height:220px;overflow-y:auto;">${checklist('charges', b.rentaCatCharges)}</div>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-
-    // ── Rentabilité par bien et par exercice ──
-    let rentaRowsHtml = quittancesBiens.map(b => {
-        let totalInvesti = (Number(b.montantAchat)||0) + (Number(b.montantRenovation)||0);
-        let byEx = {};
-        transactions.forEach(t => {
-            if (t.amount === 0) return;
-            let key = rentaCatKey(t.cat1 || '_SANS_CATEGORIE', t.cat2);
-            let isRev = (b.rentaCatRevenus||[]).includes(key);
-            let isChg = (b.rentaCatCharges||[]).includes(key);
-            if (!isRev && !isChg) return;
-            let dStr = String(t.dateExpense || t.dateOp || '');
-            if (dStr.length < 7) return;
-            let ex = getFiscalYearLabel(dStr.substring(0,4), dStr.substring(5,7), fiscalStartMonthSyndic);
-            if (!byEx[ex]) byEx[ex] = { revenus: 0, charges: 0 };
-            if (isRev) byEx[ex].revenus += Number(t.amount);
-            if (isChg) byEx[ex].charges += Number(t.amount);
-        });
-        let exs = Object.keys(byEx).sort();
-        let rows = exs.map(ex => {
-            let revenus = byEx[ex].revenus;
-            let charges = Math.abs(byEx[ex].charges);
-            let brute = totalInvesti > 0 ? (revenus / totalInvesti) * 100 : 0;
-            let nette = totalInvesti > 0 ? ((revenus - charges) / totalInvesti) * 100 : 0;
-            return `<tr class="tcd-row-sub-tr">
-                <td class="tcd-col-axis"><div class="tcd-row-sub">↳ ${escapeHtml(ex)}</div></td>
-                <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(revenus)}</span></td>
-                <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(charges)}</span></td>
-                <td class="tcd-cell"><span class="budget-val-ro">${totalInvesti>0 ? brute.toFixed(2)+' %' : '-'}</span></td>
-                <td class="tcd-cell"><span class="budget-val-ro">${totalInvesti>0 ? nette.toFixed(2)+' %' : '-'}</span></td>
-            </tr>`;
-        }).join('') || '<tr class="tcd-row-sub-tr"><td class="tcd-col-axis"><div class="tcd-row-sub">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
-        return `<tr class="tcd-row-main-tr"><td class="tcd-col-axis" colspan="5"><div class="tcd-row-main">${escapeHtml(b.nom)} — Investi : ${formatCurrency(totalInvesti)}</div></td></tr>${rows}`;
-    }).join('');
+    // ── Rentabilité globale par exercice ──
+    let byEx = {};
+    transactions.forEach(t => {
+        if (t.amount === 0) return;
+        let c1n = normalizeCatName(t.cat1);
+        let isRev = c1n === RENTA_CAT_REVENUS;
+        let isChg = c1n === RENTA_CAT_CHARGES;
+        if (!isRev && !isChg) return;
+        let dStr = String(t.dateExpense || t.dateOp || '');
+        if (dStr.length < 7) return;
+        let ex = getFiscalYearLabel(dStr.substring(0,4), dStr.substring(5,7), fiscalStartMonthSyndic);
+        if (!byEx[ex]) byEx[ex] = { revenus: 0, charges: 0 };
+        if (isRev) byEx[ex].revenus += Number(t.amount);
+        if (isChg) byEx[ex].charges += Number(t.amount);
+    });
+    let exs = Object.keys(byEx).sort();
+    let grandRevenus = 0, grandCharges = 0;
+    let rentaRowsHtml = exs.map(ex => {
+        let revenus = byEx[ex].revenus;
+        let charges = Math.abs(byEx[ex].charges);
+        grandRevenus += revenus; grandCharges += charges;
+        let brute = grandTotalInvesti > 0 ? (revenus / grandTotalInvesti) * 100 : 0;
+        let nette = grandTotalInvesti > 0 ? ((revenus - charges) / grandTotalInvesti) * 100 : 0;
+        return `<tr class="tcd-row-main-tr">
+            <td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(ex)}</div></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(revenus)}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(charges)}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? brute.toFixed(2)+' %' : '-'}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? nette.toFixed(2)+' %' : '-'}</span></td>
+        </tr>`;
+    }).join('') || '<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
 
     container.innerHTML = `
         <div class="budget-block-title">📦 Récap des montants investis</div>
         <div class="budget-mirror-wrap">${recapHtml}</div>
-        <div class="budget-block-title" style="margin-top:24px;">⚙️ Catégories comptant pour la rentabilité (par bien)</div>
-        ${configHtml}
-        <div class="budget-block-title" style="margin-top:24px;">📈 Rentabilité par bien et par exercice</div>
+        <div class="budget-block-title" style="margin-top:24px;">📈 Rentabilité globale par exercice</div>
+        <p style="color:var(--ink-soft);font-size:0.82em;margin:0 0 8px 0;">Revenus = transactions catégorisées "1 - Revenus" · Charges = "2 - Charges deductibles" · Rapportées au total investi de tous les biens (${formatCurrency(grandTotalInvesti)}).</p>
         <div class="budget-mirror-wrap">
             <table class="tcd-native budget-table" cellspacing="0" cellpadding="0"><thead><tr>
-                <th class="tcd-col-axis" style="text-align:center;">Bien / Exercice</th>
+                <th class="tcd-col-axis" style="text-align:center;">Exercice</th>
                 <th class="tcd-th-month">Revenus</th>
                 <th class="tcd-th-month">Charges</th>
                 <th class="tcd-th-month">Rentabilité Brute</th>
