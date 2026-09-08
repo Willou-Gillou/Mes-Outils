@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.1.4';
+const APP_VERSION = '4.1.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6311,24 +6311,25 @@ window.renderRentabilite = function() {
         let revenus = byEx[ex].revenus;
         let charges = Math.abs(byEx[ex].charges);
         grandRevenus += revenus; grandCharges += charges;
+        let resultat = revenus - charges;
         let brute = grandTotalInvesti > 0 ? (revenus / grandTotalInvesti) * 100 : 0;
-        let nette = grandTotalInvesti > 0 ? ((revenus - charges) / grandTotalInvesti) * 100 : 0;
+        let nette = grandTotalInvesti > 0 ? (resultat / grandTotalInvesti) * 100 : 0;
         return `<tr class="tcd-row-main-tr">
             <td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(ex)}</div></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(revenus)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(charges)}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(resultat)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? brute.toFixed(2)+' %' : '-'}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? nette.toFixed(2)+' %' : '-'}</span></td>
         </tr>`;
-    }).join('') || '<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
+    }).join('') || '<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
     if (exs.length) {
-        let bruteTotal = grandTotalInvesti > 0 ? (grandRevenus / grandTotalInvesti) * 100 : 0;
-        let netteTotal = grandTotalInvesti > 0 ? ((grandRevenus - grandCharges) / grandTotalInvesti) * 100 : 0;
         rentaRowsHtml += `<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL</div></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandRevenus)}</span></td>
             <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandCharges)}</span></td>
-            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? bruteTotal.toFixed(2)+' %' : '-'}</span></td>
-            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? netteTotal.toFixed(2)+' %' : '-'}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandRevenus - grandCharges)}</span></td>
+            <td class="tcd-cell"></td>
+            <td class="tcd-cell"></td>
         </tr>`;
     }
 
@@ -6342,6 +6343,7 @@ window.renderRentabilite = function() {
                 <th class="tcd-col-axis" style="text-align:center;">Exercice</th>
                 <th class="tcd-th-month">Revenus</th>
                 <th class="tcd-th-month">Charges</th>
+                <th class="tcd-th-month">Résultat annuel</th>
                 <th class="tcd-th-month">Rentabilité Brute</th>
                 <th class="tcd-th-month">Rentabilité Nette</th>
             </tr></thead><tbody>${rentaRowsHtml}</tbody></table>
