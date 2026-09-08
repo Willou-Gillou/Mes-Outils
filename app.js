@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.1.2';
+const APP_VERSION = '4.1.3';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -6246,14 +6246,10 @@ function applyRentabiliteOptionState() {
     if (enabled && typeof window.renderRentabilite === 'function') window.renderRentabilite();
 }
 
-// v3.4.30 : rentabilité globale (tous biens confondus), calculée à partir de deux catégories
-// fixes : les revenus dans "1 - Revenus", les charges dans "2 - Charges deductibles". Comparaison
-// insensible aux accents/casse/espaces pour tolérer de petites variations d'orthographe.
-function normalizeCatName(s) {
-    return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase().replace(/\s+/g,' ').trim();
-}
-const RENTA_CAT_REVENUS = normalizeCatName('1 - Revenus');
-const RENTA_CAT_CHARGES = normalizeCatName('2 - Charges deductibles');
+// v3.4.31 : rentabilité globale (tous biens confondus) — revenus = TOUTE Catégorie 1 dont le nom
+// commence par "1" (ex: "1 - Revenus"), charges = TOUTE Catégorie 1 commençant par "2" (ex:
+// "2 - Charges déductibles"), même convention de préfixe numérique déjà utilisée ailleurs dans
+// l'app pour distinguer recettes/charges (cf. banner de validation Budget/Projection).
 
 // Rentabilité brute = Revenus locatifs annuels / Total investi (tous biens). Rentabilité nette =
 // (Revenus - Charges) / Total investi. Regroupées par exercice "syndic" (fiscalStartMonthSyndic),
@@ -6298,9 +6294,9 @@ window.renderRentabilite = function() {
     let byEx = {};
     transactions.forEach(t => {
         if (t.amount === 0) return;
-        let c1n = normalizeCatName(t.cat1);
-        let isRev = c1n === RENTA_CAT_REVENUS;
-        let isChg = c1n === RENTA_CAT_CHARGES;
+        let c1 = String(t.cat1||'').trim();
+        let isRev = /^1/.test(c1);
+        let isChg = /^2/.test(c1);
         if (!isRev && !isChg) return;
         let dStr = String(t.dateExpense || t.dateOp || '');
         if (dStr.length < 7) return;
@@ -6325,12 +6321,22 @@ window.renderRentabilite = function() {
             <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? nette.toFixed(2)+' %' : '-'}</span></td>
         </tr>`;
     }).join('') || '<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">Aucune donnée</div></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td><td class="tcd-cell"></td></tr>';
+    if (exs.length) {
+        let bruteTotal = grandTotalInvesti > 0 ? (grandRevenus / grandTotalInvesti) * 100 : 0;
+        let netteTotal = grandTotalInvesti > 0 ? ((grandRevenus - grandCharges) / grandTotalInvesti) * 100 : 0;
+        rentaRowsHtml += `<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL</div></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandRevenus)}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${formatCurrency(grandCharges)}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? bruteTotal.toFixed(2)+' %' : '-'}</span></td>
+            <td class="tcd-cell"><span class="budget-val-ro">${grandTotalInvesti>0 ? netteTotal.toFixed(2)+' %' : '-'}</span></td>
+        </tr>`;
+    }
 
     container.innerHTML = `
         <div class="budget-block-title">📦 Récap des montants investis</div>
         <div class="budget-mirror-wrap">${recapHtml}</div>
         <div class="budget-block-title" style="margin-top:24px;">📈 Rentabilité globale par exercice</div>
-        <p style="color:var(--ink-soft);font-size:0.82em;margin:0 0 8px 0;">Revenus = transactions catégorisées "1 - Revenus" · Charges = "2 - Charges deductibles" · Rapportées au total investi de tous les biens (${formatCurrency(grandTotalInvesti)}).</p>
+        <p style="color:var(--ink-soft);font-size:0.82em;margin:0 0 8px 0;">Revenus = transactions dont la Catégorie 1 commence par "1" · Charges = Catégorie 1 commençant par "2" · Rapportées au total investi de tous les biens (${formatCurrency(grandTotalInvesti)}).</p>
         <div class="budget-mirror-wrap">
             <table class="tcd-native budget-table" cellspacing="0" cellpadding="0"><thead><tr>
                 <th class="tcd-col-axis" style="text-align:center;">Exercice</th>
