@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.2.2</title>
-    <!-- v4.2.2 - Rentabilité : le montant investi pris en compte par exercice est proraté sur l'année d'achat du bien (au jour près) et exclu avant sa date d'achat, au lieu d'un total investi fixe faussant le % de rentabilité -->
+    <title>Mes finances - v4.3.0</title>
+    <!-- v4.3.0 - Rentabilité déplacée en bas de l'onglet Budget/Projection (fin de l'onglet et du réglage Paramètres dédiés) ; revenus/charges tirés du Budget/Projection lui-même au lieu des seules transactions réelles, pour refléter la projection complète de l'exercice en cours -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -60,7 +60,6 @@
     <button class="tab-btn" data-target="view-charts" id="tabCharts">📈 Graphiques</button>
     <button class="tab-btn" data-target="view-quittances" id="tabQuittances" style="display:none;">🏠 Immobilier</button>
     <button class="tab-btn" data-target="view-budget" id="tabBudget" style="display:none;">📊 Budget / Projection</button>
-    <button class="tab-btn" data-target="view-rentabilite" id="tabRentabilite" style="display:none;">💹 Rentabilité</button>
     <button class="tab-btn" data-target="view-settings">Paramètres</button>
     <button class="tab-btn" data-target="view-diagnostic" id="tabDiagnostic" style="display:none;">🧪 Diagnostic</button>
 </div>
@@ -490,11 +489,9 @@
             <textarea id="budgetCloseNotes" class="input-text" style="width:100%;min-height:60px;font-size:0.85em;" onblur="window.onBudgetCloseNotesBlur()"></textarea>
         </div>
         <div id="budgetGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
-    </div>
 
-    <div id="view-rentabilite" class="view">
-        <div style="padding:10px 16px;">
-            <h2 style="margin:0 0 4px 0;">💹 Rentabilité</h2>
+        <div style="padding:10px 16px;margin-top:20px;border-top:1px solid var(--ink-faint);">
+            <h2 style="margin:16px 0 4px 0;">💹 Rentabilité</h2>
             <p style="color:var(--ink-soft);font-size:0.85em;margin:0;">Montants investis (Immobilier → Info investissement) et rentabilité brute/nette globale par exercice.</p>
         </div>
         <div id="rentabiliteEmptyState" style="display:none;text-align:center;padding:40px;color:var(--ink-soft);">
@@ -566,11 +563,6 @@
                     </div>
                 </div>
             </div>
-            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
-                <input type="checkbox" id="optRentabiliteCb" style="width:18px;height:18px;" onchange="window.toggleRentabiliteOption(this.checked)">
-                Rentabilité (investissement, rentabilité brute/nette globale)
-            </label>
-            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié récapitulant les montants investis (Immobilier → Info investissement) et calculant la rentabilité brute et nette globale, par exercice.</p>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optDiagCb" style="width:18px;height:18px;" onchange="window.toggleDiagOption(this.checked)">
                 Diagnostic intégré (tests automatisés après mise à jour)

@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.2.2';
+const APP_VERSION = '4.3.0';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -49,8 +49,8 @@ var budgetEnabled = false;
 // v3.4.32 : Suivi & Régule de charges n'est plus une option indépendante — intégré à l'onglet
 // Immobilier (ex-Quittances), sous le bien actuellement sélectionné.
 var currentRegulBienId = null;
-// v3.4.28 : Rentabilité (par compte)
-var rentabiliteEnabled = false;
+// v3.4.35 : Rentabilité n'est plus une option indépendante — intégrée en bas de l'onglet
+// Budget/Projection, elle suit l'activation de budgetEnabled.
 // ── v3.4.10 : Graphiques (par compte, activé par défaut) ────────────────────────
 var chartsEnabled = true;
 // ── v3.3.6 : Diagnostic intégré (réglage global, sans distinction de compte) ──
@@ -398,7 +398,7 @@ const buildEncryptedPayload = () => {
         budgetIndicatorConfig: window.budgetIndicatorConfig,
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,rentabiliteEnabled:rentabiliteEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -460,13 +460,6 @@ function decryptPayload(remoteData) {
             localStorage.setItem('f_budget_enabled_' + currentAccountId, budgetEnabled ? '1' : '0');
         }
         if (typeof applyBudgetOptionState === 'function') applyBudgetOptionState();
-        rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
-        applyRentabiliteOptionState();
-        if (typeof p.rentabiliteEnabled === 'boolean') {
-            rentabiliteEnabled = p.rentabiliteEnabled;
-            localStorage.setItem('f_rentabilite_enabled_' + currentAccountId, rentabiliteEnabled ? '1' : '0');
-        }
-        if (typeof applyRentabiliteOptionState === 'function') applyRentabiliteOptionState();
         if (p.fiscalStartMonthSyndic) {
             fiscalStartMonthSyndic = parseInt(p.fiscalStartMonthSyndic) || 10;
             localStorage.setItem('f_fiscal_syndic_' + currentAccountId, fiscalStartMonthSyndic);
@@ -815,8 +808,6 @@ function triggerSave(reRenderDbView = false, quiet = false) {
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
     try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyChartsOptionState(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
-    rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
-    applyRentabiliteOptionState();
     if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
 };
 
@@ -1464,6 +1455,10 @@ window.renderBudget = function() {
     });
 
     window.bindBudgetDrillDown();
+
+    // v3.4.35 : Rentabilité est affichée en bas de l'onglet Budget/Projection, toujours à jour
+    // en même temps que le budget (elle en tire ses données de revenus/charges).
+    if (typeof window.renderRentabilite === 'function') window.renderRentabilite();
 };
 
 let _budgetClickHandler = null;
@@ -4451,8 +4446,6 @@ window.switchAccount = async function(newId) {
     loadFiscalStartMonthSyndic(); applyFiscalStartMonthState();
     budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
     applyBudgetOptionState();
-    rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
-    applyRentabiliteOptionState();
     chartsEnabled = localStorage.getItem('f_charts_enabled_' + currentAccountId) !== '0'; // activé par défaut
     applyChartsOptionState();
     if (window.appState) window.appState.tcdRedCells = window.appState.tcdRedCells || {};
@@ -6202,28 +6195,8 @@ window.setFiscalStartMonthSyndic = function(v) {
     if (typeof window.populateRegulExerciceSelect === 'function') window.populateRegulExerciceSelect();
     showToast('Exercice syndic mis à jour ✓');
 };
-// ── v3.4.28 : Rentabilité ────────────────────────────────────────────────────
-window.toggleRentabiliteOption = function(checked) {
-    rentabiliteEnabled = checked;
-    localStorage.setItem('f_rentabilite_enabled_' + currentAccountId, checked ? '1' : '0');
-    let tab = $('tabRentabilite'); if (tab) tab.style.display = checked ? '' : 'none';
-    if (!checked) {
-        let activeTab = document.querySelector('.tab-btn.active');
-        if (activeTab && activeTab.dataset.target === 'view-rentabilite') {
-            let sumTab = document.querySelector('.tab-btn[data-target="view-summary"]');
-            if (sumTab) sumTab.click();
-        }
-    } else {
-        window.renderRentabilite();
-    }
-    triggerSave(false);
-};
-function applyRentabiliteOptionState() {
-    let enabled = rentabiliteEnabled;
-    let tab = $('tabRentabilite'); if (tab) tab.style.display = enabled ? '' : 'none';
-    let cb = $('optRentabiliteCb'); if (cb) cb.checked = enabled;
-    if (enabled && typeof window.renderRentabilite === 'function') window.renderRentabilite();
-}
+// v3.4.35 : Rentabilité vit désormais au bas de l'onglet Budget/Projection — plus d'option
+// séparée, elle suit budgetEnabled et se rafraîchit à chaque appel de window.renderBudget().
 
 // v3.4.31 : rentabilité globale (tous biens confondus) — revenus = TOUTE Catégorie 1 dont le nom
 // commence par "1" (ex: "1 - Revenus"), charges = TOUTE Catégorie 1 commençant par "2" (ex:
@@ -6295,19 +6268,28 @@ window.renderRentabilite = function() {
         <td class="tcd-cell tcd-total-col tcd-grand"><span class="budget-val-ro">${formatCurrency(grandTotalInvesti)}</span></td></tr></tbody></table>`;
 
     // ── Rentabilité globale par exercice ──
+    // v3.4.35 : les revenus/charges viennent désormais du BUDGET (budgetData, l'onglet
+    // Budget/Projection lui-même) et non plus des seules transactions réelles — l'exercice en
+    // cours reflète ainsi la projection complète de l'année, pas seulement ce qui s'est déjà
+    // produit à date.
     let byEx = {};
-    transactions.forEach(t => {
-        if (t.amount === 0) return;
-        let c1 = String(t.cat1||'').trim();
-        let isRev = /^1/.test(c1);
-        let isChg = /^2/.test(c1);
-        if (!isRev && !isChg) return;
-        let dStr = String(t.dateExpense || t.dateOp || '');
-        if (dStr.length < 7) return;
-        let ex = getFiscalYearLabel(dStr.substring(0,4), dStr.substring(5,7), fiscalStartMonth);
-        if (!byEx[ex]) byEx[ex] = { revenus: 0, charges: 0 };
-        if (isRev) byEx[ex].revenus += Number(t.amount);
-        if (isChg) byEx[ex].charges += Number(t.amount);
+    Object.keys(budgetData).forEach(ex => {
+        let exData = budgetData[ex];
+        if (!exData) return;
+        let revenus = 0, charges = 0;
+        Object.keys(exData).forEach(c1 => {
+            if (c1 === '__validated' || c1 === '__closed') return;
+            let isRev = /^1/.test(c1);
+            let isChg = /^2/.test(c1);
+            if (!isRev && !isChg) return;
+            Object.keys(exData[c1] || {}).forEach(c2 => {
+                Object.values(exData[c1][c2] || {}).forEach(v => {
+                    let n = Number(v) || 0;
+                    if (isRev) revenus += n; else charges += n;
+                });
+            });
+        });
+        if (revenus !== 0 || charges !== 0) byEx[ex] = { revenus, charges };
     });
     let exs = Object.keys(byEx).sort();
     let grandRevenus = 0, grandCharges = 0;
@@ -6344,7 +6326,7 @@ window.renderRentabilite = function() {
         <div class="budget-block-title">📦 Récap des montants investis</div>
         <div class="budget-mirror-wrap">${recapHtml}</div>
         <div class="budget-block-title" style="margin-top:24px;">📈 Rentabilité globale par exercice</div>
-        <p style="color:var(--ink-soft);font-size:0.82em;margin:0 0 8px 0;">Revenus = transactions dont la Catégorie 1 commence par "1" · Charges = Catégorie 1 commençant par "2" · Rapportées au montant investi de l'exercice, proraté sur l'année d'achat (un bien ne compte qu'à partir de sa date d'achat, au prorata du nombre de jours possédés).</p>
+        <p style="color:var(--ink-soft);font-size:0.82em;margin:0 0 8px 0;">Revenus = Budget/Projection ci-dessus, Catégorie 1 commençant par "1" · Charges = Catégorie 1 commençant par "2" · Rapportées au montant investi de l'exercice, proraté sur l'année d'achat (un bien ne compte qu'à partir de sa date d'achat, au prorata du nombre de jours possédés).</p>
         <div class="budget-mirror-wrap">
             <table class="tcd-native budget-table" cellspacing="0" cellpadding="0"><thead><tr>
                 <th class="tcd-col-axis" style="text-align:center;">Exercice</th>
@@ -7427,8 +7409,6 @@ document.addEventListener('DOMContentLoaded', function() {
             applyFiscalStartMonthState();
             budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
             applyBudgetOptionState();
-    rentabiliteEnabled = localStorage.getItem('f_rentabilite_enabled_' + currentAccountId) === '1';
-    applyRentabiliteOptionState();
         } catch(e) {}
     }, 300);
 });
