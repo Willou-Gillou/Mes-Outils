@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.0.7</title>
-    <!-- v4.0.7 - Budget/Projection : en-têtes de mois au format "Jan 26" (mois standards alignés sur les colonnes hors exercice) ; fond bleu clair distinctif sur les en-têtes des mois hors exercice -->
+    <title>Mes finances - v4.1.0</title>
+    <!-- v4.1.0 - Nouvel onglet optionnel Rentabilité : Quittances → section Info investissement (date/montant d'achat, montant rénovation) ; récap des montants investis par bien ; calcul de la rentabilité brute et nette par bien et par exercice, à partir de catégories de transactions configurables -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -61,6 +61,7 @@
     <button class="tab-btn" data-target="view-quittances" id="tabQuittances" style="display:none;">🧾 Quittances</button>
     <button class="tab-btn" data-target="view-budget" id="tabBudget" style="display:none;">📊 Budget / Projection</button>
     <button class="tab-btn" data-target="view-regul" id="tabRegul" style="display:none;">⚖️ Suivi & Régule charges</button>
+    <button class="tab-btn" data-target="view-rentabilite" id="tabRentabilite" style="display:none;">💹 Rentabilité</button>
     <button class="tab-btn" data-target="view-settings">Paramètres</button>
     <button class="tab-btn" data-target="view-diagnostic" id="tabDiagnostic" style="display:none;">🧪 Diagnostic</button>
 </div>
@@ -521,6 +522,17 @@
         <div id="regulCloseBanner" style="display:none;text-align:center;font-weight:700;font-size:1em;padding:8px;margin:0 16px 8px 16px;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;color:var(--ink);"></div>
         <div id="regulGrid" style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px);padding:0 16px 24px 16px;"></div>
     </div>
+
+    <div id="view-rentabilite" class="view">
+        <div style="padding:10px 16px;">
+            <h2 style="margin:0 0 4px 0;">💹 Rentabilité</h2>
+            <p style="color:var(--ink-soft);font-size:0.85em;margin:0;">Montants investis (Quittances → Info investissement) et rentabilité brute/nette par bien et par exercice, calculées à partir des catégories de transactions cochées ci-dessous.</p>
+        </div>
+        <div id="rentabiliteEmptyState" style="display:none;text-align:center;padding:40px;color:var(--ink-soft);">
+            <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien n'est configuré. Allez dans l'onglet Quittances pour en créer un.</p>
+        </div>
+        <div id="rentabiliteGrid" style="overflow-x:auto;padding:0 16px 24px 16px;"></div>
+    </div>
     <div id="view-settings" class="view">
         <h2 style="margin-bottom:24px;">Paramètres</h2>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
@@ -595,6 +607,11 @@
                     <option value="1">Janvier</option><option value="2">Février</option><option value="3">Mars</option><option value="4">Avril</option><option value="5">Mai</option><option value="6">Juin</option><option value="7">Juillet</option><option value="8">Août</option><option value="9">Septembre</option><option value="10">Octobre</option><option value="11">Novembre</option><option value="12">Décembre</option>
                 </select>
             </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
+                <input type="checkbox" id="optRentabiliteCb" style="width:18px;height:18px;" onchange="window.toggleRentabiliteOption(this.checked)">
+                Rentabilité (investissement, rentabilité brute/nette par bien)
+            </label>
+            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet dédié récapitulant les montants investis (Quittances → Info investissement) et calculant la rentabilité brute et nette de chaque bien, par exercice.</p>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optDiagCb" style="width:18px;height:18px;" onchange="window.toggleDiagOption(this.checked)">
                 Diagnostic intégré (tests automatisés après mise à jour)
@@ -699,6 +716,21 @@
                 <div class="summary-card" style="flex:1 1 260px;min-width:220px;margin-top:0;">
                     <h3 style="margin-bottom:12px;">💬 Commentaires</h3>
                     <textarea id="qCommentaires" class="input-text" rows="3" style="width:100%;resize:vertical;" onchange="window.saveQuittanceField()" placeholder="Ex : Régule de charges faite. Réévaluation des provisions..."></textarea>
+                </div>
+
+                <div class="summary-card" style="flex:1 1 260px;min-width:240px;margin-top:0;">
+                    <h3 style="margin-bottom:12px;">💰 Info investissement</h3>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        <label style="font-size:0.85em;display:flex;align-items:center;gap:8px;">Date d'achat
+                            <input type="date" id="qDateAchat" class="input-text" style="flex:1;" onchange="window.saveQuittanceField()">
+                        </label>
+                        <label style="font-size:0.85em;display:flex;align-items:center;gap:8px;">Montant d'achat
+                            <input type="number" id="qMontantAchat" class="input-text" style="flex:1;" placeholder="€" onchange="window.saveQuittanceField()">
+                        </label>
+                        <label style="font-size:0.85em;display:flex;align-items:center;gap:8px;">Montant rénovation
+                            <input type="number" id="qMontantRenovation" class="input-text" style="flex:1;" placeholder="€" onchange="window.saveQuittanceField()">
+                        </label>
+                    </div>
                 </div>
 
                 <div class="summary-card" style="flex:2 1 380px;min-width:300px;margin-top:0;">
