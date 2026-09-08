@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.2.0</title>
-    <!-- v4.2.0 - Onglet "Quittances" renommé "Immobilier" ; Suivi & Régule de charges intégré dedans, sous l'échéancier de facturation (fin du sélecteur de bien séparé et du réglage indépendant dans Paramètres, exercice fiscal syndic déplacé au-dessus du tableau) ; montants d'achat/rénovation affichés en euros formatés (espace milliers) -->
+    <title>Mes finances - v4.2.1</title>
+    <!-- v4.2.1 - Budget/Projection : l'exercice sélectionné est mémorisé par compte (changement d'onglet, réouverture) ; Immobilier : la ligne de titre/actions reste fixe, seul le contenu du bien défile en dessous -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -468,7 +468,7 @@
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;justify-content:center;">
             <div class="pivot-select-group">
                 <label style="font-weight:700;font-size:0.85em;">Exercice</label>
-                <select id="budgetExerciceSelect" class="input-text" style="width:auto;" onchange="window.renderBudget()">
+                <select id="budgetExerciceSelect" class="input-text" style="width:auto;" onchange="window.onBudgetExerciceChange()">
                 </select>
             </div>
             
@@ -633,6 +633,7 @@
             </div>
         </div>
 
+        <div style="overflow-y:auto;max-height:calc(100vh - 200px);">
         <div id="quittanceEmptyState" style="display:none;text-align:center;padding:60px 20px;color:var(--ink-soft);">
             <p style="font-size:1.1em;margin-bottom:16px;">Aucun bien configuré pour les quittances.</p>
             <button class="btn btn-primary" onclick="window.addQuittanceBien()">+ Créer un premier bien</button>
@@ -864,6 +865,7 @@
                 </div>
             </div>
 
+        </div>
         </div>
     </div>
 

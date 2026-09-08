@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.2.0';
+const APP_VERSION = '4.2.1';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -907,10 +907,18 @@ window.populateBudgetExerciceSelect = function() {
     let nextEx = shiftExerciceLabel(sorted[sorted.length-1], 1);
     if (!sorted.includes(nextEx)) sorted.push(nextEx);
     sorted.sort();
-    let prevVal = sel.value;
+    // v3.4.33 : mémorise l'exercice choisi (par compte) pour le retrouver après un changement
+    // d'onglet ou une réouverture de l'app, au lieu de retomber sur le plus récent à chaque fois.
+    let prevVal = sel.value || localStorage.getItem('f_budget_exercice_' + currentAccountId) || '';
     sel.innerHTML = sorted.map(ex => `<option value="${ex}">${ex}</option>`).join('');
     if (sorted.includes(prevVal)) sel.value = prevVal;
     else sel.value = sorted[sorted.length-1];
+    localStorage.setItem('f_budget_exercice_' + currentAccountId, sel.value);
+    window.renderBudget();
+};
+window.onBudgetExerciceChange = function() {
+    let sel = $('budgetExerciceSelect');
+    if (sel) localStorage.setItem('f_budget_exercice_' + currentAccountId, sel.value);
     window.renderBudget();
 };
 
