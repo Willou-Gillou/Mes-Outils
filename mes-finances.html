@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.3</title>
-    <!-- v4.3.3 - Budget/Projection : titre remis à gauche (comme les autres onglets) avec la barre d'outils à droite ; passage à un layout flexbox (au lieu d'un max-height estimé) pour n'avoir qu'un seul ascenseur vertical, celui du contenu sous le titre toujours visible -->
+    <title>Mes finances - v4.3.4</title>
+    <!-- v4.3.4 - Immobilier : le commentaire unique devient deux commentaires distincts, placés sous la quittance de loyer et sous la quittance de caution, chacun spécifique au document généré -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -669,11 +669,6 @@
                     </div>
                 </div>
 
-                <div class="summary-card" style="flex:1 1 260px;min-width:220px;margin-top:0;">
-                    <h3 style="margin-bottom:12px;">💬 Commentaires</h3>
-                    <textarea id="qCommentaires" class="input-text" rows="3" style="width:100%;resize:vertical;" onchange="window.saveQuittanceField()" placeholder="Ex : Régule de charges faite. Réévaluation des provisions..."></textarea>
-                </div>
-
                 <div class="summary-card" style="flex:1 1 260px;min-width:240px;margin-top:0;">
                     <h3 style="margin-bottom:12px;">💰 Info investissement</h3>
                     <div style="display:flex;flex-direction:column;gap:8px;">
@@ -798,6 +793,11 @@
                             </table>
                         </div>
 
+                        <div style="margin-bottom:16px;">
+                            <h4 style="margin-bottom:8px;font-size:0.9em;">💬 Commentaire (quittance de loyer)</h4>
+                            <textarea id="qCommentairesLoyer" class="input-text" rows="2" style="width:100%;resize:vertical;" onchange="window.saveQuittanceField()" placeholder="Ex : Régule de charges faite. Réévaluation des provisions..."></textarea>
+                        </div>
+
                         <h3 style="margin:20px 0 12px;">🖨️ Générer une quittance de caution</h3>
                         <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:16px;">
                             <button class="btn btn-primary" onclick="window.generateCautionAffichage()">🧾 Générer la quittance de caution</button>
@@ -815,6 +815,11 @@
                                     </tr>
                                 </tfoot>
                             </table>
+                        </div>
+
+                        <div style="margin-bottom:16px;">
+                            <h4 style="margin-bottom:8px;font-size:0.9em;">💬 Commentaire (quittance de caution)</h4>
+                            <textarea id="qCommentairesCaution" class="input-text" rows="2" style="width:100%;resize:vertical;" onchange="window.saveQuittanceField()" placeholder="Ex : Dépôt restitué partiellement, retenue pour..."></textarea>
                         </div>
                     </div>
 

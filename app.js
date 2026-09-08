@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.3';
+const APP_VERSION = '4.3.4';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4783,7 +4783,8 @@ function newQuittanceBien(nom) {
         dateAnniversaire: '',
         echeancier: [],
         lignesQuittance: [],
-        commentaires: '',
+        commentairesLoyer: '',
+        commentairesCaution: '',
         faitA: '',
         signatureTexte: '',
         logoDataUrl: '',
@@ -4833,7 +4834,8 @@ window.saveQuittanceField = function() {
     bien.faitA = $('qFaitA').value;
     bien.signatureTexte = $('qSignatureTexte').value;
     bien.signatureDate = $('qSignatureDate').value || new Date().toISOString().slice(0,10);
-    bien.commentaires = $('qCommentaires').value;
+    bien.commentairesLoyer = $('qCommentairesLoyer').value;
+    bien.commentairesCaution = $('qCommentairesCaution').value;
     bien.dateAchat = $('qDateAchat').value;
     const cleanMontant = v => parseFloat(String(v||'').replace(/[\s  €a-zA-Z]/g,'').replace(',', '.')) || 0;
     bien.montantAchat = cleanMontant($('qMontantAchat').value);
@@ -5709,7 +5711,12 @@ window.renderQuittancesView = function() {
     $('qFaitA').value = bien.faitA || '';
     $('qSignatureTexte').value = bien.signatureTexte || '';
     $('qSignatureDate').value = bien.signatureDate || new Date().toISOString().slice(0,10);
-    $('qCommentaires').value = bien.commentaires || '';
+    // v4.3.4 : le commentaire unique est désormais spécifique à chaque document ; on migre
+    // l'ancien commentaire global (s'il existe encore) vers celui de la quittance de loyer.
+    if (bien.commentairesLoyer === undefined) bien.commentairesLoyer = bien.commentaires || '';
+    if (bien.commentairesCaution === undefined) bien.commentairesCaution = '';
+    $('qCommentairesLoyer').value = bien.commentairesLoyer || '';
+    $('qCommentairesCaution').value = bien.commentairesCaution || '';
     $('qDateAchat').value = bien.dateAchat || '';
     $('qMontantAchat').value = bien.montantAchat ? formatCurrency(bien.montantAchat) : '';
     $('qMontantRenovation').value = bien.montantRenovation ? formatCurrency(bien.montantRenovation) : '';
@@ -5815,6 +5822,7 @@ window._generateQuittanceCore = function(type) {
 
     let titreMap = { loyer: 'QUITTANCE DE LOYER', appel: 'APPEL DE LOYER', caution: 'QUITTANCE DE DÉPÔT DE GARANTIE' };
     let titreAffiche = titreMap[type] || 'QUITTANCE DE LOYER';
+    let commentaireActif = (type === 'caution') ? (bien.commentairesCaution || '') : (bien.commentairesLoyer || '');
     let periodeHtml = (type !== 'caution') ? `<p style="text-align:left;margin-bottom:10px;font-size:0.92em;font-weight:bold;">Periode couverte par le loyer: ${fmtDate(debut)} au ${fmtDate(fin)}</p>` : '';
     let echeancierHtml = (type === 'loyer') ? `<div style="margin-top:14px;font-size:0.85em;"><strong>${echTitre}:</strong>
         <div style="display:flex;gap:6px;margin-top:6px;">
@@ -5840,7 +5848,7 @@ window._generateQuittanceCore = function(type) {
     <p style="text-align:right;margin:16px 0 3px;font-size:0.85em;">Fait à ${escapeHtml(bien.faitA || '')}, le ${fmtDate(bien.signatureDate) || new Date().toLocaleDateString('fr-FR')}</p>
     <p style="text-align:right;font-size:0.85em;">${escapeHtml(bien.signatureTexte || '')}</p>
     <div style="text-align:right;">${logoHtml}</div>
-    ${(bien.commentaires||'').trim() ? `<div style="margin-top:14px;font-size:0.8em;"><strong>Commentaires:</strong><br>${escapeHtml(bien.commentaires||'').replace(/\n/g,'<br>')}</div>` : ''}
+    ${commentaireActif.trim() ? `<div style="margin-top:14px;font-size:0.8em;"><strong>Commentaires:</strong><br>${escapeHtml(commentaireActif).replace(/\n/g,'<br>')}</div>` : ''}
     ${echeancierHtml}
     `;
 
@@ -5855,7 +5863,7 @@ window._generateQuittanceCore = function(type) {
     }
     window._lastQuittanceData = {
         type, bien, debut, fin, fmtDate, fmtEur,
-        totalDebit, totalCredit,
+        totalDebit, totalCredit, commentaire: commentaireActif,
         lignes: lignesSource.map(l => ({
             libelle: l.libelle === 'Payé par virement bancaire, le' ? (l.libelle + (l.detail ? ' ' + fmtDate(l.detail) : '')) : (l.libelle + (l.detail ? ' : ' + l.detail : '')),
             debit: (l.debit||0) > 0 ? fmtEur(l.debit) : '',
@@ -5969,10 +5977,10 @@ window.buildQuittancePdfBlob = async function() {
     }
     y += 4;
 
-    if ((bien.commentaires || '').trim()) {
+    if ((d.commentaire || '').trim()) {
         pdf.setFont('helvetica', 'bold'); pdf.text('Commentaires:', marginX, y); y += 5;
         pdf.setFont('helvetica', 'normal'); pdf.setFontSize(8.5);
-        let commLines = pdf.splitTextToSize(bien.commentaires, pageW - marginX*2);
+        let commLines = pdf.splitTextToSize(d.commentaire, pageW - marginX*2);
         pdf.text(commLines, marginX, y);
         y += commLines.length * 4 + 6;
         pdf.setFontSize(9);
