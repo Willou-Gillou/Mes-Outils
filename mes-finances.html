@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.4</title>
-    <!-- v4.3.4 - Immobilier : le commentaire unique devient deux commentaires distincts, placés sous la quittance de loyer et sous la quittance de caution, chacun spécifique au document généré -->
+    <title>Mes finances - v4.3.5</title>
+    <!-- v4.3.5 - Base de données : ajout du tri alphabétique sur la colonne Détails, comme les autres colonnes -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -247,7 +247,7 @@
                         <th style="width:130px;"><div class="col-header-wrap">Date Écr. <button class="sort-btn" data-col="dateOp">↕</button></div><input type="text" class="col-filter" id="fltDate" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:130px;"><div class="col-header-wrap">Date réelle <button class="sort-btn" data-col="dateExpense">↕</button></div><input type="text" class="col-filter" id="fltDateExpense" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:200px;"><div class="col-header-wrap">Libellé <button class="sort-btn" data-col="label">↕</button></div><input type="text" class="col-filter" id="fltLabel" placeholder="Filtre..."> <div class="resizer"></div></th>
-                        <th style="width:250px;"><div class="col-header-wrap">Détails</div><input type="text" class="col-filter" id="fltDetails" placeholder="Filtre..."> <div class="resizer"></div></th>
+                        <th style="width:250px;"><div class="col-header-wrap">Détails <button class="sort-btn" data-col="details">↕</button></div><input type="text" class="col-filter" id="fltDetails" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:180px;"><div class="col-header-wrap" style="display:flex;align-items:center;gap:4px;">Notes <button id="fltNoteNotEmptyBtn" onclick="window.toggleFltNoteNotEmpty()" style="font-size:0.68em;padding:1px 6px;border-radius:10px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted);white-space:nowrap;flex-shrink:0;">≠ vide</button></div><input type="text" class="col-filter" id="fltNote" placeholder="Espace pour vide..."> <div class="resizer"></div></th>
                         <th style="width:110px;"><div class="col-header-wrap">Montant <button class="sort-btn" data-col="amount">↕</button></div><input type="text" class="col-filter" id="fltAmount" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:180px;"><div class="col-header-wrap">Catégorie 1 <button class="sort-btn" data-col="cat1">↕</button></div><input type="text" class="col-filter" id="fltCat1" placeholder="Espace pour vide..."> <div class="resizer"></div></th>
