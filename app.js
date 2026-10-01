@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.6';
+const APP_VERSION = '4.3.7';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4670,41 +4670,42 @@ function applyChequesOptionState() {
     let cb = $('optChequesCb');
     if (cb) cb.checked = enabled;
     if (enabled) {
-        let dd = $('chqDateDebut'), df = $('chqDateFin');
-        if (dd && !dd.value) dd.value = localStorage.getItem('f_cheques_date_debut_' + currentAccountId) || '';
-        if (df && !df.value) df.value = localStorage.getItem('f_cheques_date_fin_' + currentAccountId) || '';
+        let sel = $('chqWindowSelect');
+        if (sel) sel.value = localStorage.getItem('f_cheques_window_' + currentAccountId) || '12';
     }
 }
 
-// Repère un numéro de chèque dans un libellé/détail bancaire (ex: "CHEQUE 1144", "CHEQUE N°1144").
-function extractChequeNumero(text) {
-    if (!text) return null;
-    let norm = String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
-    let m = norm.match(/CHEQUE\s*N?°?\.?\s*(\d+)/);
+// Repère un numéro de chèque dans le champ Détails d'une transaction (doit commencer par "CHEQUE",
+// ex: "CHEQUE 1144", "CHEQUE N°1144") — le libellé n'est volontairement pas pris en compte.
+function extractChequeNumero(details) {
+    if (!details) return null;
+    let norm = String(details).trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    let m = norm.match(/^CHEQUE\s*N?°?\.?\s*(\d+)/);
     return m ? parseInt(m[1], 10) : null;
 }
 
-window.onChequesDateFilterChange = function() {
-    localStorage.setItem('f_cheques_date_debut_' + currentAccountId, $('chqDateDebut').value);
-    localStorage.setItem('f_cheques_date_fin_' + currentAccountId, $('chqDateFin').value);
+window.onChequesWindowChange = function() {
+    localStorage.setItem('f_cheques_window_' + currentAccountId, $('chqWindowSelect').value);
     window.renderCheques();
 };
 
 window.renderCheques = function() {
     let tbody = $('chequesBody');
     if (!tbody) return;
-    let dateDebut = $('chqDateDebut') ? $('chqDateDebut').value : '';
-    let dateFin = $('chqDateFin') ? $('chqDateFin').value : '';
+    let months = parseInt(($('chqWindowSelect') ? $('chqWindowSelect').value : '') || '12', 10);
+    let windowStart = new Date();
+    windowStart.setMonth(windowStart.getMonth() - months);
+    let dateDebut = windowStart.toISOString().slice(0,10);
     let toFr = iso => iso ? iso.split('-').reverse().join('/') : '--';
 
-    // 1) Chèques encaissés : détectés dans les transactions de la Base de données, dans la fenêtre choisie.
+    // 1) Chèques encaissés : détectés dans le champ Détails des transactions (doit commencer par
+    // "CHEQUE"), sur la période choisie (N derniers mois).
     let encaisseByNum = {};
     transactions.forEach(t => {
-        let num = extractChequeNumero(t.details || t.label);
+        let num = extractChequeNumero(t.details);
         if (num === null) return;
-        if (dateDebut && (!t.dateOp || t.dateOp < dateDebut)) return;
-        if (dateFin && (!t.dateOp || t.dateOp > dateFin)) return;
-        if (!encaisseByNum[num]) encaisseByNum[num] = { dateOp: t.dateOp, dateExpense: t.dateExpense, details: t.details || t.label, montant: t.amount };
+        if (!t.dateOp || t.dateOp < dateDebut) return;
+        if (!encaisseByNum[num]) encaisseByNum[num] = { dateOp: t.dateOp, dateExpense: t.dateExpense, details: t.details, montant: t.amount };
     });
 
     // v4.3.6 : dès qu'un chèque saisi manuellement est détecté dans les transactions, il devient
@@ -4718,15 +4719,18 @@ window.renderCheques = function() {
     let manualDefinedNums = chequesManual.filter(m => m.montant).map(m => m.numero);
 
     // Les numéros de chèques s'incrémentent : on anticipe toujours celui qui suit le dernier chèque
-    // connu (encaissé, ou non encaissé mais déjà doté d'un montant), et on comble les trous entre
-    // le plus ancien et le plus récent numéro connu par des chèques non encaissés.
-    let allKnownNums = encaisseNums.concat(manualNums);
-    let numsToShow = new Set(allKnownNums);
-    if (allKnownNums.length) {
-        let minKnown = Math.min(...allKnownNums);
+    // connu (encaissé, ou non encaissé mais déjà doté d'un montant), et on comble les trous entre le
+    // plus ancien chèque ENCAISSÉ de la période et le plus récent numéro connu par des chèques non
+    // encaissés — sans extrapoler en amont (on ne remonte jamais avant le plus ancien chèque encaissé
+    // de la période choisie).
+    let numsToShow = new Set(encaisseNums.concat(manualNums));
+    if (encaisseNums.length) {
+        let minKnown = Math.min(...encaisseNums);
         let maxKnown = Math.max(minKnown, ...encaisseNums, ...manualDefinedNums);
         for (let n = minKnown; n <= maxKnown; n++) numsToShow.add(n);
         numsToShow.add(maxKnown + 1);
+    } else if (manualDefinedNums.length) {
+        numsToShow.add(Math.max(...manualDefinedNums) + 1);
     }
 
     let rows = [...numsToShow].sort((a,b) => b - a).map(num => {

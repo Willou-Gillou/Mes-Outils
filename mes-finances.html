@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.6</title>
-    <!-- v4.3.6 - Nouvel onglet optionnel "Suivi chèques" (Paramètres/Options additionnelles) : détecte les chèques encaissés dans la Base de données, comble les trous de numérotation et anticipe le chèque suivant comme non encaissé, avec fenêtre de dates et total des chèques sortis non encaissés -->
+    <title>Mes finances - v4.3.7</title>
+    <!-- v4.3.7 - Suivi chèques : détection restreinte au champ Détails commençant par "CHEQUE", fenêtre remplacée par un choix 12/18/24 derniers mois (sauvegardé), plus d'extrapolation des chèques antérieurs au plus ancien chèque encaissé de la période -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -509,16 +509,16 @@
             <h2 style="margin:0;">💳 Suivi chèques</h2>
             <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
                 <div class="pivot-select-group">
-                    <label style="font-weight:700;font-size:0.85em;">Du</label>
-                    <input type="date" id="chqDateDebut" class="input-text" style="width:auto;" onchange="window.onChequesDateFilterChange()">
-                </div>
-                <div class="pivot-select-group">
-                    <label style="font-weight:700;font-size:0.85em;">Au</label>
-                    <input type="date" id="chqDateFin" class="input-text" style="width:auto;" onchange="window.onChequesDateFilterChange()">
+                    <label style="font-weight:700;font-size:0.85em;">Période</label>
+                    <select id="chqWindowSelect" class="input-text" style="width:auto;" onchange="window.onChequesWindowChange()">
+                        <option value="12">12 derniers mois</option>
+                        <option value="18">18 derniers mois</option>
+                        <option value="24">24 derniers mois</option>
+                    </select>
                 </div>
             </div>
         </div>
-        <p style="color:var(--ink-soft);font-size:0.85em;margin-bottom:16px;">Les chèques encaissés sont détectés automatiquement dans la Base de données (libellé ou détails contenant "CHEQUE n°..."). Les numéros manquants dans la séquence, ainsi que le numéro suivant le dernier chèque connu, sont ajoutés comme chèques non encaissés : complétez leur date réelle et leur montant si vous les connaissez déjà.</p>
+        <p style="color:var(--ink-soft);font-size:0.85em;margin-bottom:16px;">Les chèques encaissés sont détectés automatiquement dans la Base de données (détails commençant par "CHEQUE n°...") sur la période choisie. Les numéros manquants dans la séquence, ainsi que le numéro suivant le dernier chèque connu, sont ajoutés comme chèques non encaissés : complétez leur date réelle et leur montant si vous les connaissez déjà.</p>
         <div style="font-weight:700;font-size:1.05em;margin-bottom:14px;">Total chèques non encaissés : <span id="chequesTotalNonEncaisse" style="color:var(--urgent);">0,00 €</span></div>
         <div style="overflow:auto;">
             <table class="std-table" id="chequesTable">
