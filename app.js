@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.5';
+const APP_VERSION = '4.3.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -53,6 +53,9 @@ var currentRegulBienId = null;
 // Budget/Projection, elle suit l'activation de budgetEnabled.
 // ── v3.4.10 : Graphiques (par compte, activé par défaut) ────────────────────────
 var chartsEnabled = true;
+// ── v4.3.6 : Suivi chèques (par compte) ──────────────────────────────────────
+var chequesEnabled = false;
+var chequesManual = []; // [{numero, dateReelle, montant, statut:'non_encaisse'|'annule'}] — chèques non encore repérés dans les transactions
 // ── v3.3.6 : Diagnostic intégré (réglage global, sans distinction de compte) ──
 var diagEnabled = localStorage.getItem('f_diag_enabled') === '1';
 var fiscalStartMonthSyndic = 10;
@@ -398,7 +401,7 @@ const buildEncryptedPayload = () => {
         budgetIndicatorConfig: window.budgetIndicatorConfig,
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled}),appSecretKey).toString()});
+    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled,chequesEnabled:chequesEnabled,chequesManual:chequesManual}),appSecretKey).toString()});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -460,6 +463,12 @@ function decryptPayload(remoteData) {
             localStorage.setItem('f_budget_enabled_' + currentAccountId, budgetEnabled ? '1' : '0');
         }
         if (typeof applyBudgetOptionState === 'function') applyBudgetOptionState();
+        chequesManual = Array.isArray(p.chequesManual) ? p.chequesManual : [];
+        if (typeof p.chequesEnabled === 'boolean') {
+            chequesEnabled = p.chequesEnabled;
+            localStorage.setItem('f_cheques_enabled_' + currentAccountId, chequesEnabled ? '1' : '0');
+        }
+        if (typeof applyChequesOptionState === 'function') applyChequesOptionState();
         if (p.fiscalStartMonthSyndic) {
             fiscalStartMonthSyndic = parseInt(p.fiscalStartMonthSyndic) || 10;
             localStorage.setItem('f_fiscal_syndic_' + currentAccountId, fiscalStartMonthSyndic);
@@ -808,7 +817,9 @@ function triggerSave(reRenderDbView = false, quiet = false) {
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
     try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyChartsOptionState(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
-    if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
+    if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget();
+    applyChequesOptionState();
+    if (chequesEnabled && typeof window.renderCheques === 'function') window.renderCheques(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
 };
 
 window.toggleGroup = function(r1) { tcdSaveScroll(); if(collapsedGroups.has(r1)) collapsedGroups.delete(r1); else collapsedGroups.add(r1); tcdSaveCollapsed(); window.renderSummary(); };
@@ -4545,7 +4556,9 @@ window.addAccount = async function() {
                 fiscalStartMonthSyndic: 10,
                 fiscalStartMonth: 1,
                 activeTab: 'view-summary',
-                chartsEnabled: true
+                chartsEnabled: true,
+                chequesEnabled: false,
+                chequesManual: []
             };
             let emptyPayload = JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify(emptyState), appSecretKey || '').toString()});
             let blob = new Blob([emptyPayload], {type:'application/json'});
@@ -4633,6 +4646,136 @@ function applyBudgetOptionState() {
     if (enabled) window.populateBudgetExerciceSelect();
     window.populateBudgetIndicatorSettingsUI();
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+// SUIVI CHÈQUES — v4.3.6
+// ══════════════════════════════════════════════════════════════════════════
+window.toggleChequesOption = function(checked) {
+    chequesEnabled = checked;
+    localStorage.setItem('f_cheques_enabled_' + currentAccountId, checked ? '1' : '0');
+    $('tabCheques').style.display = checked ? '' : 'none';
+    if (!checked) {
+        let activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab && activeTab.dataset.target === 'view-cheques') {
+            document.querySelector('.tab-btn[data-target="view-summary"]').click();
+        }
+    }
+    triggerSave(false);
+};
+
+function applyChequesOptionState() {
+    let enabled = chequesEnabled;
+    let tab = $('tabCheques');
+    if (tab) tab.style.display = enabled ? '' : 'none';
+    let cb = $('optChequesCb');
+    if (cb) cb.checked = enabled;
+    if (enabled) {
+        let dd = $('chqDateDebut'), df = $('chqDateFin');
+        if (dd && !dd.value) dd.value = localStorage.getItem('f_cheques_date_debut_' + currentAccountId) || '';
+        if (df && !df.value) df.value = localStorage.getItem('f_cheques_date_fin_' + currentAccountId) || '';
+    }
+}
+
+// Repère un numéro de chèque dans un libellé/détail bancaire (ex: "CHEQUE 1144", "CHEQUE N°1144").
+function extractChequeNumero(text) {
+    if (!text) return null;
+    let norm = String(text).normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+    let m = norm.match(/CHEQUE\s*N?°?\.?\s*(\d+)/);
+    return m ? parseInt(m[1], 10) : null;
+}
+
+window.onChequesDateFilterChange = function() {
+    localStorage.setItem('f_cheques_date_debut_' + currentAccountId, $('chqDateDebut').value);
+    localStorage.setItem('f_cheques_date_fin_' + currentAccountId, $('chqDateFin').value);
+    window.renderCheques();
+};
+
+window.renderCheques = function() {
+    let tbody = $('chequesBody');
+    if (!tbody) return;
+    let dateDebut = $('chqDateDebut') ? $('chqDateDebut').value : '';
+    let dateFin = $('chqDateFin') ? $('chqDateFin').value : '';
+    let toFr = iso => iso ? iso.split('-').reverse().join('/') : '--';
+
+    // 1) Chèques encaissés : détectés dans les transactions de la Base de données, dans la fenêtre choisie.
+    let encaisseByNum = {};
+    transactions.forEach(t => {
+        let num = extractChequeNumero(t.details || t.label);
+        if (num === null) return;
+        if (dateDebut && (!t.dateOp || t.dateOp < dateDebut)) return;
+        if (dateFin && (!t.dateOp || t.dateOp > dateFin)) return;
+        if (!encaisseByNum[num]) encaisseByNum[num] = { dateOp: t.dateOp, dateExpense: t.dateExpense, details: t.details || t.label, montant: t.amount };
+    });
+
+    // v4.3.6 : dès qu'un chèque saisi manuellement est détecté dans les transactions, il devient
+    // automatiquement "Chèque encaissé" — son entrée manuelle, devenue redondante, est retirée.
+    let beforeLen = chequesManual.length;
+    chequesManual = chequesManual.filter(m => !encaisseByNum[m.numero]);
+    if (chequesManual.length !== beforeLen) triggerSave(false, true);
+
+    let encaisseNums = Object.keys(encaisseByNum).map(Number);
+    let manualNums = chequesManual.map(m => m.numero);
+    let manualDefinedNums = chequesManual.filter(m => m.montant).map(m => m.numero);
+
+    // Les numéros de chèques s'incrémentent : on anticipe toujours celui qui suit le dernier chèque
+    // connu (encaissé, ou non encaissé mais déjà doté d'un montant), et on comble les trous entre
+    // le plus ancien et le plus récent numéro connu par des chèques non encaissés.
+    let allKnownNums = encaisseNums.concat(manualNums);
+    let numsToShow = new Set(allKnownNums);
+    if (allKnownNums.length) {
+        let minKnown = Math.min(...allKnownNums);
+        let maxKnown = Math.max(minKnown, ...encaisseNums, ...manualDefinedNums);
+        for (let n = minKnown; n <= maxKnown; n++) numsToShow.add(n);
+        numsToShow.add(maxKnown + 1);
+    }
+
+    let rows = [...numsToShow].sort((a,b) => b - a).map(num => {
+        if (encaisseByNum[num]) {
+            let e = encaisseByNum[num];
+            return { numero: num, dateOp: e.dateOp, dateExpense: e.dateExpense, details: e.details, montant: e.montant, statut: 'encaisse' };
+        }
+        let m = chequesManual.find(x => x.numero === num);
+        return { numero: num, dateOp: '', dateExpense: m ? (m.dateReelle || '') : '', details: 'CHEQUE ' + num, montant: m ? (m.montant || 0) : 0, statut: m ? m.statut : 'non_encaisse' };
+    });
+
+    let totalNonEncaisse = rows.filter(r => r.statut === 'non_encaisse').reduce((s,r) => s + (parseFloat(r.montant)||0), 0);
+    let totalEl = $('chequesTotalNonEncaisse');
+    if (totalEl) totalEl.textContent = formatCurrency(totalNonEncaisse);
+
+    tbody.innerHTML = rows.length ? rows.map(r => {
+        if (r.statut === 'encaisse') {
+            return `<tr>
+                <td>${toFr(r.dateOp)}</td>
+                <td>${toFr(r.dateExpense)}</td>
+                <td>${escapeHtml(r.details||'')}</td>
+                <td style="text-align:right;">${formatCurrency(r.montant)}</td>
+                <td><span style="color:var(--done);font-weight:600;">✔️ Chèque encaissé</span></td>
+            </tr>`;
+        }
+        return `<tr style="${r.statut==='annule' ? 'opacity:0.6;' : ''}">
+            <td>--</td>
+            <td><input type="date" class="input-text" value="${r.dateExpense||''}" onchange="window.saveChequeField(${r.numero}, 'dateReelle', this.value)"></td>
+            <td>${escapeHtml(r.details)}</td>
+            <td><input type="text" inputmode="decimal" class="input-text" style="text-align:right;" placeholder="€" value="${r.montant ? formatCurrency(r.montant) : ''}" onchange="window.saveChequeField(${r.numero}, 'montant', this.value)"></td>
+            <td>
+                <select class="input-text" onchange="window.saveChequeField(${r.numero}, 'statut', this.value)">
+                    <option value="non_encaisse" ${r.statut!=='annule'?'selected':''}>Chèque non encaissé</option>
+                    <option value="annule" ${r.statut==='annule'?'selected':''}>Chèque annulé</option>
+                </select>
+            </td>
+        </tr>`;
+    }).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--ink-soft);padding:20px;">Aucun chèque détecté sur la période. Les chèques apparaissent automatiquement dès qu\'une opération "CHEQUE n°..." est présente dans la Base de données.</td></tr>';
+};
+
+window.saveChequeField = function(numero, field, value) {
+    let m = chequesManual.find(x => x.numero === numero);
+    if (!m) { m = { numero, dateReelle: '', montant: 0, statut: 'non_encaisse' }; chequesManual.push(m); }
+    if (field === 'montant') m.montant = parseFloat(String(value||'').replace(/[\s  €a-zA-Z]/g,'').replace(',', '.')) || 0;
+    else if (field === 'dateReelle') m.dateReelle = value;
+    else if (field === 'statut') m.statut = value;
+    triggerSave(false);
+    window.renderCheques();
+};
 
 // ── v3.3.6 : Diagnostic intégré (réglage global, sans distinction de compte) ──
 window.toggleDiagOption = function(checked) {
@@ -4749,6 +4892,7 @@ window.runDiagnostics = function() {
     if (budgetEnabled && typeof window.renderBudget === 'function') renderChecks.push(['Rendu Budget/Projection', window.renderBudget]);
     if (quittancesEnabled && typeof window.renderQuittancesView === 'function') renderChecks.push(['Rendu Immobilier', window.renderQuittancesView]);
     if (quittancesEnabled && typeof window.renderRegul === 'function') renderChecks.push(['Rendu Suivi & Régule', window.renderRegul]);
+    if (chequesEnabled && typeof window.renderCheques === 'function') renderChecks.push(['Rendu Suivi chèques', window.renderCheques]);
     renderChecks.forEach(([name, fn]) => t(name, () => { fn(); return true; }));
 
     // --- Rendu du rapport ---
@@ -7434,6 +7578,8 @@ document.addEventListener('DOMContentLoaded', function() {
             applyFiscalStartMonthState();
             budgetEnabled = localStorage.getItem('f_budget_enabled_' + currentAccountId) === '1';
             applyBudgetOptionState();
+            chequesEnabled = localStorage.getItem('f_cheques_enabled_' + currentAccountId) === '1';
+            applyChequesOptionState();
         } catch(e) {}
     }, 300);
 });
@@ -7501,7 +7647,9 @@ window.importAccountFromDat = async function(input) {
             fiscalStartMonthSyndic: parseInt(decrypted.fiscalStartMonthSyndic) || 10,
             fiscalStartMonth: parseInt(decrypted.fiscalStartMonth) || 1,
             activeTab: decrypted.activeTab || 'view-summary',
-            chartsEnabled: typeof decrypted.chartsEnabled === 'boolean' ? decrypted.chartsEnabled : true
+            chartsEnabled: typeof decrypted.chartsEnabled === 'boolean' ? decrypted.chartsEnabled : true,
+            chequesEnabled: !!decrypted.chequesEnabled,
+            chequesManual: Array.isArray(decrypted.chequesManual) ? decrypted.chequesManual : []
         };
         let payload = JSON.stringify({ vault: CryptoJS.AES.encrypt(JSON.stringify(isolatedState), appSecretKey).toString() });
         let blob = new Blob([payload], { type: 'application/json' });

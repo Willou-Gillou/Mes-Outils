@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.5</title>
-    <!-- v4.3.5 - Base de données : ajout du tri alphabétique sur la colonne Détails, comme les autres colonnes -->
+    <title>Mes finances - v4.3.6</title>
+    <!-- v4.3.6 - Nouvel onglet optionnel "Suivi chèques" (Paramètres/Options additionnelles) : détecte les chèques encaissés dans la Base de données, comble les trous de numérotation et anticipe le chèque suivant comme non encaissé, avec fenêtre de dates et total des chèques sortis non encaissés -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -60,6 +60,7 @@
     <button class="tab-btn" data-target="view-charts" id="tabCharts">📈 Graphiques</button>
     <button class="tab-btn" data-target="view-quittances" id="tabQuittances" style="display:none;">🏠 Immobilier</button>
     <button class="tab-btn" data-target="view-budget" id="tabBudget" style="display:none;">📊 Budget / Projection</button>
+    <button class="tab-btn" data-target="view-cheques" id="tabCheques" style="display:none;">💳 Suivi chèques</button>
     <button class="tab-btn" data-target="view-settings">Paramètres</button>
     <button class="tab-btn" data-target="view-diagnostic" id="tabDiagnostic" style="display:none;">🧪 Diagnostic</button>
 </div>
@@ -503,6 +504,29 @@
         <div id="rentabiliteGrid" style="padding:0 16px 24px 16px;"></div>
         </div>
     </div>
+    <div id="view-cheques" class="view">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:20px;">
+            <h2 style="margin:0;">💳 Suivi chèques</h2>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                <div class="pivot-select-group">
+                    <label style="font-weight:700;font-size:0.85em;">Du</label>
+                    <input type="date" id="chqDateDebut" class="input-text" style="width:auto;" onchange="window.onChequesDateFilterChange()">
+                </div>
+                <div class="pivot-select-group">
+                    <label style="font-weight:700;font-size:0.85em;">Au</label>
+                    <input type="date" id="chqDateFin" class="input-text" style="width:auto;" onchange="window.onChequesDateFilterChange()">
+                </div>
+            </div>
+        </div>
+        <p style="color:var(--ink-soft);font-size:0.85em;margin-bottom:16px;">Les chèques encaissés sont détectés automatiquement dans la Base de données (libellé ou détails contenant "CHEQUE n°..."). Les numéros manquants dans la séquence, ainsi que le numéro suivant le dernier chèque connu, sont ajoutés comme chèques non encaissés : complétez leur date réelle et leur montant si vous les connaissez déjà.</p>
+        <div style="font-weight:700;font-size:1.05em;margin-bottom:14px;">Total chèques non encaissés : <span id="chequesTotalNonEncaisse" style="color:var(--urgent);">0,00 €</span></div>
+        <div style="overflow:auto;">
+            <table class="std-table" id="chequesTable">
+                <thead><tr><th>Date Écr.</th><th>Date Réelle</th><th>Détails</th><th>Montant</th><th style="min-width:180px;">Statut</th></tr></thead>
+                <tbody id="chequesBody"></tbody>
+            </table>
+        </div>
+    </div>
     <div id="view-settings" class="view">
         <h2 style="margin-bottom:24px;">Paramètres</h2>
         <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
@@ -567,6 +591,11 @@
                     </div>
                 </div>
             </div>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
+                <input type="checkbox" id="optChequesCb" style="width:18px;height:18px;" onchange="window.toggleChequesOption(this.checked)">
+                Suivi chèques (liste des chèques encaissés et non encaissés)
+            </label>
+            <p style="color:var(--ink-soft);margin-top:8px;font-size:0.85em;">Active un onglet qui détecte automatiquement les chèques dans la Base de données (libellé/détails contenant "CHEQUE n°...") et anticipe les numéros suivants, non encore encaissés, à partir de la numérotation croissante des chèques.</p>
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-weight:500;margin-top:16px;">
                 <input type="checkbox" id="optDiagCb" style="width:18px;height:18px;" onchange="window.toggleDiagOption(this.checked)">
                 Diagnostic intégré (tests automatisés après mise à jour)
