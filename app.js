@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.7';
+const APP_VERSION = '4.3.8';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -4699,12 +4699,14 @@ window.renderCheques = function() {
     let toFr = iso => iso ? iso.split('-').reverse().join('/') : '--';
 
     // 1) Chèques encaissés : détectés dans le champ Détails des transactions (doit commencer par
-    // "CHEQUE"), sur la période choisie (N derniers mois).
+    // "CHEQUE"), sur TOUT l'historique — un chèque déjà encaissé ne doit jamais pouvoir être marqué
+    // "non encaissé" par erreur sous prétexte qu'il est antérieur à la période choisie. La période
+    // (N derniers mois) sert uniquement à borner la plage de numéros prise en compte pour combler les
+    // trous et anticiper le prochain chèque, pas à filtrer la détection elle-même.
     let encaisseByNum = {};
     transactions.forEach(t => {
         let num = extractChequeNumero(t.details);
         if (num === null) return;
-        if (!t.dateOp || t.dateOp < dateDebut) return;
         if (!encaisseByNum[num]) encaisseByNum[num] = { dateOp: t.dateOp, dateExpense: t.dateExpense, details: t.details, montant: t.amount };
     });
 
@@ -4714,7 +4716,10 @@ window.renderCheques = function() {
     chequesManual = chequesManual.filter(m => !encaisseByNum[m.numero]);
     if (chequesManual.length !== beforeLen) triggerSave(false, true);
 
-    let encaisseNums = Object.keys(encaisseByNum).map(Number);
+    let encaisseNumsInWindow = Object.keys(encaisseByNum).map(Number).filter(num => {
+        let dateOp = encaisseByNum[num].dateOp;
+        return dateOp && dateOp >= dateDebut;
+    });
     let manualNums = chequesManual.map(m => m.numero);
     let manualDefinedNums = chequesManual.filter(m => m.montant).map(m => m.numero);
 
@@ -4723,10 +4728,10 @@ window.renderCheques = function() {
     // plus ancien chèque ENCAISSÉ de la période et le plus récent numéro connu par des chèques non
     // encaissés — sans extrapoler en amont (on ne remonte jamais avant le plus ancien chèque encaissé
     // de la période choisie).
-    let numsToShow = new Set(encaisseNums.concat(manualNums));
-    if (encaisseNums.length) {
-        let minKnown = Math.min(...encaisseNums);
-        let maxKnown = Math.max(minKnown, ...encaisseNums, ...manualDefinedNums);
+    let numsToShow = new Set(encaisseNumsInWindow.concat(manualNums));
+    if (encaisseNumsInWindow.length) {
+        let minKnown = Math.min(...encaisseNumsInWindow);
+        let maxKnown = Math.max(minKnown, ...encaisseNumsInWindow, ...manualDefinedNums);
         for (let n = minKnown; n <= maxKnown; n++) numsToShow.add(n);
         numsToShow.add(maxKnown + 1);
     } else if (manualDefinedNums.length) {
