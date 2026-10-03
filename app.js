@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.10';
+const APP_VERSION = '4.3.11';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -809,8 +809,17 @@ function triggerSave(reRenderDbView = false, quiet = false) {
     // que l'utilisateur ne s'arrête pas — le badge reste bloqué sur "Sauvegarde en cours..."
     // et les données restent non sauvegardées plus longtemps que nécessaire. Ce timer plafond
     // force une sauvegarde périodique même en cas d'activité continue.
+    // v4.3.11 : performSave() chiffre tout le jeu de données de façon SYNCHRONE (CryptoJS, sur
+    // le fil principal) avant l'upload — sur un compte avec beaucoup de transactions, ce chiffrement
+    // peut prendre plusieurs secondes et bloque l'interface pendant ce temps. Avec un plafond à 5s,
+    // une rafale de catégorisations (qui ne laisse jamais 1s d'inactivité) déclenchait cette
+    // sauvegarde bloquante toutes les 5 secondes, en plein milieu de l'action de l'utilisateur —
+    // chaque clic tombant dans cette fenêtre semblait mettre plusieurs secondes à "prendre effet".
+    // Plafond relevé à 15s pour réduire la fréquence de ces coupures pendant une rafale ; le
+    // débounce d'inactivité à 1s ci-dessus reste le mécanisme normal de sauvegarde (il se déclenche
+    // dès que l'utilisateur fait une pause, donc sans bloquer une action en cours).
     if (!saveMaxWaitTimer) {
-        saveMaxWaitTimer = setTimeout(() => performSave(reRenderDbView), 5000);
+        saveMaxWaitTimer = setTimeout(() => performSave(reRenderDbView), 15000);
     }
 }
 
