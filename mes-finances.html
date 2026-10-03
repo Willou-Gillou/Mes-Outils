@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.9</title>
-    <!-- v4.3.9 - Optimisations de performance (sauvegarde/chargement) : suppression du scan O(n²) dans "À Catégoriser", suppression du code mort Tabulator dans le Tableau de bord, debounce sur les filtres, et rendu limité à l'onglet actif au lieu de tous les onglets à chaque sauvegarde/changement d'onglet -->
+    <title>Mes finances - v4.3.10</title>
+    <!-- v4.3.10 - Base de données : la suppression groupée (bulkDelete) attendait la sauvegarde Drive différée (jusqu'à ~6s) pour retirer les lignes supprimées de l'écran ; elle se met désormais à jour immédiatement, la sauvegarde continuant en arrière-plan -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>

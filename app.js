@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.9';
+const APP_VERSION = '4.3.10';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -3517,7 +3517,7 @@ window.updateBulkActions = function() {
     $('bulkActions').style.display=c>0?'flex':'none'; $('dbHeaderNormal').style.display=c>0?'none':'flex';
 };
 window.toggleSelectAll = function() { let v=$('selectAllCb').checked; $$('.row-cb').forEach(c=>c.checked=v); window.updateBulkActions(); };
-window.bulkDelete = function() { if(confirm("Supprimer la sélection ?")){ let ids=Array.from($$('.row-cb:checked')).map(c=>c.value); transactions=transactions.filter(t=>!ids.includes(String(t.id))); $('selectAllCb').checked=false; triggerSave(true); window.updateBulkActions(); showToast("Supprimées"); } };
+window.bulkDelete = function() { if(confirm("Supprimer la sélection ?")){ let ids=Array.from($$('.row-cb:checked')).map(c=>c.value); transactions=transactions.filter(t=>!ids.includes(String(t.id))); $('selectAllCb').checked=false; triggerSave(false); window.renderDataTable(); window.updateBulkActions(); showToast("Supprimées"); } };
 window.bulkDuplicate = function() {
     let ids = Array.from($$('.row-cb:checked')).map(c => c.value);
     if (!ids.length) return;
