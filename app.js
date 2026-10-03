@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.8';
+const APP_VERSION = '4.3.12';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -816,7 +816,26 @@ function triggerSave(reRenderDbView = false, quiet = false) {
 
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
-    try { window.renderSummary(); window.renderUncategorized(); window.renderDataTable(); window.renderRules(); window.renderCategories(); $('bulkCat1').innerHTML=getC1Opts(); window.renderCharts(); applyChartsOptionState(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
+    try {
+        // v4.3.9 : chaque sauvegarde/changement d'onglet recalculait TOUS les tableaux (Tableau de
+        // bord, Base de données, Règles, Catégories, Graphiques), y compris ceux non visibles à
+        // l'écran — coûteux sans aucun bénéfice visuel. On ne redessine désormais à fond que
+        // l'onglet actuellement affiché ; les autres se mettront à jour la prochaine fois que
+        // l'utilisateur cliquera sur leur onglet (activateTab appelle à nouveau renderViewsSafe).
+        // "À Catégoriser" reste toujours recalculé car son compteur (uncatCount) est visible en
+        // permanence dans la barre d'onglets, pas seulement dans sa propre vue.
+        let activeBtn = document.querySelector('.tab-btn.active');
+        let activeTarget = activeBtn ? activeBtn.dataset.target : null;
+        const isActive = id => activeTarget === id;
+
+        window.renderUncategorized();
+        if (isActive('view-summary'))    window.renderSummary();
+        if (isActive('view-data'))       window.renderDataTable();
+        if (isActive('view-rules'))      window.renderRules();
+        if (isActive('view-categories')) window.renderCategories();
+        if (isActive('view-charts'))     window.renderCharts();
+
+        $('bulkCat1').innerHTML=getC1Opts(); applyChartsOptionState(); applyQuittancesOptionState(); if (typeof window.renderQuittancesView === 'function') window.renderQuittancesView(); applyBudgetOptionState();
     if (budgetEnabled && typeof window.renderBudget === 'function') window.renderBudget();
     applyChequesOptionState();
     if (chequesEnabled && typeof window.renderCheques === 'function') window.renderCheques(); } catch(err) { console.error('Erreur affichage:', err); alert("Erreur d'affichage: " + err.message); }
@@ -1785,96 +1804,12 @@ window.renderSummary = function(force=false) {
         tcdSaveCollapsed();
     }
 
-    // 1. Colonnes Tabulator - double entête (année / mois)
-    let columns = [{
-        title: "", field: "axis", frozen: true, width: 280, formatter: "html", headerSort: false, cssClass: "tabulator-frozen-col"
-    }];
-    yearsSorted.forEach(y => {
-        let isCol = collapsedYears.has(y);
-        let yearToggleLabel = '<span class="tcd-toggle-year" data-y="' + y + '" style="cursor:pointer;display:block;text-align:center;font-weight:700;letter-spacing:1px;" title="Cliquer pour réduire/développer">' + y + '</span>';
-        let subCols = [];
-        if (!isCol) {
-            sortedMonthsOf(y).forEach(m => {
-                let padM = m.toString().padStart(2,'0');
-                let monthNames = ['','Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
-                subCols.push({ title: monthNames[parseInt(m)] || padM, field: y+'_'+padM, width:80, hozAlign:"right", formatter:"html", headerSort:false });
-            });
-        }
-        // Colonne TOTAL : visible seulement quand l'année est réduite
-        if (isCol) {
-            subCols.push({ title: '<b>TOTAL</b>', field: 'total_'+y, width:110, hozAlign:"right", formatter:"html", headerSort:false, titleFormatter:"html" });
-        }
-        columns.push({
-            title: yearToggleLabel,
-            titleFormatter: "html",
-            headerSort: false,
-            columns: subCols
-        });
-    });
-    columns.push({ title: "TOTAL GLOBAL", field: "grand_total", width: 130, hozAlign:"right", formatter:"html", headerSort:false });
+    // v4.3.9 : l'app a migré vers un rendu HTML natif (voir plus bas) ; la construction d'une
+    // structure de colonnes/lignes au format Tabulator.js vivait encore ici sans jamais être lue
+    // par personne (aucun `new Tabulator(` dans tout le fichier) — elle doublait inutilement le
+    // coût de chaque rendu du Tableau de bord. Supprimée.
 
-    // 2. Données
-    let tableData = [];
-    const cellFmt = (val, key, isSub=false) => val === 0 ? '' : `<span class="tcd-clickable${isSub?' tcd-sub-amount':''}" data-k="${escapeHtml(key)}">${formatCurrency(val)}</span>`;
-
-    r1Sorted.forEach(r1 => {
-        let collapsed = collapsedGroups.has(r1);
-        let rowObj = {
-            id: r1, isMain: true,
-            axis: `<div class="tcd-row-main" style="cursor:pointer;" data-toggle-r1="${btoa(unescape(encodeURIComponent(r1)))}">${escapeHtml(r1)}</div>`
-        };
-        yearsSorted.forEach(y => {
-            let isCol = collapsedYears.has(y);
-            if (!isCol) {
-                sortedMonthsOf(y).forEach(m => {
-                    let padM = m.toString().padStart(2,'0');
-                    rowObj[`${y}_${padM}`] = `<b>${cellFmt(tree[r1].cells[`${r1}::*::${y}::${m}`]||0, `${r1}::*::${y}::${m}`)}</b>`;
-                });
-            }
-            rowObj[`total_${y}`] = `<b>${cellFmt(tree[r1].yearTotals[y]||0, `${r1}::*::${y}::ALL`)}</b>`;
-        });
-        rowObj.grand_total = `<b>${cellFmt(tree[r1].total, `${r1}::*::ALL::ALL`)}</b>`;
-        tableData.push(rowObj);
-
-        if (r2F && !collapsed) {
-            Object.keys(tree[r1].sub).sort(customSortCmp).forEach(r2 => {
-                let subObj = {
-                    id: `${r1}_${r2}`, isSub: true,
-                    axis: `<div class="tcd-row-sub">↳ ${escapeHtml(r2)}</div>`
-                };
-                yearsSorted.forEach(y => {
-                    let isCol = collapsedYears.has(y);
-                    if (!isCol) {
-                        sortedMonthsOf(y).forEach(m => {
-                            let padM = m.toString().padStart(2,'0');
-                            subObj[`${y}_${padM}`] = cellFmt(tree[r1].sub[r2].cells[`${r1}::${r2}::${y}::${m}`]||0, `${r1}::${r2}::${y}::${m}`, true);
-                        });
-                    }
-                    subObj[`total_${y}`] = cellFmt(tree[r1].sub[r2].yearTotals[y]||0, `${r1}::${r2}::${y}::ALL`, true);
-                });
-                subObj.grand_total = cellFmt(tree[r1].sub[r2].total, `${r1}::${r2}::ALL::ALL`, true);
-                tableData.push(subObj);
-            });
-        }
-    });
-
-    // Ligne TOTAL GLOBAL
-    let totalObj = { id:'GRAND_TOTAL', isTotal:true, axis:'<div class="tcd-row-main">TOTAL GLOBAL</div>' };
-    yearsSorted.forEach(y => {
-        let isCol = collapsedYears.has(y);
-        let yTotal = colTotals[`${y}::ALL`]||0;
-        if (!isCol) {
-            sortedMonthsOf(y).forEach(m => {
-                let padM = m.toString().padStart(2,'0');
-                totalObj[`${y}_${padM}`] = cellFmt(colTotals[`${y}::${m}`]||0, `MONTH_TOTAL::${y}::${padM}`);
-            });
-        }
-        totalObj[`total_${y}`] = `<b>${cellFmt(yTotal, `YEAR_TOTAL::${y}`)}</b>`;
-    });
-    totalObj.grand_total = `<b>${cellFmt(totalGrand, 'GRAND_TOTAL')}</b>`;
-    tableData.push(totalObj);
-
-    // 3. Rendu HTML natif (sans Tabulator)
+    // Rendu HTML natif (sans bibliothèque de grille)
     function applyTcdStyles() {
         window.bindTcdDrillDown();
         let _fs = localStorage.getItem('f_tcd_fontsize');
@@ -2310,7 +2245,19 @@ function stripCardPrefix(s) {
     return v.trim();
 }
 
-function getSuggestions(tx) {
+// v4.3.9 : index {clean, cat1, cat2} des transactions déjà catégorisées, pour la recherche de
+// catégorie historique dans getSuggestions — à construire une seule fois par rendu de
+// "À Catégoriser" plutôt qu'une fois par ligne non catégorisée.
+function buildCatSuggestionIndex() {
+    var idx = [];
+    transactions.forEach(function(t) {
+        if (!t.cat1 || !t.cat2 || t.cat1 === '_SANS_CATEGORIE' || t.cat2 === '_SANS_CATEGORIE') return;
+        idx.push({ clean: stripCardPrefix(t.details || t.label || '').toUpperCase(), cat1: t.cat1, cat2: t.cat2 });
+    });
+    return idx;
+}
+
+function getSuggestions(tx, catIndex) {
     var rawDetail = tx.details || tx.label || '';
     var words = stripCardPrefix(rawDetail).split(/\s+/).filter(function(w){ return w.length >= 4; });
 
@@ -2326,13 +2273,15 @@ function getSuggestions(tx) {
     if (words.length > 0) {
         var cleanUp = stripCardPrefix(rawDetail).toUpperCase();
         var freq = {};
-        transactions.forEach(function(t) {
-            if (!t.cat1 || !t.cat2 || t.cat1 === '_SANS_CATEGORIE' || t.cat2 === '_SANS_CATEGORIE') return;
-            var tClean = stripCardPrefix(t.details || t.label || '').toUpperCase();
+        // v4.3.9 : l'index {clean, cat1, cat2} des transactions déjà catégorisées est précalculé une
+        // seule fois par rendu (voir buildCatSuggestionIndex) au lieu d'être reconstruit — avec un
+        // nettoyage de chaîne par regex — pour CHAQUE ligne non catégorisée (coût en O(n²) sinon).
+        (catIndex || buildCatSuggestionIndex()).forEach(function(e) {
+            var tClean = e.clean;
             var score = 0;
             if (cleanUp.length >= 4 && tClean.includes(cleanUp)) score += words.length + 2;
             else words.forEach(function(w) { if (tClean.includes(w.toUpperCase())) score++; });
-            if (score > 0) { var k = t.cat1+'|||'+t.cat2; freq[k]=(freq[k]||0)+score; }
+            if (score > 0) { var k = e.cat1+'|||'+e.cat2; freq[k]=(freq[k]||0)+score; }
         });
         var best = Object.keys(freq).sort(function(a,b){ return freq[b]-freq[a]; })[0];
         if (best) { var bp = best.split('|||'); histCat = { c1: bp[0], c2: bp[1] }; }
@@ -2357,8 +2306,8 @@ function getSuggestions(tx) {
     return sugg.slice(0, 2);
 }
 
-function renderPills(tx) {
-    var suggs = getSuggestions(tx);
+function renderPills(tx, catIndex) {
+    var suggs = getSuggestions(tx, catIndex);
     if (!suggs.length) return '';
     var html = '';
     suggs.forEach(function(s) {
@@ -3320,6 +3269,16 @@ window.sortUncat = function(col) {
 window.renderUncategorized = function() {
     let _wrap = $('view-categorize').querySelector('.table-wrap');
     let _savedScroll = _wrap ? _wrap.scrollTop : 0;
+    // v4.3.9 : le match de règle (rules.find + parsing du pattern) était recalculé deux fois pour
+    // chaque transaction non catégorisée — une fois ici pour le filtre, une fois dans le rendu des
+    // lignes plus bas. On le calcule une seule fois par transaction et on réutilise le résultat.
+    let ruleMatchCache = new Map();
+    const findRuleMatch = t => {
+        if (ruleMatchCache.has(t)) return ruleMatchCache.get(t);
+        let m = rules.find(r => r.pattern.split(';').map(p=>p.trim()).filter(p=>p).some(p => (t.label && t.label.toUpperCase().includes(p.toUpperCase())) || (t.details && t.details.toUpperCase().includes(p.toUpperCase()))));
+        ruleMatchCache.set(t, m);
+        return m;
+    };
     let uncat = transactions.filter(t => {
         if (!(!t.cat1 || !t.cat2 || t.cat1==="_SANS_CATEGORIE" || t.cat2==="_SANS_CATEGORIE")) return false;
         let f = uncatColFilters;
@@ -3327,7 +3286,7 @@ window.renderUncategorized = function() {
         let c1 = (cat1 && cat1!=='_SANS_CATEGORIE') ? cat1 : '';
         let c2 = (cat2 && cat2!=='_SANS_CATEGORIE') ? cat2 : '';
         // Inclure aussi le match règle dans displayCat pour le filtre
-        let m = rules.find(r => r.pattern.split(';').map(p=>p.trim()).filter(p=>p).some(p => (t.label && t.label.toUpperCase().includes(p.toUpperCase())) || (t.details && t.details.toUpperCase().includes(p.toUpperCase()))));
+        let m = findRuleMatch(t);
         let rc1 = m ? m.cat1 : '', rc2 = m ? m.cat2 : '';
         let eff1 = c1 || rc1, eff2 = c2 || rc2;
         let displayCat = (eff1 && eff2) ? eff1+' > '+eff2 : (eff1 || eff2);
@@ -3355,16 +3314,20 @@ window.renderUncategorized = function() {
     [{col:'dateOp',id:'uncatSortDateOp',lbl:'Date Écriture'},{col:'dateExpense',id:'uncatSortDateExp',lbl:'Date réelle'},{col:'amount',id:'uncatSortAmount',lbl:'Montant'}].forEach(s => {
         let el=$(s.id); if(el) el.textContent = s.lbl + (uncatSortCol===s.col ? (uncatSortDir===-1?' ▼':' ▲') : ' ⇅');
     });
-    
+
 
     let tb = $('uncatTable').querySelector('tbody');
     if(!uncat.length) return tb.innerHTML='<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--ink-soft);">Toutes les écritures sont affectées ! 🎉</td></tr>';
 
+    // v4.3.9 : index des catégories historiques construit une seule fois pour tout le tableau
+    // (voir buildCatSuggestionIndex) au lieu d'une fois par ligne — gain majeur dès que le nombre
+    // de transactions catégorisées devient important.
+    let catIndex = buildCatSuggestionIndex();
     tb.innerHTML = uncat.map(t => {
-        let m = rules.find(r => r.pattern.split(';').map(p=>p.trim()).filter(p=>p).some(p => (t.label && t.label.toUpperCase().includes(p.toUpperCase())) || (t.details && t.details.toUpperCase().includes(p.toUpperCase()))));
+        let m = findRuleMatch(t);
         let sc1=m?m.cat1:'', sc2=m?m.cat2:'', isM=!!m, isPrefilled = (t.cat1 && t.cat1 !== "_SANS_CATEGORIE" && t.cat2 && t.cat2 !== "_SANS_CATEGORIE");
         let displayCat = isPrefilled ? `${t.cat1} > ${t.cat2}` : (isM ? `${sc1} > ${sc2}` : "-");
-        
+
         let act = `<button class="action-cell-btn ${isM||isPrefilled?'action-btn-prefilled':'action-btn-empty'} btn-cat-action" data-id="${t.id}" data-c1="${escapeHtml(sc1||t.cat1)}" data-c2="${escapeHtml(sc2||t.cat2)}" data-match="${isM||isPrefilled}">${isM||isPrefilled?'✏️':'🔍'}</button>`;
 
         return `<tr data-id="${t.id}" class="${selectedUncatIds.has(String(t.id))?'selected-row':''}">
@@ -3372,7 +3335,7 @@ window.renderUncategorized = function() {
             <td>${String(t.dateOp||'').split('-').reverse().join('/')}</td>
             <td><input type="date" class="inline-edit" data-id="${t.id}" data-field="dateExpense" value="${t.dateExpense || t.dateOp}" onclick="event.stopPropagation()"></td>
             <td class="wrap-text" style="font-size:0.9em; color:var(--ink-soft);">${escapeHtml(t.details)}</td>
-            <td style="vertical-align:middle;padding:2px 4px;"><div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center;">${renderPills(t)}</div></td>
+            <td style="vertical-align:middle;padding:2px 4px;"><div style="display:flex;flex-wrap:wrap;gap:2px;align-items:center;">${renderPills(t, catIndex)}</div></td>
             <td><input type="text" class="inline-edit" data-id="${t.id}" data-field="note" value="${escapeHtml(t.note||'')}" placeholder="Notes..." onclick="event.stopPropagation()"></td>
             <td style="font-weight:600; text-align:right; color:${t.amount>0?'var(--done)':'var(--ink)'}">${t.amount} €</td>
             <td style="text-align:right; white-space:nowrap;">${act}</td>
@@ -3513,8 +3476,19 @@ window.renderDataTable = function() {
     if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 
-$$('.col-filter').forEach(inp=>inp.addEventListener('input', ()=>{ dbPage=0; window.renderDataTable(); }));
-$$('.uf-filter').forEach(inp=>inp.addEventListener('input', window.applyUncatFilters));
+// v4.3.9 : les filtres déclenchent un rendu coûteux (filtre+tri sur toute la table) à chaque
+// frappe — on laisse l'utilisateur taper quelques caractères avant de recalculer.
+function debounce(fn, wait) {
+    let t;
+    return function(...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); };
+}
+// Les filtres de "À Catégoriser" portent aussi la classe .col-filter (pour le style commun), donc
+// on les exclut ici pour éviter de redessiner la Base de données à chaque frappe dans cet onglet.
+$$('.col-filter:not(.uf-filter)').forEach(inp=>inp.addEventListener('input', debounce(()=>{ dbPage=0; window.renderDataTable(); }, 250)));
+// window.applyUncatFilters n'est défini que plus bas dans ce fichier : on le résout via une
+// fermeture (appelée seulement à la frappe) plutôt qu'en le capturant ici, où il vaudrait encore
+// `undefined`.
+$$('.uf-filter').forEach(inp=>inp.addEventListener('input', debounce(()=>window.applyUncatFilters(), 250)));
 $$('.sort-btn').forEach(btn=>btn.addEventListener('click',e=>{let c=e.target.dataset.col;if(dbSortCol===c)dbSortDir*=-1;else{dbSortCol=c;dbSortDir=-1;}window.renderDataTable();}));
 
 window.handleInlineChange = function(e) {
@@ -3543,7 +3517,7 @@ window.updateBulkActions = function() {
     $('bulkActions').style.display=c>0?'flex':'none'; $('dbHeaderNormal').style.display=c>0?'none':'flex';
 };
 window.toggleSelectAll = function() { let v=$('selectAllCb').checked; $$('.row-cb').forEach(c=>c.checked=v); window.updateBulkActions(); };
-window.bulkDelete = function() { if(confirm("Supprimer la sélection ?")){ let ids=Array.from($$('.row-cb:checked')).map(c=>c.value); transactions=transactions.filter(t=>!ids.includes(String(t.id))); $('selectAllCb').checked=false; triggerSave(true); window.updateBulkActions(); showToast("Supprimées"); } };
+window.bulkDelete = function() { if(confirm("Supprimer la sélection ?")){ let ids=Array.from($$('.row-cb:checked')).map(c=>c.value); transactions=transactions.filter(t=>!ids.includes(String(t.id))); $('selectAllCb').checked=false; triggerSave(false); window.renderDataTable(); window.updateBulkActions(); showToast("Supprimées"); } };
 window.bulkDuplicate = function() {
     let ids = Array.from($$('.row-cb:checked')).map(c => c.value);
     if (!ids.length) return;
