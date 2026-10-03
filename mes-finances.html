@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.11</title>
-    <!-- v4.3.11 - Sauvegarde : le filet de sécurité qui force une sauvegarde (chiffrement bloquant) toutes les 5s pendant une rafale de modifications (ex. catégorisation en série) coupait l'interface en plein milieu de l'action ; plafond relevé à 15s pour espacer ces coupures -->
+    <title>Mes finances - v4.3.8</title>
+    <!-- v4.3.8 - Suivi chèques : correction d'un bug où des chèques réellement encaissés hors de la période affichée (ex: 18-24 mois avec une fenêtre de 24 mois) étaient marqués "non encaissé" à tort — la détection porte désormais sur tout l'historique, la période ne sert plus qu'à borner la plage de numéros affichée -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -192,12 +192,12 @@
                 <thead style="position:sticky; top:0; z-index:4; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <tr>
                         <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAllUncatCb" onclick="window.toggleSelectAllUncat()" style="cursor:pointer; width:16px; height:16px;"></th>
-                        <th style="width:120px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateOp')"><span id="uncatSortDateOp">Date Écriture</span></div><input type="text" class="col-filter uf-filter" id="ufDateOp" placeholder="Filtre..."> <div class="resizer"></div></th>
-                        <th style="width:140px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateExpense')"><span id="uncatSortDateExp">Date réelle</span></div><input type="text" class="col-filter uf-filter" id="ufDateExpense" placeholder="Filtre..."> <div class="resizer"></div></th>
-                        <th style="width:250px;"><div class="col-header-wrap">Détails</div><input type="text" class="col-filter uf-filter" id="ufDetails" placeholder="Filtre..."> <div class="resizer"></div></th>
+                        <th style="width:120px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateOp')"><span id="uncatSortDateOp">Date Écriture</span></div><input type="text" class="col-filter uf-filter" id="ufDateOp" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
+                        <th style="width:140px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateExpense')"><span id="uncatSortDateExp">Date réelle</span></div><input type="text" class="col-filter uf-filter" id="ufDateExpense" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
+                        <th style="width:250px;"><div class="col-header-wrap">Détails</div><input type="text" class="col-filter uf-filter" id="ufDetails" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:220px;"><div class="col-header-wrap">Catégories possibles</div><button id="ufCatNotEmptyBtn" onclick="window.toggleUfCatNotEmpty()" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:4px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted);font-size:0.85em;text-align:left;">≠ vide</button> <div class="resizer"></div></th>
-                        <th style="width:180px;"><div class="col-header-wrap">Notes</div><input type="text" class="col-filter uf-filter" id="ufNote" placeholder="Espace pour vide..."> <div class="resizer"></div></th>
-                        <th style="width:110px; text-align:right;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('amount')"><span id="uncatSortAmount">Montant</span></div><input type="text" class="col-filter uf-filter" id="ufAmount" placeholder="Filtre..."> <div class="resizer"></div></th>
+                        <th style="width:180px;"><div class="col-header-wrap">Notes</div><input type="text" class="col-filter uf-filter" id="ufNote" placeholder="Espace pour vide..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
+                        <th style="width:110px; text-align:right;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('amount')"><span id="uncatSortAmount">Montant</span></div><input type="text" class="col-filter uf-filter" id="ufAmount" placeholder="Filtre..." oninput="window.applyUncatFilters()"> <div class="resizer"></div></th>
                         <th style="width:120px; text-align:center;"><div class="col-header-wrap">Actions</div></th>
                     </tr>
                 </thead>
