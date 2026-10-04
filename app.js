@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.14';
+const APP_VERSION = '4.3.15';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -894,13 +894,21 @@ async function performSave(reRenderDbView) {
     clearTimeout(saveTimer); saveTimer = null;
     clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
     if (!driveAccessToken || !appSecretKey) return;
+    // v4.3.15 : chronométrage détaillé (demandé pour identifier précisément où passe le temps —
+    // chiffrement, résolution du fichier Drive, ou upload réseau) — un seul message récapitulatif
+    // dans la console, préfixé "[Sauvegarde]", à chaque sauvegarde réelle.
+    const _t0 = performance.now();
     try {
-        const payload = await buildEncryptedPayload(); const fileId = await driveGetFileId();
+        const payload = await buildEncryptedPayload();
+        const _t1 = performance.now();
+        const fileId = await driveGetFileId();
+        const _t2 = performance.now();
         let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', method = 'POST'; const form = new FormData();
         if (fileId) { url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`; method = 'PATCH'; }
         else { const meta = { name: getAccountDriveFilename(), parents: ['appDataFolder'] }; form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' })); }
         form.append('file', new Blob([payload], { type: 'application/json' }));
         const _sr=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
+        const _t3 = performance.now();
         if(!_sr.ok) {
             // Token expiré → on le renouvelle et on réessaie une fois
             if(_sr.status===401) {
@@ -917,9 +925,11 @@ async function performSave(reRenderDbView) {
         if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
         if (!quiet) updateSyncBadge('ok', '✓ Sauvegardé');
         if(reRenderDbView) window.renderDataTable();
+        console.log('[Sauvegarde] taille ' + Math.round(payload.length/1024) + ' Ko — chiffrement ' + Math.round(_t1-_t0) + 'ms, résolution fichier Drive ' + Math.round(_t2-_t1) + 'ms, upload réseau ' + Math.round(_t3-_t2) + 'ms, TOTAL ' + Math.round(_t3-_t0) + 'ms (hors débounce avant le déclenchement).');
     } catch (e) {
         updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez'); // toujours visible, même pour un lot silencieux
         showSaveError(e);
+        console.log('[Sauvegarde] échec après ' + Math.round(performance.now()-_t0) + 'ms :', e.message);
     }
 }
 
@@ -933,7 +943,9 @@ function triggerSave(reRenderDbView = false, quiet = false) {
     pendingSaveQuiet = pendingSaveQuiet && quiet;
     if (!pendingSaveQuiet) updateSyncBadge('syncing', 'Sauvegarde en cours...');
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => performSave(reRenderDbView), 1000);
+    // v4.3.15 : 400ms (au lieu de 1s) — une action isolée (catégoriser une ligne, importer, etc.)
+    // n'a pas besoin d'attendre une pleine seconde d'inactivité avant que la sauvegarde démarre.
+    saveTimer = setTimeout(() => performSave(reRenderDbView), 400);
     // Filet de sécurité : lors d'une rafale de modifications rapprochées (ex. catégorisation
     // en série), chaque appel repousse saveTimer et la sauvegarde réelle n'arrive jamais tant
     // que l'utilisateur ne s'arrête pas — le badge reste bloqué sur "Sauvegarde en cours..."
