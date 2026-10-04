@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.12</title>
-    <!-- v4.3.12 - Reprise des optimisations v4.3.9/v4.3.10 (scan O(n²) "À Catégoriser", code mort Tabulator, rendu limité à l'onglet actif, bulkDelete immédiat) SANS le relèvement du plafond de sauvegarde de v4.3.11, qui aggravait le ralenti pour un usage sans pause (catégorisation en rafale) : le plafond reste à 5s -->
+    <title>Mes finances - v4.3.13</title>
+    <!-- v4.3.13 - Sauvegarde : le chiffrement (CryptoJS) passe désormais par un Web Worker (fil séparé) pour ne plus jamais bloquer l'interface pendant une sauvegarde, avec repli automatique sur l'ancienne méthode si le Worker est indisponible. Mode actif visible dans la console (préfixe "[Chiffrement]") et dans Paramètres → Administration Drive -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -624,6 +624,7 @@
         <div class="summary-card" style="margin-top:24px;">
             <h3 style="margin-bottom:12px;">🛠️ Administration Drive</h3>
             <p style="color:var(--ink-soft);margin-bottom:16px;">Visualiser et supprimer manuellement les fichiers de l'application sur Google Drive.</p>
+            <p style="color:var(--ink-soft);font-size:0.85em;margin-bottom:16px;">Chiffrement des sauvegardes : <strong id="cryptoModeLabel" style="color:var(--ink-soft);">Détection en cours...</strong></p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <button class="btn btn-outline" id="adminDriveListBtn" onclick="window.loadDriveFilesList()">📂 Charger les fichiers Drive</button>
               <button class="btn btn-outline" onclick="$('datUploadInput').click()">⬆️ Uploader un fichier .dat</button>

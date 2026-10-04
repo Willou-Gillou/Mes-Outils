@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.12';
+const APP_VERSION = '4.3.13';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -381,7 +381,111 @@ $('unlockBtn').addEventListener('click', () => {
     fetchDriveData().catch(() => { driveDataLoaded=true; driveShowLogin(); });
 });
 
-const buildEncryptedPayload = () => {
+// ══════════════════════════════════════════════════════════════════════════
+// CHIFFREMENT DANS UN WEB WORKER — v4.3.13
+// performSave() chiffre (CryptoJS AES) tout le jeu de données avant chaque
+// sauvegarde Drive. Sur un gros compte, ce calcul peut prendre plusieurs
+// secondes ; exécuté sur le fil principal, il gèle l'interface pendant ce
+// temps. On le délègue à un Worker (fil séparé) quand c'est possible, pour
+// que la sauvegarde ne bloque plus jamais l'affichage ou la saisie — avec
+// repli automatique et silencieux sur l'ancienne méthode (synchrone, sur le
+// fil principal) si le Worker ne peut pas être créé ou échoue, pour ne
+// jamais empêcher une sauvegarde de partir.
+// Visibilité du mode actif : message dans la console (préfixe "[Chiffrement]")
+// à chaque opération, et libellé "Chiffrement des sauvegardes" dans
+// Paramètres → Administration Drive (mis à jour après chaque opération réelle).
+let _cryptoWorker = null;
+let _cryptoWorkerBroken = false; // une fois vrai, on ne retente plus de créer le Worker
+let _cryptoWorkerSeq = 0;
+let _cryptoWorkerPending = new Map();
+
+function updateCryptoModeLabel(mode) {
+    let el = $('cryptoModeLabel');
+    if (!el) return;
+    if (mode === 'worker') {
+        el.textContent = 'Web Worker (non bloquant) ✓';
+        el.style.color = 'var(--done)';
+    } else if (mode === 'fallback') {
+        el.textContent = 'Mode de compatibilité (synchrone, fil principal)';
+        el.style.color = 'var(--urgent)';
+    } else {
+        el.textContent = 'Détection en cours...';
+        el.style.color = 'var(--ink-soft)';
+    }
+}
+
+function getCryptoWorker() {
+    if (_cryptoWorkerBroken) return null;
+    if (_cryptoWorker) return _cryptoWorker;
+    try {
+        const workerSrc = `
+            importScripts('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js');
+            onmessage = function(e) {
+                const { id, op, text, key } = e.data;
+                try {
+                    let result = (op === 'encrypt')
+                        ? CryptoJS.AES.encrypt(text, key).toString()
+                        : CryptoJS.AES.decrypt(text, key).toString(CryptoJS.enc.Utf8);
+                    postMessage({ id: id, ok: true, result: result });
+                } catch (err) {
+                    postMessage({ id: id, ok: false, error: String(err && err.message || err) });
+                }
+            };
+        `;
+        const blobUrl = URL.createObjectURL(new Blob([workerSrc], { type: 'application/javascript' }));
+        const w = new Worker(blobUrl);
+        w.onmessage = function(e) {
+            const { id, ok, result, error } = e.data || {};
+            const pending = _cryptoWorkerPending.get(id);
+            if (!pending) return;
+            _cryptoWorkerPending.delete(id);
+            if (ok) pending.resolve(result); else pending.reject(new Error(error || 'Erreur worker inconnue'));
+        };
+        w.onerror = function(err) {
+            console.warn('[Chiffrement] Web Worker indisponible (', (err && err.message) || err, ') — repli sur le fil principal.');
+            _cryptoWorkerBroken = true;
+            _cryptoWorkerPending.forEach(p => p.reject(new Error('worker error')));
+            _cryptoWorkerPending.clear();
+            _cryptoWorker = null;
+        };
+        _cryptoWorker = w;
+    } catch (e) {
+        console.warn('[Chiffrement] Impossible de créer le Web Worker (', e.message, ') — repli sur le fil principal.');
+        _cryptoWorkerBroken = true;
+        return null;
+    }
+    return _cryptoWorker;
+}
+
+function cryptoViaWorker(op, text, key) {
+    return new Promise((resolve, reject) => {
+        const w = getCryptoWorker();
+        if (!w) { reject(new Error('worker unavailable')); return; }
+        const id = ++_cryptoWorkerSeq;
+        _cryptoWorkerPending.set(id, { resolve, reject });
+        setTimeout(() => {
+            if (_cryptoWorkerPending.has(id)) { _cryptoWorkerPending.delete(id); reject(new Error('worker timeout')); }
+        }, 10000); // filet de sécurité : si le worker ne répond jamais, on bascule sur le fil principal
+        w.postMessage({ id, op, text, key });
+    });
+}
+
+// Chiffre en essayant d'abord le Worker ; retombe automatiquement sur CryptoJS synchrone en cas
+// d'échec (quelle qu'en soit la raison) — la sauvegarde ne doit jamais être empêchée par ceci.
+async function encryptAsync(text, key) {
+    try {
+        const result = await cryptoViaWorker('encrypt', text, key);
+        console.log('[Chiffrement] Sauvegarde chiffrée via Web Worker (non bloquant).');
+        updateCryptoModeLabel('worker');
+        return result;
+    } catch (e) {
+        console.log('[Chiffrement] Sauvegarde chiffrée sur le fil principal (mode de compatibilité) :', e.message);
+        updateCryptoModeLabel('fallback');
+        return CryptoJS.AES.encrypt(text, key).toString();
+    }
+}
+
+const buildEncryptedPayload = async () => {
     let activeTabBtn = document.querySelector('.tab-btn.active');
     let activeTab = activeTabBtn ? activeTabBtn.dataset.target : 'view-summary';
     let settings = {
@@ -401,7 +505,9 @@ const buildEncryptedPayload = () => {
         budgetIndicatorConfig: window.budgetIndicatorConfig,
         settingsTs: Date.now(),
     };
-    return JSON.stringify({vault: CryptoJS.AES.encrypt(JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled,chequesEnabled:chequesEnabled,chequesManual:chequesManual}),appSecretKey).toString()});
+    const plainPayload = JSON.stringify({transactions,rules,categories,version:APP_VERSION,accounts,settings,accountId:currentAccountId,savedCharts:savedCharts,quittancesBiens:quittancesBiens,quittancesEnabled:quittancesEnabled,budgetData:budgetData,budgetEnabled:budgetEnabled,fiscalStartMonthSyndic:fiscalStartMonthSyndic,fiscalStartMonth:fiscalStartMonth,activeTab:activeTab,chartsEnabled:chartsEnabled,chequesEnabled:chequesEnabled,chequesManual:chequesManual});
+    const cipher = await encryptAsync(plainPayload, appSecretKey);
+    return JSON.stringify({vault: cipher});
 };
 function decryptPayload(remoteData) {
     if(!remoteData.vault) { driveDataLoaded=true; return true; }
@@ -765,7 +871,7 @@ async function performSave(reRenderDbView) {
     clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
     if (!driveAccessToken || !appSecretKey) return;
     try {
-        const payload = buildEncryptedPayload(); const fileId = await driveGetFileId();
+        const payload = await buildEncryptedPayload(); const fileId = await driveGetFileId();
         let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', method = 'POST'; const form = new FormData();
         if (fileId) { url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`; method = 'PATCH'; }
         else { const meta = { name: getAccountDriveFilename(), parents: ['appDataFolder'] }; form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' })); }
@@ -7563,6 +7669,10 @@ document.addEventListener('DOMContentLoaded', function() {
             applyBudgetOptionState();
             chequesEnabled = localStorage.getItem('f_cheques_enabled_' + currentAccountId) === '1';
             applyChequesOptionState();
+            // v4.3.13 : sonde silencieuse pour savoir tout de suite (sans attendre une vraie
+            // sauvegarde) si le chiffrement passera par le Web Worker ou par le mode de
+            // compatibilité — met à jour le libellé dans Paramètres → Administration Drive.
+            encryptAsync('{"probe":true}', 'probe').catch(() => {});
         } catch(e) {}
     }, 300);
 });
