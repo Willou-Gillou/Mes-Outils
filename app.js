@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.13';
+const APP_VERSION = '4.3.14';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -398,6 +398,7 @@ let _cryptoWorker = null;
 let _cryptoWorkerBroken = false; // une fois vrai, on ne retente plus de créer le Worker
 let _cryptoWorkerSeq = 0;
 let _cryptoWorkerPending = new Map();
+let _cryptoJsSourcePromise = null;
 
 function updateCryptoModeLabel(mode) {
     let el = $('cryptoModeLabel');
@@ -414,12 +415,32 @@ function updateCryptoModeLabel(mode) {
     }
 }
 
-function getCryptoWorker() {
+// v4.3.14 : le Worker chargeait crypto-js via son propre importScripts(), c'est-à-dire sa PROPRE
+// requête réseau, indépendante de celle du <script> de la page — si elle était lente (CDN froid,
+// proxy/extension traitant différemment les requêtes d'un Worker), le filet de sécurité de 10s
+// ci-dessous attendait la totalité de ce délai avant de basculer sur l'ancienne méthode, ajoutant
+// jusqu'à 10s d'attente pure à chaque sauvegarde. On récupère maintenant le code source une seule
+// fois DEPUIS LE FIL PRINCIPAL (qui réutilise le cache HTTP du <script> déjà chargé par la page,
+// donc quasi instantané) et on l'injecte directement dans le Worker — celui-ci n'a plus jamais à
+// faire sa propre requête réseau.
+function getCryptoJsSource() {
+    if (!_cryptoJsSourcePromise) {
+        _cryptoJsSourcePromise = fetch('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js', { cache: 'force-cache' })
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); });
+    }
+    return _cryptoJsSourcePromise;
+}
+
+async function getCryptoWorker() {
     if (_cryptoWorkerBroken) return null;
     if (_cryptoWorker) return _cryptoWorker;
     try {
-        const workerSrc = `
-            importScripts('https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js');
+        // Filet de sécurité supplémentaire : si même la récupération du code source (pourtant
+        // censée venir du cache HTTP) est anormalement lente, on abandonne le Worker pour cette
+        // session plutôt que de laisser l'utilisateur attendre indéfiniment.
+        const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('fetch crypto-js timeout')), 3000));
+        const cryptoJsSrc = await Promise.race([getCryptoJsSource(), timeout]);
+        const workerSrc = cryptoJsSrc + `
             onmessage = function(e) {
                 const { id, op, text, key } = e.data;
                 try {
@@ -457,15 +478,18 @@ function getCryptoWorker() {
     return _cryptoWorker;
 }
 
-function cryptoViaWorker(op, text, key) {
+async function cryptoViaWorker(op, text, key) {
+    const w = await getCryptoWorker();
+    if (!w) throw new Error('worker unavailable');
     return new Promise((resolve, reject) => {
-        const w = getCryptoWorker();
-        if (!w) { reject(new Error('worker unavailable')); return; }
         const id = ++_cryptoWorkerSeq;
         _cryptoWorkerPending.set(id, { resolve, reject });
+        // Filet de sécurité : le code source est désormais déjà en main avant l'envoi du message
+        // (voir getCryptoWorker), donc le Worker répond quasi instantanément — un délai court
+        // suffit à détecter un vrai blocage sans jamais faire attendre l'utilisateur longtemps.
         setTimeout(() => {
             if (_cryptoWorkerPending.has(id)) { _cryptoWorkerPending.delete(id); reject(new Error('worker timeout')); }
-        }, 10000); // filet de sécurité : si le worker ne répond jamais, on bascule sur le fil principal
+        }, 2000);
         w.postMessage({ id, op, text, key });
     });
 }

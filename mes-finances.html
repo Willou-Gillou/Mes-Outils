@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.13</title>
-    <!-- v4.3.13 - Sauvegarde : le chiffrement (CryptoJS) passe désormais par un Web Worker (fil séparé) pour ne plus jamais bloquer l'interface pendant une sauvegarde, avec repli automatique sur l'ancienne méthode si le Worker est indisponible. Mode actif visible dans la console (préfixe "[Chiffrement]") et dans Paramètres → Administration Drive -->
+    <title>Mes finances - v4.3.14</title>
+    <!-- v4.3.14 - Correction d'une régression de v4.3.13 : le Worker chargeait crypto-js via sa propre requête réseau, et une sauvegarde pouvait attendre jusqu'à 10s si elle était lente — le code est maintenant récupéré une seule fois depuis le fil principal (cache HTTP, quasi instantané) et injecté dans le Worker, avec un filet de sécurité à 3s (au lieu de 10s) qui, une fois déclenché, ne refait plus jamais attendre les sauvegardes suivantes de la session -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
