@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.15';
+const APP_VERSION = '4.3.16';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -734,12 +734,12 @@ function initDrive() {
 
 $('googleLoginBtnReal').addEventListener('click', () => { driveShowLoading("Authentification..."); driveTokenClient.requestAccessToken({ prompt: 'consent' }); });
 $('logoutBtn').addEventListener('click', () => { if(driveAccessToken)google.accounts.oauth2.revoke(driveAccessToken); localStorage.removeItem(DRIVE_LS+'token'); localStorage.removeItem(DRIVE_LS+'token_exp'); localStorage.removeItem(DRIVE_LS+'scope'); localStorage.removeItem(DRIVE_LS+'granted_scope'); location.reload(); });
-const updateSyncBadge=(st,txt)=>{
+const updateSyncBadge=(st,txt,detail)=>{
     let b=$('syncBadge');
     b.textContent=txt;
     b.className=`badge badge-sync ${st==='ok'?'synced':st==='syncing'?'syncing':st==='error'?'error':''}`;
     b.onclick = st==='error' ? ()=>{ triggerSave(false); } : null;
-    b.title   = st==='error' ? 'Cliquez pour réessayer la sauvegarde' : '';
+    b.title   = st==='error' ? 'Cliquez pour réessayer la sauvegarde' : (detail || '');
 };
 
 // v3.4.5 : scanne une seule fois par session les anciens fichiers "appsysdata-<index>.dat"
@@ -923,9 +923,18 @@ async function performSave(reRenderDbView) {
             }
         }
         if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
-        if (!quiet) updateSyncBadge('ok', '✓ Sauvegardé');
+        // v4.3.16 : le détail du chronométrage était seulement loggé dans la console du
+        // navigateur ; affiché aussi directement dans l'app (tooltip du badge de synchronisation
+        // + ligne dédiée dans Paramètres → Administration Drive) pour ne pas avoir à ouvrir les
+        // outils de développement pour le lire.
+        let sizeKo = Math.round(payload.length/1024);
+        let msEncrypt = Math.round(_t1-_t0), msFileId = Math.round(_t2-_t1), msUpload = Math.round(_t3-_t2), msTotal = Math.round(_t3-_t0);
+        let detail = 'Taille ' + sizeKo + ' Ko — chiffrement ' + msEncrypt + 'ms, résolution fichier Drive ' + msFileId + 'ms, upload réseau ' + msUpload + 'ms, TOTAL ' + msTotal + 'ms (hors débounce avant déclenchement).';
+        let timingLabel = $('lastSaveTimingLabel');
+        if (timingLabel) timingLabel.textContent = detail;
+        if (!quiet) updateSyncBadge('ok', '✓ Sauvegardé (' + (msTotal/1000).toFixed(1) + 's)', detail);
         if(reRenderDbView) window.renderDataTable();
-        console.log('[Sauvegarde] taille ' + Math.round(payload.length/1024) + ' Ko — chiffrement ' + Math.round(_t1-_t0) + 'ms, résolution fichier Drive ' + Math.round(_t2-_t1) + 'ms, upload réseau ' + Math.round(_t3-_t2) + 'ms, TOTAL ' + Math.round(_t3-_t0) + 'ms (hors débounce avant le déclenchement).');
+        console.log('[Sauvegarde] ' + detail);
     } catch (e) {
         updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez'); // toujours visible, même pour un lot silencieux
         showSaveError(e);

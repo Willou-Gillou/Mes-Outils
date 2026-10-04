@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.3.15</title>
-    <!-- v4.3.15 - Sauvegarde toujours lente (8-10s) malgré v4.3.14 : débounce d'inactivité réduit de 1s à 400ms, et surtout ajout d'un chronométrage détaillé dans la console ("[Sauvegarde] ... chiffrement Xms, résolution fichier Drive Xms, upload réseau Xms, TOTAL Xms") pour identifier précisément où passe le temps plutôt que de deviner -->
+    <title>Mes finances - v4.3.16</title>
+    <!-- v4.3.16 - Le chronométrage de v4.3.15 n'était visible que dans la console du navigateur ; affiché désormais directement dans l'app : badge de sauvegarde ("✓ Sauvegardé (X,Xs)"), son infobulle au survol, et une ligne dédiée dans Paramètres → Administration Drive, pour lire le détail (chiffrement/fichier/upload) sans ouvrir les outils de développement -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -625,6 +625,7 @@
             <h3 style="margin-bottom:12px;">🛠️ Administration Drive</h3>
             <p style="color:var(--ink-soft);margin-bottom:16px;">Visualiser et supprimer manuellement les fichiers de l'application sur Google Drive.</p>
             <p style="color:var(--ink-soft);font-size:0.85em;margin-bottom:16px;">Chiffrement des sauvegardes : <strong id="cryptoModeLabel" style="color:var(--ink-soft);">Détection en cours...</strong></p>
+            <p style="color:var(--ink-soft);font-size:0.85em;margin-bottom:16px;">Dernière sauvegarde : <strong id="lastSaveTimingLabel" style="color:var(--ink-soft);">—</strong></p>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
               <button class="btn btn-outline" id="adminDriveListBtn" onclick="window.loadDriveFilesList()">📂 Charger les fichiers Drive</button>
               <button class="btn btn-outline" onclick="$('datUploadInput').click()">⬆️ Uploader un fichier .dat</button>
