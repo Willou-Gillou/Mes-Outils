@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.16';
+const APP_VERSION = '4.3.17';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -2010,8 +2010,14 @@ window.renderSummary = function(force=false) {
     html += '</tr></thead><tbody>';
 
     // Rows
-    const cellFmt2 = (val, key, isSub=false) => val === 0 ? '<td class="tcd-cell tcd-zero"></td>' :
-        '<td class="tcd-cell' + (isSub?' tcd-sub-amount':'') + '"><span class="tcd-clickable" data-k="' + escapeHtml(key) + '">' + formatCurrency(val) + '</span></td>';
+    // v4.3.17 : une cellule dont les transactions s'annulent exactement (ex: -420€ et +420€ sur
+    // la même catégorie/mois) affichait une case totalement vide et non cliquable — les
+    // transactions étaient bien comptées mais devenaient invisibles, sans aucun moyen d'y accéder
+    // depuis le Tableau de bord. On affiche désormais la cellule (et son détail au clic) dès que
+    // des transactions existent pour cette clé, même si leur somme nette est 0.
+    const cellFmt2 = (val, key, isSub=false) => (tcdMap[key] && tcdMap[key].length > 0)
+        ? '<td class="tcd-cell' + (isSub?' tcd-sub-amount':'') + '"><span class="tcd-clickable" data-k="' + escapeHtml(key) + '">' + formatCurrency(val) + '</span></td>'
+        : '<td class="tcd-cell tcd-zero"></td>';
 
     r1Sorted.forEach(r1 => {
         let collapsed = collapsedGroups.has(r1);
@@ -2026,8 +2032,9 @@ window.renderSummary = function(force=false) {
                 });
             }
             let _ytClass = collapsedYears.has(y) ? 'tcd-cell tcd-total-col' : 'tcd-cell tcd-total-col tcd-year-total-hidden';
-            html += '<td class="' + _ytClass + '"><b>' + (tree[r1].yearTotals[y] ?
-                '<span class="tcd-clickable" data-k="' + escapeHtml(`${r1}::*::${y}::ALL`) + '">' + formatCurrency(tree[r1].yearTotals[y]) + '</span>' : '') + '</b></td>';
+            let _kY1 = `${r1}::*::${y}::ALL`;
+            html += '<td class="' + _ytClass + '"><b>' + ((tcdMap[_kY1] && tcdMap[_kY1].length > 0) ?
+                '<span class="tcd-clickable" data-k="' + escapeHtml(_kY1) + '">' + formatCurrency(tree[r1].yearTotals[y]||0) + '</span>' : '') + '</b></td>';
         });
         html += '<td class="tcd-cell tcd-total-col tcd-grand"><b><span class="tcd-clickable" data-k="' + escapeHtml(`${r1}::*::ALL::ALL`) + '">' + formatCurrency(tree[r1].total) + '</span></b></td>';
         html += '</tr>';
@@ -2051,9 +2058,10 @@ window.renderSummary = function(force=false) {
                         });
                     }
                     let ytVal = tree[r1].sub[r2].yearTotals[y]||0;
+                    let _kY2 = `${r1}::${r2}::${y}::ALL`;
                     let _ytSubClass = collapsedYears.has(y) ? 'tcd-cell tcd-sub-amount tcd-total-col' : 'tcd-cell tcd-sub-amount tcd-total-col tcd-year-total-hidden';
-                    html += '<td class="' + _ytSubClass + '">' + (ytVal ?
-                        '<span class="tcd-clickable" data-k="' + escapeHtml(`${r1}::${r2}::${y}::ALL`) + '">' + formatCurrency(ytVal) + '</span>' : '') + '</td>';
+                    html += '<td class="' + _ytSubClass + '">' + ((tcdMap[_kY2] && tcdMap[_kY2].length > 0) ?
+                        '<span class="tcd-clickable" data-k="' + escapeHtml(_kY2) + '">' + formatCurrency(ytVal) + '</span>' : '') + '</td>';
                 });
                 let gtVal = tree[r1].sub[r2].total;
                 let gtKey = `${r1}::${r2}::ALL::ALL`;
@@ -2074,13 +2082,15 @@ window.renderSummary = function(force=false) {
             sortedMonthsOf(y).forEach(m => {
                 let padM = m.toString().padStart(2,'0');
                 let v = colTotals[`${y}::${m}`]||0;
-                html += '<td class="tcd-cell">' + (v ? '<span class="tcd-clickable" data-k="MONTH_TOTAL::' + y + '::' + padM + '">' + formatCurrency(v) + '</span>' : '') + '</td>';
+                let _mkey = 'MONTH_TOTAL::' + y + '::' + padM;
+                html += '<td class="tcd-cell">' + ((tcdMap[_mkey] && tcdMap[_mkey].length > 0) ? '<span class="tcd-clickable" data-k="' + _mkey + '">' + formatCurrency(v) + '</span>' : '') + '</td>';
             });
         }
         let yTotal = colTotals[`${y}::ALL`]||0;
+        let _ykey = 'YEAR_TOTAL::' + y;
         let _ytTotClass = collapsedYears.has(y) ? 'tcd-cell tcd-total-col' : 'tcd-cell tcd-total-col tcd-year-total-hidden';
-        html += '<td class="' + _ytTotClass + '"><b>' + (yTotal ?
-            '<span class="tcd-clickable" data-k="YEAR_TOTAL::' + y + '">' + formatCurrency(yTotal) + '</span>' : '') + '</b></td>';
+        html += '<td class="' + _ytTotClass + '"><b>' + ((tcdMap[_ykey] && tcdMap[_ykey].length > 0) ?
+            '<span class="tcd-clickable" data-k="' + _ykey + '">' + formatCurrency(yTotal) + '</span>' : '') + '</b></td>';
     });
     html += '<td class="tcd-cell tcd-total-col tcd-grand"><b><span class="tcd-clickable" data-k="GRAND_TOTAL">' + formatCurrency(totalGrand) + '</span></b></td>';
     html += '</tr></tbody></table>';
