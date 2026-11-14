@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.4.0</title>
-    <!-- v4.4.0 - Fiabilisation de la synchronisation Drive : une erreur Drive n'est plus prise pour un compte vide (plus d'écrasement), une seule sauvegarde à la fois, changement de compte sécurisé, détection d'un compte modifié depuis un autre appareil, jeton Google renouvelé sans redemander le mot de passe, nouvel essai automatique après un échec, avertissement avant de fermer l'onglet avec des modifications non enregistrées -->
+    <title>Mes finances - v4.5.0</title>
+    <!-- v4.5.0 - Refonte de l'affichage téléphone : les listes (À catégoriser, Base de données, Règles, Chèques, Détail des opérations) s'affichent en cartes à la largeur de l'écran au lieu de tableaux à faire défiler, filtres et réglages repliables, fenêtre d'affectation de catégorie lisible, actions groupées toujours visibles, onglet actif ramené à l'écran, Immobilier et Budget réorganisés ; corrige une erreur JS à chaque case cochée dans À catégoriser et le libellé « ≠ vide » invisible -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -67,7 +67,10 @@
 
 <main>
     <div id="view-summary" class="view active" style="overflow:visible">
-        <div class="pivot-config" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;justify-content:center;">
+        <div class="m-only m-list-toolbar">
+            <button class="btn btn-outline m-toggle-btn" onclick="window.toggleMobilePanel('pivotConfig', this)">⚙️ Réglages du tableau</button>
+        </div>
+        <div class="pivot-config m-collapsible" id="pivotConfig" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;justify-content:center;">
             <div class="pivot-select-group">
                 <label style="font-weight:700;font-size:0.85em;">L1</label>
                 <select id="pivotRows" class="input-text" style="width:auto;" onchange="window.renderSummary(); triggerSave(false);">
@@ -187,15 +190,19 @@
             <div id="quickCatDropdown"
                 style="display:none;position:absolute;top:100%;left:28px;right:0;background:var(--surface);border:1px solid var(--ink-faint);border-radius:8px;box-shadow:var(--shadow);z-index:200;max-height:220px;overflow-y:auto;"></div>
         </div>
-        <div class="table-wrap" style="height:calc(100vh - 325px); overflow-y:auto;">
-            <table id="uncatTable" class="std-table">
+        <div class="m-only m-list-toolbar">
+            <button class="btn btn-outline m-toggle-btn" id="uncatFiltersBtn" onclick="window.toggleMobileFilters('uncatTable', this)">🔎 Filtres et tri</button>
+            <label class="m-select-all"><input type="checkbox" onclick="document.getElementById('selectAllUncatCb').click(); this.checked = document.getElementById('selectAllUncatCb').checked;"> Tout sélectionner</label>
+        </div>
+        <div class="table-wrap m-cards-wrap" style="height:calc(100vh - 325px); overflow-y:auto;">
+            <table id="uncatTable" class="std-table m-cards">
                 <thead style="position:sticky; top:0; z-index:4; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <tr>
                         <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAllUncatCb" onclick="window.toggleSelectAllUncat()" style="cursor:pointer; width:16px; height:16px;"></th>
                         <th style="width:120px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateOp')"><span id="uncatSortDateOp">Date Écriture</span></div><input type="text" class="col-filter uf-filter" id="ufDateOp" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:140px;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('dateExpense')"><span id="uncatSortDateExp">Date réelle</span></div><input type="text" class="col-filter uf-filter" id="ufDateExpense" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:250px;"><div class="col-header-wrap">Détails</div><input type="text" class="col-filter uf-filter" id="ufDetails" placeholder="Filtre..."> <div class="resizer"></div></th>
-                        <th style="width:220px;"><div class="col-header-wrap">Catégories possibles</div><button id="ufCatNotEmptyBtn" onclick="window.toggleUfCatNotEmpty()" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:4px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted);font-size:0.85em;text-align:left;">≠ vide</button> <div class="resizer"></div></th>
+                        <th style="width:220px;"><div class="col-header-wrap">Catégories possibles</div><button id="ufCatNotEmptyBtn" onclick="window.toggleUfCatNotEmpty()" style="width:100%;box-sizing:border-box;padding:4px 8px;border-radius:4px;border:1px solid var(--ink-faint);cursor:pointer;background:var(--surface);color:var(--ink-muted, #6B7280);font-size:0.85em;text-align:left;">≠ vide</button> <div class="resizer"></div></th>
                         <th style="width:180px;"><div class="col-header-wrap">Notes</div><input type="text" class="col-filter uf-filter" id="ufNote" placeholder="Espace pour vide..."> <div class="resizer"></div></th>
                         <th style="width:110px; text-align:right;"><div class="col-header-wrap" style="cursor:pointer;" onclick="window.sortUncat('amount')"><span id="uncatSortAmount">Montant</span></div><input type="text" class="col-filter uf-filter" id="ufAmount" placeholder="Filtre..."> <div class="resizer"></div></th>
                         <th style="width:120px; text-align:center;"><div class="col-header-wrap">Actions</div></th>
@@ -239,9 +246,13 @@
             </div>
         </div>
 
+        <div class="m-only m-list-toolbar">
+            <button class="btn btn-outline m-toggle-btn" id="dataFiltersBtn" onclick="window.toggleMobileFilters('dataTable', this)">🔎 Filtres et tri</button>
+            <label class="m-select-all"><input type="checkbox" onclick="document.getElementById('selectAllCb').click(); this.checked = document.getElementById('selectAllCb').checked;"> Tout sélectionner</label>
+        </div>
         <div id="dbPaginationNav" style="padding:2px 4px;"></div>
-        <div class="table-wrap" style="height:calc(100vh - 230px); overflow-y:auto;">
-            <table id="dataTable" class="std-table">
+        <div class="table-wrap m-cards-wrap" style="height:calc(100vh - 230px); overflow-y:auto;">
+            <table id="dataTable" class="std-table m-cards">
                 <thead style="position:sticky; top:0; z-index:4; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                     <tr>
                         <th style="width:40px; text-align:center;"><input type="checkbox" id="selectAllCb" onclick="window.toggleSelectAll()" style="cursor:pointer; width:16px; height:16px;"></th>
@@ -258,6 +269,7 @@
                 <tbody></tbody>
             </table>
         </div>
+        <div id="dbPaginationNavBottom" class="m-only" style="padding:2px 4px 12px 4px;"></div>
     </div>
 
     <div id="view-rules" class="view">
@@ -268,8 +280,8 @@
                 <button class="btn btn-outline" id="exportRuleBtn">📤 Exporter Excel</button>
             </div>
         </div>
-        <div class="table-wrap">
-            <table id="rulesTable" class="std-table">
+        <div class="table-wrap m-cards-wrap">
+            <table id="rulesTable" class="std-table m-cards">
                 <thead>
                     <tr style="background:var(--pro-soft); box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         <td style="padding:12px 8px;"><input type="text" id="newRulePattern" class="input-text" placeholder="Mots-clés séparés par ;"></td>
@@ -467,12 +479,13 @@
     <div id="view-budget" class="view">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 16px;flex-shrink:0;">
             <h2 style="margin:0;">📊 Budget / Projection</h2>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+            <div id="budgetToolbar" class="m-collapsible-items" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
                 <div class="pivot-select-group">
                     <label style="font-weight:700;font-size:0.85em;">Exercice</label>
                     <select id="budgetExerciceSelect" class="input-text" style="width:auto;" onchange="window.onBudgetExerciceChange()">
                     </select>
                 </div>
+                <button class="btn btn-outline m-only m-toggle-btn" onclick="window.toggleMobilePanel('budgetToolbar', this)">⚙️ Actions</button>
                 <button id="btnReprendreN1" class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.reprendreElementsN1()" title="Copie le réel de l'exercice précédent dans la projection de l'exercice sélectionné, comme base de départ du budget">↺ Reprendre éléments n-1</button>
                 <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.validateBudget()">✅ Valider budget</button>
                 <button class="btn btn-outline" style="font-size:0.82em;padding:4px 10px;font-weight:700;" onclick="window.cancelBudgetValidation()">↩️ Annuler budget</button>
@@ -520,8 +533,8 @@
         </div>
         <p style="color:var(--ink-soft);font-size:0.85em;margin-bottom:16px;">Les chèques encaissés sont détectés automatiquement dans la Base de données (détails commençant par "CHEQUE n°...") sur la période choisie. Les numéros manquants dans la séquence, ainsi que le numéro suivant le dernier chèque connu, sont ajoutés comme chèques non encaissés : complétez leur date réelle et leur montant si vous les connaissez déjà.</p>
         <div style="font-weight:700;font-size:1.05em;margin-bottom:14px;">Total chèques non encaissés : <span id="chequesTotalNonEncaisse" style="color:var(--urgent);">0,00 €</span></div>
-        <div style="overflow:auto;">
-            <table class="std-table" id="chequesTable">
+        <div class="m-cards-wrap" style="overflow:auto;">
+            <table class="std-table m-cards" id="chequesTable">
                 <thead><tr><th>Date Écr.</th><th>Date Réelle</th><th>Détails</th><th>Montant</th><th style="min-width:180px;">Statut</th></tr></thead>
                 <tbody id="chequesBody"></tbody>
             </table>
@@ -1115,8 +1128,8 @@
             <h2 style="margin:0;">Détail des opérations</h2>
             <button class="btn btn-outline" onclick="document.getElementById('tcdDetailsOverlay').classList.remove('open')" style="padding:4px 10px; border-radius:20px;">✕</button>
         </div>
-        <div class="table-wrap" style="max-height:80vh; overflow-y:auto; margin-bottom:0;">
-            <table class="std-table">
+        <div class="table-wrap m-cards-wrap" style="max-height:80vh; overflow-y:auto; margin-bottom:0;">
+            <table class="std-table m-cards" id="tcdDetailsTable">
                 <thead style="position:sticky;top:0;z-index:2;background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,0.05);"><tr>
                     <th style="width:120px;cursor:pointer;" onclick="window.sortTcdDetail('dateOp')"><span id="tcdSortDateOp">Date Écr.</span></th>
                     <th style="width:120px;cursor:pointer;" onclick="window.sortTcdDetail('dateExpense')"><span id="tcdSortDateExp">Date réelle</span></th>
@@ -1143,7 +1156,7 @@
             <div style="font-size:1.05em; font-weight:600; margin-left:auto;" id="catModalTxAmount"></div>
         </div>
 
-        <div style="display:flex; gap:16px; align-items:flex-start;">
+        <div id="catModalBody" style="display:flex; gap:16px; align-items:flex-start;">
 
             <!-- GAUCHE : sélection catégorie -->
             <div style="flex:1; min-width:0;">
@@ -1178,10 +1191,10 @@
             </div>
 
             <!-- SEPARATEUR -->
-            <div style="width:1px; background:var(--ink-faint); align-self:stretch; flex-shrink:0;"></div>
+            <div id="catModalSep" style="width:1px; background:var(--ink-faint); align-self:stretch; flex-shrink:0;"></div>
 
             <!-- DROITE : recherche dans la base -->
-            <div style="width:280px; flex-shrink:0;">
+            <div id="catModalSearchCol" style="width:280px; flex-shrink:0;">
                 <p style="font-size:0.82em; color:var(--ink-soft); margin-bottom:6px; font-weight:700; text-transform:uppercase; letter-spacing:.04em;">🔍 Recherche dans la base</p>
                 <input type="text" id="catModalSearchInput" class="input-text"
                     placeholder="Mot-clé, libellé, montant..."

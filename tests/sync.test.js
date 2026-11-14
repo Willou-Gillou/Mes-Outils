@@ -99,7 +99,7 @@ let results = [];
 function check(name, cond, extra) { results.push({ name, ok: !!cond }); console.log((cond ? '  ✓ ' : '  ✗ ÉCHEC ') + name + (extra !== undefined && !cond ? '  → ' + JSON.stringify(extra) : '')); }
 
 async function openApp(browser, drive, opts = {}) {
-    const ctx = await browser.newContext();
+    const ctx = await browser.newContext(opts.context || {});
     const page = await ctx.newPage();
     page.on('pageerror', e => console.log('   [pageerror] ' + e.message));
     page.on('dialog', async d => { page.__dialogs = (page.__dialogs || []); page.__dialogs.push(d.type() + ':' + d.message().slice(0, 80)); if (d.type() === 'beforeunload') await d.accept(); else if (opts.dismissDialogs) await d.dismiss(); else await d.accept(); });
@@ -139,7 +139,7 @@ function seeded() {
 }
 const edit = (page, label) => page.evaluate(l => { transactions[0].details = l; triggerSave(false); }, label);
 
-(async () => {
+async function main() {
     await new Promise(r => server.listen(PORT, r));
     const browser = await chromium.launch({ executablePath: CHROMIUM, headless: true, args: ['--headless=new'] });
     const only = process.argv[2];
@@ -395,4 +395,7 @@ const edit = (page, label) => page.evaluate(l => { transactions[0].details = l; 
     const ko = results.filter(r => !r.ok);
     console.log('\n' + (results.length - ko.length) + '/' + results.length + ' vérifications réussies' + (ko.length ? ' — ÉCHECS : ' + ko.map(k => k.name).join(' | ') : ''));
     process.exit(ko.length ? 1 : 0);
-})();
+}
+if (require.main === module) main();
+// Réutilisé par mobile.test.js (faux Drive, ouverture de l'appli, chiffrement de test)
+module.exports = { chromium, CryptoJS, FakeDrive, openApp, enc, dec, sleep, state, server, PORT, CHROMIUM, KEY, ACCOUNTS };
