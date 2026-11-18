@@ -1,0 +1,51 @@
+name: Publication GitHub Pages
+
+# Publie le contenu du dépôt (mes-finances.html et les autres outils) sur GitHub Pages
+# à chaque envoi sur main, ou à la demande (onglet Actions → "Run workflow").
+# Aucune étape de build : ce sont des pages HTML statiques, servies telles quelles.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@v4
+
+      - name: Configuration de Pages
+        uses: actions/configure-pages@v5
+
+      - name: Préparation du contenu à publier (sans .git, .github ni tests/)
+        run: |
+          mkdir -p _site
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='tests' \
+            --exclude='_site' \
+            ./ _site/
+
+      - name: Archivage pour Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Déploiement sur Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
