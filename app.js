@@ -1,11 +1,37 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.5.4';
+const APP_VERSION = '4.5.5';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
 const DRIVE_LS = 'finances_drive_';
+
+// ── v4.5.5 : connexion Google PAR REDIRECTION (sans fenêtre pop-up) ──────────────────────────────
+// Sur certains Mac (Edge, Safari), la fenêtre pop-up de Google reste blanche sur « gsi/transform » et ne
+// peut pas renvoyer le jeton à la page (politique Cross-Origin-Opener-Policy) : la connexion échoue.
+// Ici la page entière va chez Google puis revient avec le jeton dans l'adresse (#access_token=...).
+// Nécessite que l'adresse de la page soit déclarée comme « URI de redirection autorisé » du client OAuth.
+function driveRedirectUri() { return location.origin + location.pathname; }
+function startDriveRedirectLogin() {
+    let st = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+    try { sessionStorage.setItem('f_oauth_state', st); } catch (e) {}
+    let q = new URLSearchParams({ client_id: DRIVE_CLIENT_ID, redirect_uri: driveRedirectUri(), response_type: 'token', scope: DRIVE_SCOPE, include_granted_scopes: 'true', state: st, prompt: 'select_account consent' });
+    location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + q.toString();
+}
+(function handleDriveRedirectReturn() {
+    let h = location.hash; if (!h || h.length < 2) return;
+    let ps = new URLSearchParams(h.slice(1));
+    if (!ps.has('access_token') && !ps.has('error')) return;
+    let expected = null; try { expected = sessionStorage.getItem('f_oauth_state'); sessionStorage.removeItem('f_oauth_state'); } catch (e) {}
+    history.replaceState(null, '', location.pathname + location.search); // le jeton ne doit pas rester dans l'adresse
+    if (ps.get('error')) { window._oauthRedirectError = "Google a refusé la connexion (" + ps.get('error') + ")."; return; }
+    if (!expected || ps.get('state') !== expected) { window._oauthRedirectError = "Réponse de connexion Google invalide. Réessayez."; return; }
+    localStorage.setItem(DRIVE_LS + 'token', ps.get('access_token'));
+    localStorage.setItem(DRIVE_LS + 'token_exp', String(Date.now() + (parseInt(ps.get('expires_in'), 10) || 3599) * 1000));
+    localStorage.setItem(DRIVE_LS + 'scope', DRIVE_SCOPE);
+    localStorage.setItem(DRIVE_LS + 'granted_scope', ps.get('scope') || '');
+})();
 
 var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBankForImport="", lastImportDate="";
 let dbSortCol='dateOp', dbSortDir=-1, catModalTxId=null, catModalSelectedCat1=null, catModalSelectedCat2=null, catModalSource=null;
@@ -831,7 +857,10 @@ function driveLoginFailed(msg) {
     driveHideLoading();
     let m = $('driveLoginMsg'); if (m) { m.textContent = msg; m.style.display = 'block'; }
     $('driveLoginOverlay').classList.add('open');
+    let rb = $('googleLoginRedirectBtn'); if (rb) rb.style.display = 'block'; // solution de repli sans fenêtre
 }
+$('googleLoginRedirectBtn').addEventListener('click', () => { driveShowLoading('Redirection vers Google...'); startDriveRedirectLogin(); });
+if (window._oauthRedirectError) setTimeout(() => driveLoginFailed(window._oauthRedirectError), 800);
 $('googleLoginBtnReal').addEventListener('click', () => {
     let m = $('driveLoginMsg'); if (m) m.style.display = 'none';
     driveShowLoading("Authentification...");

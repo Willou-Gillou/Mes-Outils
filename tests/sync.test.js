@@ -123,8 +123,9 @@ async function openApp(browser, drive, opts = {}) {
         if (!localStorage.getItem('f_accounts')) localStorage.setItem('f_accounts', JSON.stringify(accounts));
         if (!localStorage.getItem('f_current_account')) localStorage.setItem('f_current_account', cur);
     }, [SCOPE, ACCOUNTS, opts.account || 'default']);
-    await page.goto(BASE + '/mes-finances.html');
-    await page.waitForSelector(opts.noToken ? '#driveLoginOverlay.open' : '#authOverlay.open', { timeout: 15000 });
+    if (opts.oauthState) await page.addInitScript(st => { try { if (!sessionStorage.getItem('__seeded')) { sessionStorage.setItem('f_oauth_state', st); sessionStorage.setItem('__seeded', '1'); } } catch (e) {} }, opts.oauthState);
+    await page.goto(BASE + '/mes-finances.html' + (opts.hash || ''));
+    await page.waitForSelector(opts.waitFor || (opts.noToken ? '#driveLoginOverlay.open' : '#authOverlay.open'), { timeout: 15000 });
     if (!opts.noUnlock && !opts.noToken) {
         await page.fill('#appPassword', opts.password || KEY);
         await page.click('#unlockBtn');
@@ -425,6 +426,31 @@ async function main() {
             const d2 = seeded(); const { ctx, page } = await openApp(browser, d2, { noToken: true, tokenMode: 'ok' });
             await page.click('#googleLoginBtnReal'); await sleep(600);
             check('connexion normale : on arrive au mot de passe', await page.evaluate(() => document.getElementById('authOverlay').classList.contains('open') && !document.getElementById('driveLoadingOverlay').classList.contains('open')));
+            await ctx.close();
+        },
+        async '22. Connexion par redirection : retour de Google avec un jeton'() {
+            const st = 'etat123';
+            const scope = encodeURIComponent(SCOPE);
+            const d = seeded();
+            const { ctx, page } = await openApp(browser, d, { noToken: true, oauthState: st, hash: '#access_token=tokRedir&token_type=Bearer&expires_in=3599&scope=' + scope + '&state=' + st, waitFor: '#authOverlay.open' });
+            let r = await page.evaluate(() => ({ hash: location.hash, tok: localStorage.getItem('finances_drive_token'), login: document.getElementById('driveLoginOverlay').classList.contains('open') }));
+            check('jeton enregistré, adresse nettoyée, on arrive au mot de passe', r.tok === 'tokRedir' && r.hash === '' && !r.login, r);
+            await page.fill('#appPassword', KEY); await page.click('#unlockBtn'); await sleep(1200);
+            check('données chargées après connexion par redirection', (await state(page)).n === 3);
+            await ctx.close();
+            const bad = await openApp(browser, seeded(), { noToken: true, oauthState: 'attendu', hash: '#access_token=pirate&expires_in=3599&scope=x&state=autre', waitFor: '#driveLoginOverlay.open' });
+            await sleep(1200);
+            const r2 = await bad.page.evaluate(() => ({ tok: localStorage.getItem('finances_drive_token'), msg: document.getElementById('driveLoginMsg').textContent }));
+            check('réponse avec un mauvais « state » refusée (aucun jeton gardé)', !r2.tok && /invalide/i.test(r2.msg), r2);
+            await bad.ctx.close();
+        },
+        async '23. Le bouton de redirection apparaît après un échec de la fenêtre'() {
+            const { ctx, page } = await openApp(browser, seeded(), { noToken: true, tokenMode: 'fail' });
+            check('caché au départ', await page.evaluate(() => getComputedStyle(document.getElementById('googleLoginRedirectBtn')).display === 'none'));
+            await page.click('#googleLoginBtnReal'); await sleep(600);
+            check('visible après échec', await page.evaluate(() => getComputedStyle(document.getElementById('googleLoginRedirectBtn')).display === 'block'));
+            const url = await page.evaluate(() => { let u; window.__nav = null; try { const q = new URLSearchParams({ x: 1 }); } catch (e) {} return driveRedirectUri(); });
+            check('adresse de redirection = adresse de la page', /\/mes-finances\.html$/.test(url) && !url.includes('#'), url);
             await ctx.close();
         },
     };
