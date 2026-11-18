@@ -113,6 +113,7 @@ async function openApp(browser, drive, opts = {}) {
         r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html });
     });
     if (opts.noToken) await page.addInitScript(() => { window.__noToken = true; });
+    if (opts.loginMode) await page.addInitScript(m => { try { localStorage.setItem('f_login_mode', m); } catch (e) {} }, opts.loginMode);
     if (opts.tokenMode) await page.addInitScript(m => { window.__pendingMode = m; }, opts.tokenMode);
     await page.addInitScript(([scope, accounts, cur]) => {
         if (!window.__noToken) {
@@ -452,6 +453,37 @@ async function main() {
             const url = await page.evaluate(() => { let u; window.__nav = null; try { const q = new URLSearchParams({ x: 1 }); } catch (e) {} return driveRedirectUri(); });
             check('adresse de redirection = adresse de la page', /\/mes-finances\.html$/.test(url) && !url.includes('#'), url);
             await ctx.close();
+        },
+        async '24. Mode de connexion mémorisé par appareil'() {
+            // échec de la fenêtre -> l'appareil passe en redirection
+            let o = await openApp(browser, seeded(), { noToken: true, tokenMode: 'fail' });
+            await o.page.click('#googleLoginBtnReal'); await sleep(600);
+            check('après un échec de fenêtre, le mode « redirection » est mémorisé', await o.page.evaluate(() => localStorage.getItem('f_login_mode')) === 'redirect');
+            await o.ctx.close();
+            // appareil déjà en mode redirection : le bouton principal part directement chez Google, sans fenêtre
+            o = await openApp(browser, seeded(), { noToken: true, loginMode: 'redirect' });
+            const reqs = []; o.page.on('request', r => reqs.push(r.url()));
+            check('note explicative visible, bouton secondaire caché', await o.page.evaluate(() => getComputedStyle(document.getElementById('driveLoginModeNote')).display === 'block' && getComputedStyle(document.getElementById('googleLoginRedirectBtn')).display === 'none'));
+            await o.page.click('#googleLoginBtnReal'); await sleep(700);
+            const g = reqs.find(u => u.startsWith('https://accounts.google.com/o/oauth2/v2/auth'));
+            const q = g && new URL(g).searchParams;
+            check('un seul clic : redirection directe vers Google (response_type=token, bonne adresse de retour)', q && q.get('response_type') === 'token' && /mes-finances\.html$/.test(q.get('redirect_uri')) && q.get('state') && !(await o.page.evaluate(() => window.__tokenRequests)), g);
+            await o.ctx.close();
+            // retour réussi de la redirection : on garde ce mode
+            o = await openApp(browser, seeded(), { noToken: true, oauthState: 's1', hash: '#access_token=t&expires_in=3599&scope=' + encodeURIComponent(SCOPE) + '&state=s1', waitFor: '#authOverlay.open' });
+            check('retour de redirection réussi : mode « redirection » conservé', await o.page.evaluate(() => localStorage.getItem('f_login_mode')) === 'redirect');
+            await o.ctx.close();
+            // autorisations décochées chez Google : refusé avec un message clair, aucun jeton gardé
+            o = await openApp(browser, seeded(), { noToken: true, oauthState: 's2', hash: '#access_token=t&expires_in=3599&scope=' + encodeURIComponent('https://www.googleapis.com/auth/drive.appdata') + '&state=s2', waitFor: '#driveLoginOverlay.open' });
+            await sleep(1200);
+            const sc = await o.page.evaluate(() => ({ tok: localStorage.getItem('finances_drive_token'), msg: document.getElementById('driveLoginMsg').textContent }));
+            check('autorisations décochées : message explicite, aucun jeton gardé', !sc.tok && /cochées/.test(sc.msg), sc);
+            await o.ctx.close();
+            // « Réessayer avec la fenêtre » remet le mode par défaut
+            o = await openApp(browser, seeded(), { noToken: true, loginMode: 'redirect' });
+            await o.page.click('#driveLoginModeReset');
+            check('« Réessayer avec la fenêtre » rétablit le mode fenêtre', await o.page.evaluate(() => localStorage.getItem('f_login_mode')) === 'popup');
+            await o.ctx.close();
         },
     };
     for (const [name, fn] of Object.entries(scenarios)) {

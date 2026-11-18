@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.5.5</title>
-    <!-- v4.5.5 - Connexion Google par redirection (sans fenêtre pop-up), proposée quand la fenêtre Google échoue : contourne le blocage de la fenêtre qui reste blanche sur gsi/transform sur certains Mac -->
+    <title>Mes finances - v4.5.6</title>
+    <!-- v4.5.6 - Connexion Google : après un échec de la fenêtre pop-up, l'appareil mémorise d'utiliser directement la connexion par redirection (une seule séquence d'écrans Google au lieu de deux) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -18,7 +18,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" integrity="sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="style.css?v=4.5.5">
+<link rel="stylesheet" href="style.css?v=4.5.6">
     <!-- Tabulator -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tabulator/5.5.2/css/tabulator.min.css" rel="stylesheet" integrity="sha384-sncDvYizz6zSZvBpA5xpvD49XkP4Fmf1TQ58G2eD3wSgxv8EcOZEZ9KaWU6yxAMw" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tabulator/5.5.2/js/tabulator.min.js" integrity="sha384-QEy29Crujkm/PGSeS0Jh0wa7dhERa8mV/MhnRHyJpkq2ogOzHDyY+EpjCEcP+o8f" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1253,6 +1253,7 @@
         <p style="margin-bottom:24px; color:var(--ink-soft);">L'application requiert une connexion sécurisée à votre espace de stockage applicatif.</p>
         <p id="driveLoginMsg" style="display:none;margin:-8px 0 20px 0;padding:10px 12px;background:#FEF2F2;border:1px solid var(--urgent);border-radius:8px;color:var(--urgent);font-size:0.9em;text-align:left;"></p>
         <button class="btn btn-primary" id="googleLoginBtnReal" style="width:100%; padding:14px; font-size:1.05rem;">🔑 Se connecter avec Google</button>
+        <p id="driveLoginModeNote" style="display:none;margin:12px 0 0 0;font-size:0.82em;color:var(--ink-soft);">Sur cet appareil, la connexion se fait en quittant la page puis en y revenant (la fenêtre pop-up ne fonctionnait pas). <a href="#" id="driveLoginModeReset" onclick="return false;" style="color:var(--pro);">Réessayer avec la fenêtre</a></p>
         <button class="btn btn-outline" id="googleLoginRedirectBtn" style="display:none; width:100%; padding:12px; margin-top:10px;" title="Connexion sans fenêtre pop-up : la page va chez Google puis revient">↪ Connexion par redirection (sans fenêtre)</button>
     </div>
 </div>
@@ -1261,7 +1262,7 @@
     <div style="font-size:1.1rem; font-weight:600; color:var(--ink); margin-top:16px;" id="loadingText">Chargement...</div>
 </div>
 
-<script src="app.js?v=4.5.5"></script>
+<script src="app.js?v=4.5.6"></script>
 <!-- MODALE GESTION COMPTES -->
 <div class="overlay" id="accountManagerModal">
   <div class="modal" style="max-width:480px;">
@@ -1289,7 +1290,7 @@
 </div>
 
 
-<script src="extras.js?v=4.5.5"></script>
+<script src="extras.js?v=4.5.6"></script>
 
 <div id="quittanceLigneTypeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
     <div style="background:white;border-radius:10px;padding:24px;max-width:400px;width:92%;">

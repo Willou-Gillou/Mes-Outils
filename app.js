@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.5.5';
+const APP_VERSION = '4.5.6';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -13,6 +13,10 @@ const DRIVE_LS = 'finances_drive_';
 // Ici la page entière va chez Google puis revient avec le jeton dans l'adresse (#access_token=...).
 // Nécessite que l'adresse de la page soit déclarée comme « URI de redirection autorisé » du client OAuth.
 function driveRedirectUri() { return location.origin + location.pathname; }
+// v4.5.6 : une fois la fenêtre Google en échec sur cet appareil, on passe directement par la redirection
+// aux connexions suivantes (sinon : tous les écrans Google deux fois — fenêtre qui échoue, puis redirection).
+function driveLoginMode() { try { return localStorage.getItem('f_login_mode') || 'popup'; } catch (e) { return 'popup'; } }
+function setDriveLoginMode(m) { try { localStorage.setItem('f_login_mode', m); } catch (e) {} }
 function startDriveRedirectLogin() {
     let st = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
     try { sessionStorage.setItem('f_oauth_state', st); } catch (e) {}
@@ -27,10 +31,17 @@ function startDriveRedirectLogin() {
     history.replaceState(null, '', location.pathname + location.search); // le jeton ne doit pas rester dans l'adresse
     if (ps.get('error')) { window._oauthRedirectError = "Google a refusé la connexion (" + ps.get('error') + ")."; return; }
     if (!expected || ps.get('state') !== expected) { window._oauthRedirectError = "Réponse de connexion Google invalide. Réessayez."; return; }
+    // Autorisations décochées sur l'écran de Google : l'appli a besoin des trois, sinon elle redemanderait la connexion en boucle.
+    let granted = ps.get('scope') || '';
+    if (!DRIVE_SCOPE.split(' ').every(sc => granted.indexOf(sc) !== -1)) {
+        window._oauthRedirectError = "Il faut laisser toutes les autorisations cochées sur l'écran de Google (Drive, données de configuration et envoi d'e-mails). Recommencez la connexion en les gardant toutes cochées.";
+        return;
+    }
     localStorage.setItem(DRIVE_LS + 'token', ps.get('access_token'));
     localStorage.setItem(DRIVE_LS + 'token_exp', String(Date.now() + (parseInt(ps.get('expires_in'), 10) || 3599) * 1000));
     localStorage.setItem(DRIVE_LS + 'scope', DRIVE_SCOPE);
     localStorage.setItem(DRIVE_LS + 'granted_scope', ps.get('scope') || '');
+    setDriveLoginMode('redirect'); // la redirection a fonctionné sur cet appareil : on la garde
 })();
 
 var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBankForImport="", lastImportDate="";
@@ -819,7 +830,7 @@ function initDrive() {
                         let t = err && err.type;
                         driveLoginFailed(t === 'popup_closed' ? "La fenêtre Google a été fermée avant la fin de la connexion. Cliquez sur « Se connecter avec Google » pour réessayer."
                             : t === 'popup_failed_to_open' ? "Le navigateur a bloqué la fenêtre Google. Autorisez les fenêtres pop-up pour ce site (icône dans la barre d'adresse), puis réessayez."
-                            : "La connexion Google n'a pas abouti. Réessayez.");
+                            : "La connexion Google n'a pas abouti. Réessayez.", true);
                     }
                 }
             });
@@ -852,20 +863,27 @@ function initDrive() {
 // aucune explication ni moyen de réessayer. On sort maintenant de l'attente (fermeture de la fenêtre,
 // échec d'ouverture, ou 60 s sans réponse) en réaffichant le bouton de connexion avec un message.
 var _loginWatchdog = null;
-function driveLoginFailed(msg) {
+function driveLoginFailed(msg, popupProblem) {
     clearTimeout(_loginWatchdog); _loginWatchdog = null;
+    if (popupProblem) setDriveLoginMode('redirect');
     driveHideLoading();
     let m = $('driveLoginMsg'); if (m) { m.textContent = msg; m.style.display = 'block'; }
     $('driveLoginOverlay').classList.add('open');
     let rb = $('googleLoginRedirectBtn'); if (rb) rb.style.display = 'block'; // solution de repli sans fenêtre
 }
+if (driveLoginMode() === 'redirect') {
+    let note = $('driveLoginModeNote'); if (note) note.style.display = 'block';
+    let rb0 = $('googleLoginRedirectBtn'); if (rb0) rb0.style.display = 'none';
+}
+$('driveLoginModeReset').addEventListener('click', () => { setDriveLoginMode('popup'); $('driveLoginModeNote').style.display = 'none'; });
 $('googleLoginRedirectBtn').addEventListener('click', () => { driveShowLoading('Redirection vers Google...'); startDriveRedirectLogin(); });
 if (window._oauthRedirectError) setTimeout(() => driveLoginFailed(window._oauthRedirectError), 800);
 $('googleLoginBtnReal').addEventListener('click', () => {
     let m = $('driveLoginMsg'); if (m) m.style.display = 'none';
+    if (driveLoginMode() === 'redirect') { driveShowLoading('Redirection vers Google...'); startDriveRedirectLogin(); return; }
     driveShowLoading("Authentification...");
     clearTimeout(_loginWatchdog);
-    _loginWatchdog = setTimeout(() => driveLoginFailed("La fenêtre Google n'a pas répondu. Elle est peut-être bloquée ou cachée derrière cette page : autorisez les fenêtres pop-up pour ce site (icône dans la barre d'adresse), puis réessayez."), 60000);
+    _loginWatchdog = setTimeout(() => driveLoginFailed("La fenêtre Google n'a pas répondu. Elle est peut-être bloquée ou cachée derrière cette page : autorisez les fenêtres pop-up pour ce site (icône dans la barre d'adresse), puis réessayez.", true), 60000);
     try {
         if (!driveTokenClient) throw new Error('client Google indisponible');
         driveTokenClient.requestAccessToken({ prompt: 'consent' });
