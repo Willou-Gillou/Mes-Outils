@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.5.3';
+const APP_VERSION = '4.5.4';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -750,6 +750,7 @@ function initDrive() {
             driveTokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: DRIVE_CLIENT_ID, scope: DRIVE_SCOPE,
                 callback: async (resp) => {
+                    clearTimeout(_loginWatchdog); _loginWatchdog = null;
                     let waiters = _tokenRefreshWaiters.splice(0);
                     if (resp.error) {
                         if (waiters.length) { waiters.forEach(w => w.reject(new Error('autorisation Google refusée'))); return; }
@@ -788,6 +789,12 @@ function initDrive() {
                 error_callback: (err) => {
                     let waiters = _tokenRefreshWaiters.splice(0);
                     waiters.forEach(w => w.reject(new Error((err && err.type) || 'fenêtre Google indisponible')));
+                    if (!waiters.length && !appSecretKey) {
+                        let t = err && err.type;
+                        driveLoginFailed(t === 'popup_closed' ? "La fenêtre Google a été fermée avant la fin de la connexion. Cliquez sur « Se connecter avec Google » pour réessayer."
+                            : t === 'popup_failed_to_open' ? "Le navigateur a bloqué la fenêtre Google. Autorisez les fenêtres pop-up pour ce site (icône dans la barre d'adresse), puis réessayez."
+                            : "La connexion Google n'a pas abouti. Réessayez.");
+                    }
                 }
             });
             const token = localStorage.getItem(DRIVE_LS+'token'), tokenExp = localStorage.getItem(DRIVE_LS+'token_exp');
@@ -814,7 +821,29 @@ function initDrive() {
     gapi.load('client', async () => { await gapi.client.init({}); gapiReady = true; checkReady(); }); gisReady = true; checkReady();
 }
 
-$('googleLoginBtnReal').addEventListener('click', () => { driveShowLoading("Authentification..."); driveTokenClient.requestAccessToken({ prompt: 'consent' }); });
+// v4.5.4 : la fenêtre Google peut ne jamais répondre (bloquée par le navigateur, fermée, ouverte derrière
+// la page, réponse perdue). Avant, l'écran « Authentification... » restait affiché indéfiniment, sans
+// aucune explication ni moyen de réessayer. On sort maintenant de l'attente (fermeture de la fenêtre,
+// échec d'ouverture, ou 60 s sans réponse) en réaffichant le bouton de connexion avec un message.
+var _loginWatchdog = null;
+function driveLoginFailed(msg) {
+    clearTimeout(_loginWatchdog); _loginWatchdog = null;
+    driveHideLoading();
+    let m = $('driveLoginMsg'); if (m) { m.textContent = msg; m.style.display = 'block'; }
+    $('driveLoginOverlay').classList.add('open');
+}
+$('googleLoginBtnReal').addEventListener('click', () => {
+    let m = $('driveLoginMsg'); if (m) m.style.display = 'none';
+    driveShowLoading("Authentification...");
+    clearTimeout(_loginWatchdog);
+    _loginWatchdog = setTimeout(() => driveLoginFailed("La fenêtre Google n'a pas répondu. Elle est peut-être bloquée ou cachée derrière cette page : autorisez les fenêtres pop-up pour ce site (icône dans la barre d'adresse), puis réessayez."), 60000);
+    try {
+        if (!driveTokenClient) throw new Error('client Google indisponible');
+        driveTokenClient.requestAccessToken({ prompt: 'consent' });
+    } catch (e) {
+        driveLoginFailed("Connexion Google impossible (" + (e && e.message ? e.message : 'erreur inconnue') + "). Rechargez la page ; si ça persiste, désactivez un éventuel bloqueur de publicités.");
+    }
+});
 $('logoutBtn').addEventListener('click', () => { if(driveAccessToken)google.accounts.oauth2.revoke(driveAccessToken); localStorage.removeItem(DRIVE_LS+'token'); localStorage.removeItem(DRIVE_LS+'token_exp'); localStorage.removeItem(DRIVE_LS+'scope'); localStorage.removeItem(DRIVE_LS+'granted_scope'); location.reload(); });
 // onClick (facultatif) : action au clic sur un badge en erreur ; par défaut, relance la sauvegarde.
 const updateSyncBadge=(st,txt,detail,onClick)=>{

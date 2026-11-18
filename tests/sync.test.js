@@ -88,7 +88,7 @@ class FakeDrive {
 }
 
 const GAPI_STUB = `window.gapi = { load: (n, cb) => cb(), client: { init: async () => {}, setToken() {} } };`;
-const GIS_STUB = `window.__tokenRequests = 0; window.__tokenMode = 'ok';
+const GIS_STUB = `window.__tokenRequests = 0; window.__tokenMode = window.__pendingMode || 'ok';
 window.google = { accounts: { oauth2: { revoke() {}, initTokenClient(cfg) { window.__tokenCfg = cfg; return { requestAccessToken(o) {
     window.__tokenRequests++;
     if (window.__tokenMode === 'fail') setTimeout(() => cfg.error_callback({ type: 'popup_failed_to_open' }), 20);
@@ -112,16 +112,20 @@ async function openApp(browser, drive, opts = {}) {
         let html = fs.readFileSync(path.join(REPO, 'mes-finances.html'), 'utf8').replace(/\s+integrity="[^"]*"/g, '').replace(/\s+crossorigin="[^"]*"/g, '');
         r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html });
     });
+    if (opts.noToken) await page.addInitScript(() => { window.__noToken = true; });
+    if (opts.tokenMode) await page.addInitScript(m => { window.__pendingMode = m; }, opts.tokenMode);
     await page.addInitScript(([scope, accounts, cur]) => {
+        if (!window.__noToken) {
         localStorage.setItem('finances_drive_token', 'tok0');
         localStorage.setItem('finances_drive_token_exp', String(Date.now() + 3500000));
         localStorage.setItem('finances_drive_granted_scope', scope);
+        }
         if (!localStorage.getItem('f_accounts')) localStorage.setItem('f_accounts', JSON.stringify(accounts));
         if (!localStorage.getItem('f_current_account')) localStorage.setItem('f_current_account', cur);
     }, [SCOPE, ACCOUNTS, opts.account || 'default']);
     await page.goto(BASE + '/mes-finances.html');
-    await page.waitForSelector('#authOverlay.open', { timeout: 15000 });
-    if (!opts.noUnlock) {
+    await page.waitForSelector(opts.noToken ? '#driveLoginOverlay.open' : '#authOverlay.open', { timeout: 15000 });
+    if (!opts.noUnlock && !opts.noToken) {
         await page.fill('#appPassword', opts.password || KEY);
         await page.click('#unlockBtn');
         await page.waitForFunction(() => !document.getElementById('driveLoadingOverlay').classList.contains('open'), null, { timeout: 15000 });
@@ -408,6 +412,19 @@ async function main() {
             const errs = []; page.on('pageerror', e => errs.push(e.message));
             await page.evaluate(() => { document.dispatchEvent(new Event('mouseleave')); document.dispatchEvent(new Event('mouseover')); }); await sleep(200);
             check('pas de TypeError closest', errs.filter(e => /closest/.test(e)).length === 0, errs);
+            await ctx.close();
+        },
+        async '21. Connexion Google : fenêtre fermée ou bloquée → pas de chargement infini'() {
+            for (const [mode, attendu] of [['fail', /pop-up|fermée|abouti/i]]) {
+                const d = seeded(); const { ctx, page } = await openApp(browser, d, { noToken: true, tokenMode: mode });
+                await page.click('#googleLoginBtnReal'); await sleep(600);
+                const r = await page.evaluate(() => ({ loading: document.getElementById('driveLoadingOverlay').classList.contains('open'), login: document.getElementById('driveLoginOverlay').classList.contains('open'), msg: document.getElementById('driveLoginMsg').textContent, shown: getComputedStyle(document.getElementById('driveLoginMsg')).display }));
+                check('le spinner disparaît, le bouton revient avec un message', !r.loading && r.login && r.shown === 'block' && attendu.test(r.msg), r);
+                await ctx.close();
+            }
+            const d2 = seeded(); const { ctx, page } = await openApp(browser, d2, { noToken: true, tokenMode: 'ok' });
+            await page.click('#googleLoginBtnReal'); await sleep(600);
+            check('connexion normale : on arrive au mot de passe', await page.evaluate(() => document.getElementById('authOverlay').classList.contains('open') && !document.getElementById('driveLoadingOverlay').classList.contains('open')));
             await ctx.close();
         },
     };
