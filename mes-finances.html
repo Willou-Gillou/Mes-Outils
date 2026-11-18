@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.5.2</title>
-    <!-- v4.5.2 - app.js, style.css et extras.js sont maintenant chargés avec "?v=4.5.2" : un navigateur qui avait gardé en cache une ancienne version de ces fichiers (fréquent sur un appareil ouvert rarement, ex. un PC portable) la remplace enfin par la version actuelle au lieu de continuer à exécuter l'ancien code -->
+    <title>Mes finances - v4.5.0</title>
+    <!-- v4.5.0 - Refonte de l'affichage téléphone : les listes (À catégoriser, Base de données, Règles, Chèques, Détail des opérations) s'affichent en cartes à la largeur de l'écran au lieu de tableaux à faire défiler, filtres et réglages repliables, fenêtre d'affectation de catégorie lisible, actions groupées toujours visibles, onglet actif ramené à l'écran, Immobilier et Budget réorganisés ; corrige une erreur JS à chaque case cochée dans À catégoriser et le libellé « ≠ vide » invisible -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -18,7 +18,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" integrity="sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" integrity="sha384-fCAW/rDWORTbQXSiB7mOg0QtQ5c+r0f544y6XoKjuVva0nMBlCpNUjiFeG5iMdS3" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" integrity="sha384-ZZ1pncU3bQe8y31yfZdMFdSpttDoPmOZg2wguVK9almUodir1PghgT0eY7Mrty8H" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<link rel="stylesheet" href="style.css?v=4.5.2">
+<link rel="stylesheet" href="style.css">
     <!-- Tabulator -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tabulator/5.5.2/css/tabulator.min.css" rel="stylesheet" integrity="sha384-sncDvYizz6zSZvBpA5xpvD49XkP4Fmf1TQ58G2eD3wSgxv8EcOZEZ9KaWU6yxAMw" crossorigin="anonymous" referrerpolicy="no-referrer">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tabulator/5.5.2/js/tabulator.min.js" integrity="sha384-QEy29Crujkm/PGSeS0Jh0wa7dhERa8mV/MhnRHyJpkq2ogOzHDyY+EpjCEcP+o8f" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -1259,7 +1259,7 @@
     <div style="font-size:1.1rem; font-weight:600; color:var(--ink); margin-top:16px;" id="loadingText">Chargement...</div>
 </div>
 
-<script src="app.js?v=4.5.2"></script>
+<script src="app.js"></script>
 <!-- MODALE GESTION COMPTES -->
 <div class="overlay" id="accountManagerModal">
   <div class="modal" style="max-width:480px;">
@@ -1287,7 +1287,7 @@
 </div>
 
 
-<script src="extras.js?v=4.5.2"></script>
+<script src="extras.js"></script>
 
 <div id="quittanceLigneTypeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;">
     <div style="background:white;border-radius:10px;padding:24px;max-width:400px;width:92%;">

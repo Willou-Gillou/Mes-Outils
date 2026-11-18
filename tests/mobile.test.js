@@ -26,10 +26,7 @@ function richVault() {
     [[1140, '2026-03-04', -50], [1141, '2026-05-17', -120], [1143, '2026-09-17', -75.5], [1144, '2026-10-02', -230]].forEach(([num, d, a]) => tx.push({ id: 'c' + num, dateOp: d, dateExpense: d, label: 'CE', details: 'CHEQUE ' + num, note: '', amount: a, paymentMethod: '', cat1: '4 - VIE COURANTE', cat2: 'SANTE' }));
     const rules = Object.entries(labels).slice(0, 12).map(([c2, l]) => ({ pattern: l.split(' ').slice(0, 3).join(' '), cat1: Object.keys(cats).find(c => cats[c].includes(c2)), cat2: c2 }));
     const bien = { id: 'bien_1', nom: 'Appartement Lyon 3e', bailleur: { nom: 'Jean Dupont', adresse: '12 rue de la République, 69002 Lyon', email: 'bailleur@example.com', tel: '06 00 00 00 00' }, locataires: [{ nom: 'Paul Martin', email: 'locataire@example.com', tel: '06 11 11 11 11' }], designation: { texte: 'Appartement T2 de 48 m² au 3e étage', adresse: '45 cours Lafayette, 69003 Lyon' }, dateAnniversaire: '2025-03-01', echeancier: [], lignesQuittance: [{ libelle: 'Loyer', montant: 700 }, { libelle: 'Provision pour charges', montant: 80 }], commentairesLoyer: '', commentairesCaution: '', faitA: 'Lyon', signatureTexte: 'Jean Dupont', logoDataUrl: '', dateAchat: '2019-06-15', montantAchat: 185000, montantRenovation: 22000 };
-    // Budget de démonstration : salaire/loyers/charges fixes planifiés chaque mois, le reste partiel
-    const budgetDemo = { '2026': {} }; const plan = { 'SALAIRE': 3250.4, 'LOYERS PERCUS': 780, 'ELECTRICITE': -50, 'ASSURANCE HABITATION': -90, 'INTERNET & TELEPHONE': -100, 'IMPOTS & TAXES FONCIERES': -120, 'ALIMENTATION': -150, 'TRANSPORT': -80, 'ABATTAGE ARBRES': -1500, 'VACANCES': -200, 'LIVRET A': -100 };
-    for (const c1 of Object.keys(cats)) for (const c2 of cats[c1]) { if (plan[c2] === undefined) continue; budgetDemo['2026'][c1] = budgetDemo['2026'][c1] || {}; budgetDemo['2026'][c1][c2] = {}; for (let mo = 1; mo <= 12; mo++) { if (c2 === 'ABATTAGE ARBRES' && mo % 4) continue; budgetDemo['2026'][c1][c2][String(mo).padStart(2, '0')] = plan[c2]; } }
-    return { transactions: tx, rules, categories: cats, version: 'x', accounts: H.ACCOUNTS, settings: {}, accountId: 'default', savedCharts: [], quittancesBiens: [bien], quittancesEnabled: true, budgetData: budgetDemo, budgetEnabled: true, chartsEnabled: true, chequesEnabled: true, chequesManual: [] };
+    return { transactions: tx, rules, categories: cats, version: 'x', accounts: H.ACCOUNTS, settings: {}, accountId: 'default', savedCharts: [], quittancesBiens: [bien], quittancesEnabled: true, budgetData: {}, budgetEnabled: true, chartsEnabled: true, chequesEnabled: true, chequesManual: [] };
 }
 const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1' };
 async function start(ctxOpts) {
@@ -124,42 +121,6 @@ let ko = 0; const check = (n, c, x) => { if (!c) ko++; console.log((c ? '  ✓ '
         await page.tap('#mobileMenuToggle'); await H.sleep(300);
         const menuTop = await page.evaluate(() => { const b = document.getElementById('logoutBtn').getBoundingClientRect(); const e = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); return e && (e.id === 'logoutBtn' || e.closest('#headerControlsRow') !== null); });
         check('le menu ⋮ passe au-dessus du tableau de bord', menuTop);
-        // Budget / Projection : une période à la fois (Catégorie · Budget · Réel)
-        await page.evaluate(() => document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')));
-        await go('view-budget');
-        if (new Date().getFullYear() === 2026) check('le Budget s\'ouvre sur le mois en cours', await page.evaluate(() => document.getElementById('budgetExerciceSelect').value === '2026' && +window._budgetMobileMonth === new Date().getMonth() + 1));
-        await page.evaluate(() => { const s = document.getElementById('budgetExerciceSelect'); s.value = '2026'; window._budgetMobileMonth = '11'; window.onBudgetExerciceChange(); }); await H.sleep(400);
-        const bGeo = () => page.evaluate(() => { const t = document.querySelector('#budgetGrid .budget-mobile'); if (!t) return null; const cells = [...t.querySelectorAll('th, td')]; const sc = document.querySelector('#view-budget > div[style*="overflow:auto"]'); return { cols: t.querySelectorAll('thead th').length, inside: cells.every(c => { const r = c.getBoundingClientRect(); return r.left >= -1 && r.right <= innerWidth + 1 && r.width > 40; }), tronques: cells.filter(c => c.scrollWidth > c.clientWidth + 1).map(c => c.textContent.trim().slice(0, 25)), hScroll: sc.scrollWidth - sc.clientWidth, period: document.getElementById('budgetMobileMonthSelect').selectedOptions[0].textContent }; });
-        const bRow = name => page.evaluate(n => { const row = [...document.querySelectorAll('#budgetGrid .budget-mobile tbody tr')].find(tr => tr.textContent.includes(n)); return row ? [...row.children].map(td => td.textContent.trim().replace(/\s+/g, ' ')) : null; }, name);
-        const num = s => (s || '').replace(/[^\d,-]/g, '');
-        let bg = await bGeo();
-        check('Budget : 3 colonnes dans l\'écran, aucun montant tronqué ni superposé', bg && bg.cols === 3 && bg.inside && bg.tronques.length === 0 && bg.hScroll <= 0 && bg.period === 'Nov 26', bg);
-        const elec = await bRow('ELECTRICITE');
-        const expElec = await page.evaluate(() => transactions.filter(t => t.cat2 === 'ELECTRICITE' && t.dateOp.startsWith('2026-11')).reduce((s, t) => s + t.amount, 0));
-        check('Budget : ligne Électricité = budget −50,00 € et réel du mois', elec && /-50,00/.test(elec[1]) && num(elec[2]) === expElec.toFixed(2).replace('.', ','), { elec, expElec });
-        await page.evaluate(() => { const row = [...document.querySelectorAll('#budgetGrid .budget-mobile tbody tr')].find(tr => /PLOMBERIE/.test(tr.textContent)); const sp = row.querySelector('.budget-val[contenteditable]'); sp.focus(); sp.textContent = '-250'; sp.blur(); }); await H.sleep(1500);
-        const plomb = await bRow('PLOMBERIE');
-        const onDrive = (H.dec(d.files.get(d.idA).content).budgetData['2026']['3 - TRAVAUX & INVESTISSEMENTS'] || {})['PLOMBERIE'];
-        check('Budget : saisir un montant l\'enregistre sur le bon mois (affiché + Drive)', /-250,00/.test(plomb[1]) && onDrive && onDrive['11'] === -250 && await page.evaluate(() => window._budgetMobileMonth === '11'), { plomb, onDrive });
-        await page.tap('.bm-period .btn:first-child'); await H.sleep(300);
-        check('Budget : ‹ passe au mois précédent', (await bGeo()).period === 'Oct 26');
-        await page.selectOption('#budgetMobileMonthSelect', 'ALL'); await H.sleep(300);
-        bg = await bGeo();
-        const tot = await page.evaluate(() => [...document.querySelector('#budgetGrid .budget-mobile tbody tr.tcd-total-row').children].map(td => td.textContent.trim()));
-        const expTot = await page.evaluate(() => transactions.filter(t => t.cat1 && (t.dateExpense || t.dateOp).startsWith('2026') && t.dateOp.startsWith('2026')).reduce((s, t) => s + t.amount, 0));
-        check('Budget : « Total de l\'exercice » dans l\'écran, total réel exact, rien de modifiable', bg.period.startsWith('Total') && bg.inside && bg.tronques.length === 0 && num(tot[2]) === expTot.toFixed(2).replace('.', ',') && await page.evaluate(() => !document.querySelector('#budgetGrid .budget-mobile [contenteditable]')), { bg, tot, expTot });
-        await page.selectOption('#budgetMobileMonthSelect', '11'); await H.sleep(300);
-        await page.evaluate(() => { const row = [...document.querySelectorAll('#budgetGrid .budget-mobile tbody tr')].find(tr => /ELECTRICITE/.test(tr.textContent)); row.querySelector('.tcd-clickable').click(); }); await H.sleep(400);
-        check('Budget : toucher un montant Réel ouvre le détail des opérations', await page.evaluate(() => document.getElementById('tcdDetailsOverlay').classList.contains('open') && document.querySelectorAll('#tcdDetailsTbody tr').length >= 1));
-        await page.evaluate(() => document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open')));
-        await page.evaluate(() => { document.querySelector('#view-budget > div[style*="overflow:auto"]').scrollTop = 500; }); await H.sleep(200);
-        const stick = await page.evaluate(() => { const sc = document.querySelector('#view-budget > div[style*="overflow:auto"]').getBoundingClientRect(), bar = document.querySelector('.bm-period').getBoundingClientRect(), th = document.querySelector('#budgetGrid .budget-mobile thead th').getBoundingClientRect(); const top = document.elementFromPoint(bar.left + 20, bar.top + 20); return { bar: Math.round(bar.top - sc.top), th: Math.round(th.top - bar.bottom), cover: !!(top && top.closest('.bm-period')) }; });
-        check('Budget : au défilement, sélecteur de mois et en-tête restent en haut sans chevauchement', stick.bar === 0 && stick.th <= 0 && stick.th >= -9 && stick.cover, stick);
-        await page.evaluate(() => { budgetData['2026'].__validated = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(budgetData['2026']).filter(([k]) => !k.startsWith('__'))))); window._budgetMobileMonth = 'ALL'; renderBudget(); }); await H.sleep(300);
-        bg = await bGeo();
-        check('Budget validé : colonne « Projeté » + rappel du validé, toujours dans l\'écran', bg.inside && bg.tronques.length === 0 && await page.evaluate(() => /Projeté/.test(document.querySelector('#budgetGrid .budget-mobile thead').textContent) && document.querySelectorAll('.bm-validated').length > 0), bg);
-        const rent = await page.evaluate(() => [...document.querySelectorAll('#rentabiliteGrid .budget-mirror-wrap')].every(w => w.getBoundingClientRect().right <= innerWidth + 1) && [...document.querySelectorAll('#rentabiliteGrid .budget-table td, #rentabiliteGrid .budget-table th')].every(c => c.scrollWidth <= c.clientWidth + 1));
-        check('Rentabilité : blocs dans l\'écran, aucune cellule tronquée', rent);
         check('aucune erreur JavaScript', errors.length === 0, errors);
         await stop();
     }

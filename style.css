@@ -537,10 +537,6 @@
 
 .cat1-drop-hover { outline: 2px dashed var(--pro); background: var(--pro-soft) !important; }
 .budget-table { margin: 0 auto; width: 100%; table-layout: fixed; border-collapse: collapse; }
-/* v4.5.1 : en dessous de cette largeur les colonnes de mois devenaient trop étroites pour leurs
-   montants (jusqu'à 0 px) — le tableau garde une largeur minimale et défile dans #budgetGrid.
-   (La vue téléphone, ≤ 768px, a son propre tableau à 3 colonnes : .budget-mobile.) */
-#budgetGrid .budget-table:not(.budget-mobile) { min-width: 1100px; }
 #budgetGrid { display: block; width: 100%; overflow-x: auto; }
 .budget-table .tcd-col-axis { white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; line-height:1.3; font-size: 1.1em; position: sticky; left: 0; z-index: 5; }
 .budget-table td.tcd-cell { white-space: normal !important; overflow: visible !important; text-overflow: unset !important; position: relative; min-width: 0; width: auto; height: 0; padding: 3px 4px !important; text-align: center; }
@@ -1031,36 +1027,4 @@ label:has(input:disabled) { opacity: 0.45; cursor: not-allowed !important; }
 
     /* Le menu ⋮ passait SOUS l'en-tête figé du Tableau de bord (z-index 12 contre 10) */
     header { z-index: 60; }
-
-    /* ══ BUDGET / PROJECTION — v4.5.1 : une période à la fois (Catégorie · Budget · Réel) ══ */
-    #budgetGrid { overflow: visible !important; padding-bottom: 12px !important; }   /* sinon l'en-tête figé ne suit pas le défilement */
-    .bm-period { display: flex; gap: 8px; align-items: center; position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 0 0 8px 0; }
-    .bm-period select { flex: 1 1 auto; min-width: 0; min-height: 44px; font-weight: 700; text-align: center; text-align-last: center; }
-    .bm-period .btn { flex: 0 0 48px; min-height: 44px; font-size: 1.4em; padding: 0 !important; }
-    .bm-period .btn[disabled] { opacity: 0.35; }
-    #budgetGrid .budget-mirror-wrap { padding: 4px; }
-    #budgetGrid .budget-mobile { min-width: 0; }
-    /* 48px (et non 52) : l'en-tête se glisse de 4px sous le sélecteur, sinon un liseré de lignes apparaissait entre les deux */
-    #budgetGrid .budget-mobile thead th { top: 48px; padding: 10px 6px 8px 6px; white-space: normal; font-size: 1em; }
-    #budgetGrid .budget-mobile .tcd-col-axis { min-width: 0; max-width: none; white-space: normal !important; overflow: visible !important; padding: 7px 6px; font-size: 1em; }
-    /* Pas de défilement latéral ici : la 1re colonne n'a pas à rester figée (elle passait par-dessus le sélecteur) */
-    #budgetGrid .budget-mobile tbody .tcd-col-axis { position: static !important; }
-    #budgetGrid .budget-mobile .tcd-row-main, #budgetGrid .budget-mobile .tcd-row-sub { white-space: normal; overflow-wrap: anywhere; }
-    #budgetGrid .budget-mobile .tcd-row-sub { padding-left: 4px; font-size: 0.92em; }
-    /* Colonne Budget : place réservée à droite pour la pastille, afin que tous les montants s'alignent */
-    #budgetGrid .budget-mobile td.tcd-cell.budget-editable-cell, #budgetGrid .budget-mobile td.tcd-cell.budget-agg-cell { padding-right: 24px !important; }
-    #budgetGrid .budget-mobile td.budget-editable-cell .budget-indicator { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); margin: 0; }
-    #budgetGrid .budget-mobile td.tcd-cell { padding: 6px 6px !important; text-align: right; height: auto; white-space: nowrap !important; vertical-align: middle; }
-    #budgetGrid .budget-mobile .budget-val, #budgetGrid .budget-mobile .budget-val-ro { font-size: 1em; }
-    #budgetGrid .budget-mobile .budget-editable-cell .budget-val[contenteditable="true"] {
-        min-width: 58px; min-height: 30px; padding: 5px 6px; text-align: right; border-color: var(--ink-faint); background: var(--surface); line-height: 1.3;
-    }
-    #budgetGrid .budget-mobile .budget-delta { display: block; font-size: 0.75em; }
-    .bm-validated { font-size: 0.72em; color: var(--ink-soft); font-weight: 400; font-style: normal; }
-    .bm-note { font-size: 0.8em; color: var(--ink-soft); margin: 8px 2px 0 2px; line-height: 1.35; }
-    /* Rentabilité : largeur naturelle + défilement dans le bloc, au lieu de colonnes tronquées */
-    #rentabiliteGrid .budget-mirror-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
-    #rentabiliteGrid .budget-table { table-layout: auto; width: max-content; min-width: 100%; }
-    #rentabiliteGrid .budget-table th, #rentabiliteGrid .budget-table td { white-space: nowrap !important; overflow: visible; padding: 6px 8px !important; }
-    #view-budget > div[style*="overflow:auto"] > div[style*="border-top"] { padding-left: 0 !important; padding-right: 0 !important; }
 }

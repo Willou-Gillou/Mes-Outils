@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.5.2';
+const APP_VERSION = '4.5.0';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -1783,32 +1783,6 @@ window.renderBudget = function() {
     let totalHeaderLabel = hasValidated ? 'TOTAL PROJETÉ' : 'TOTAL BUDGET';
     let validatedHeaderHtml = hasValidated ? '<th class="tcd-th-grand">BUDGET VALIDÉ</th>' : '';
 
-    // ── v4.5.1 : vue téléphone ────────────────────────────────────────────────────────────
-    // Sur un écran étroit, les 12 colonnes de mois du tableau (table-layout:fixed, largeur 100%)
-    // tombaient à 0 px et leurs montants s'empilaient les uns sur les autres : illisible. Sur
-    // téléphone on affiche donc UNE période à la fois (un mois, ou le total de l'exercice) sur
-    // trois colonnes — Catégorie · Budget · Réel — avec un sélecteur de mois. Mêmes cellules,
-    // mêmes gestes (saisie du budget, pastille de synchro, détail des opérations au toucher).
-    const mob = window.isMobileLayout();
-    let mobM = window._budgetMobileMonth;
-    if (mob) {
-        if (mobM !== 'ALL' && !months.includes(mobM)) mobM = null;
-        if (!mobM) {
-            // Par défaut : le mois en cours s'il fait partie de l'exercice affiché, sinon le total.
-            let d0 = new Date(), k0 = String(d0.getMonth() + 1).padStart(2, '0');
-            mobM = (months.includes(k0) && getFiscalYearLabel(String(d0.getFullYear()), k0, fiscalStartMonth) === ex) ? k0 : 'ALL';
-        }
-        window._budgetMobileMonth = mobM; window._budgetMobileMonths = months.slice();
-    }
-    const mobAll = mobM === 'ALL';
-    const mobTotalBudgetCell = (bVal, cls, vVal) => `<td class="tcd-cell budget-agg-cell ${cls}"><span class="budget-val-ro">${formatCurrency(bVal || 0)}</span>${deltaHtml(bVal, vVal)}${hasValidated ? `<div class="bm-validated">validé ${formatCurrency(vVal || 0)}</div>` : ''}</td>`;
-    let htmlMob = '';
-    if (mob) {
-        htmlMob = '<table class="tcd-native budget-table budget-mobile" cellspacing="0" cellpadding="0"><colgroup><col style="width:38%;"><col style="width:33%;"><col style="width:29%;"></colgroup>'
-            + '<thead><tr><th class="tcd-col-axis" style="text-align:left;"><span id="budgetFilterBtn" class="' + (hasBudgetFilter() ? 'active' : '') + '" title="Filtrer" onclick="window.openBudgetFilter(event)" style="cursor:pointer;">⚙️</span> Catégorie</th>'
-            + '<th class="tcd-th-grand">' + (mobAll && hasValidated ? 'Projeté' : 'Budget') + '</th><th class="tcd-th-grand">Réel</th></tr></thead><tbody>';
-    }
-
     let htmlBudget = '<table class="tcd-native budget-table" cellspacing="0" cellpadding="0">';
     htmlBudget += colGroupHtml;
     htmlBudget += '<thead><tr><th class="tcd-col-axis" style="text-align:center;"><span id="budgetFilterBtn" class="' + (hasBudgetFilter() ? 'active' : '') + '" title="Filtrer" onclick="window.openBudgetFilter(event)" style="cursor:pointer;">⚙️</span> Catégorie</th>';
@@ -1864,13 +1838,6 @@ window.renderBudget = function() {
         if (hasValidated) htmlReal += `<td class="tcd-cell tcd-total-col tcd-grand tcd-row-main-cell"><span class="budget-val-ro">${formatCurrency(c1ValidatedTotal)}</span></td>`;
         htmlBudget += '</tr>';
         htmlReal += '</tr>';
-        if (mob) {
-            htmlMob += `<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(c1)}</div></td>`
-                + (mobAll
-                    ? mobTotalBudgetCell(c1BudgetTotal, 'tcd-grand tcd-row-main-cell', c1ValidatedTotal) + realCell(c1RealTotal, 'tcd-grand tcd-row-main-cell', true, `${c1}::ALL::ALL`)
-                    : budgetAggCell(c1BudgetByMonth[mobM] || 0, 'tcd-row-main-cell ' + monthColorClass(mobM), c2List.length > 0, c1ValidatedByMonth[mobM] || 0, false) + realCell(c1RealByMonth[mobM] || 0, 'tcd-row-main-cell', false, `${c1}::ALL::${mobM}`))
-                + '</tr>';
-        }
 
         c2List.forEach(c2 => {
             htmlBudget += `<tr class="tcd-row-sub-tr"><td class="tcd-col-axis"><div class="tcd-row-sub">↳ ${escapeHtml(c2)}</div></td>`;
@@ -1890,13 +1857,6 @@ window.renderBudget = function() {
             if (hasValidated) htmlReal += `<td class="tcd-cell tcd-total-col tcd-grand"><span class="budget-val-ro">${formatCurrency(c2ValidatedTotal)}</span></td>`;
             htmlBudget += '</tr>';
             htmlReal += '</tr>';
-            if (mob) {
-                htmlMob += `<tr class="tcd-row-sub-tr"><td class="tcd-col-axis"><div class="tcd-row-sub">↳&nbsp;${escapeHtml(c2)}</div></td>`
-                    + (mobAll
-                        ? mobTotalBudgetCell(c2BudgetTotal, 'tcd-grand', c2ValidatedTotal) + realCell(c2RealTotal, 'tcd-grand', true, `${c1}::${c2}::ALL`)
-                        : budgetEditableCell(c1, c2, mobM) + realCell(realByC1C2Month[`${c1}::${c2}::${mobM}`] || 0, '', false, `${c1}::${c2}::${mobM}`))
-                    + '</tr>';
-            }
         });
     });
 
@@ -1915,13 +1875,6 @@ window.renderBudget = function() {
 
     htmlBudget += '</tbody></table>';
     htmlReal += '</tbody></table>';
-    if (mob) {
-        htmlMob += '<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL GLOBAL</div></td>'
-            + (mobAll
-                ? mobTotalBudgetCell(grandBudgetTotal, 'tcd-grand tcd-total-row-cell', grandValidatedTotal) + realCell(grandRealTotal, 'tcd-grand tcd-total-row-cell', true, 'GRAND_TOTAL')
-                : budgetAggCell(grandBudgetByMonth[mobM] || 0, 'tcd-total-row-cell ' + monthColorClass(mobM), true, grandValidatedByMonth[mobM] || 0, false) + realCell(grandRealByMonth[mobM] || 0, 'tcd-total-row-cell', true, `MONTH_TOTAL::${mobM}`))
-            + '</tr></tbody></table>';
-    }
 
     let banner = $('budgetValidatedBanner');
     if (hasValidated) {
@@ -1977,27 +1930,12 @@ window.renderBudget = function() {
     let compactBtn = $('btnBudgetCompactView');
     if (compactBtn) compactBtn.textContent = budgetCompactView ? '🔍 Agrandir' : '🔎 Réduire';
 
-    if (mob) {
-        let periodOpts = months.map(m => `<option value="${m}" ${m === mobM ? 'selected' : ''}>${monthLabel(m, extraMonthsMap)}</option>`).join('')
-            + `<option value="ALL" ${mobAll ? 'selected' : ''}>Total de l'exercice</option>`;
-        let atStart = !mobAll && months.indexOf(mobM) === 0;
-        container.innerHTML = `
-            <div class="bm-period">
-                <button class="btn btn-outline" onclick="window.stepBudgetMobileMonth(-1)" title="Période précédente" ${atStart ? 'disabled' : ''}>‹</button>
-                <select class="input-text" id="budgetMobileMonthSelect" onchange="window.setBudgetMobileMonth(this.value)">${periodOpts}</select>
-                <button class="btn btn-outline" onclick="window.stepBudgetMobileMonth(1)" title="Période suivante" ${mobAll ? 'disabled' : ''}>›</button>
-            </div>
-            <div class="budget-mirror-wrap">${htmlMob}</div>
-            <p class="bm-note">${(mobAll || budgetLocked) ? '' : 'Touchez un montant <strong>Budget</strong> pour le modifier. '}Touchez un montant <strong>Réel</strong> pour voir les opérations. Réel : sélection par date réelle, affiché par date d'écriture.</p>
-        `;
-    } else {
     container.innerHTML = `
         <div class="budget-block-title">💰 Budget / Projection <span class="budget-badge badge-budget">Éditable</span></div>
         <div class="budget-mirror-wrap">${htmlBudget}</div>
         <div class="budget-block-title" style="margin-top:20px;">📈 Réel <span class="budget-badge badge-real">Sélection par date réelle, affiché par date écriture</span></div>
         <div class="budget-mirror-wrap">${htmlReal}</div>
     `;
-    }
 
     let fs = parseInt(localStorage.getItem('f_budget_fontsize') || '13', 10);
     document.querySelectorAll('#budgetGrid .tcd-native th, #budgetGrid .tcd-native td').forEach(el => {
@@ -2012,22 +1950,6 @@ window.renderBudget = function() {
 };
 
 let _budgetClickHandler = null;
-// v4.5.1 : sélecteur de période de la vue téléphone du Budget
-window.setBudgetMobileMonth = function(m) { window._budgetMobileMonth = m; window.renderBudget(); };
-window.stepBudgetMobileMonth = function(dir) {
-    let list = (window._budgetMobileMonths || []).concat(['ALL']);
-    let i = list.indexOf(window._budgetMobileMonth); if (i < 0) i = list.length - 1;
-    window._budgetMobileMonth = list[Math.max(0, Math.min(list.length - 1, i + dir))];
-    window.renderBudget();
-};
-// Rotation du téléphone / redimensionnement : le Budget n'a pas le même tableau des deux côtés du seuil.
-(function() {
-    if (!window.matchMedia) return;
-    let mq = window.matchMedia('(max-width: 768px)');
-    let onChange = () => { let v = $('view-budget'); if (v && v.classList.contains('active') && typeof window.renderBudget === 'function') window.renderBudget(); };
-    if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
-})();
-
 window.bindBudgetDrillDown = function() {
     let grid = $('budgetGrid');
     if (!grid) return;
