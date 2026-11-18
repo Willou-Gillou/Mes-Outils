@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.18';
+const APP_VERSION = '4.5.3';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -11,6 +11,22 @@ var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBan
 let dbSortCol='dateOp', dbSortDir=-1, catModalTxId=null, catModalSelectedCat1=null, catModalSelectedCat2=null, catModalSource=null;
 var driveAccessToken=null, driveFileId=null, driveTokenClient=null, saveTimer=null, saveMaxWaitTimer=null;
 var driveDataLoaded = false; // true uniquement après chargement confirmé depuis Drive
+// ── v4.4.0 : garde-fous de synchronisation ───────────────────────────────────
+// saveReady : aucune sauvegarde vers Drive n'est autorisée tant que les données du compte courant
+// n'ont pas été POSITIVEMENT chargées (ou le compte POSITIVEMENT confirmé comme nouveau, c.-à-d.
+// Drive a répondu 200 avec zéro fichier). Sans ça, un chargement en échec (erreur réseau, 401,
+// 429, 500...) laissait l'app avec un état vide en mémoire que la première sauvegarde venue
+// écrivait par-dessus le vrai fichier.
+var saveReady = false;
+var _loadSeq = 0;               // invalide un chargement devenu obsolète (changement de compte entre-temps)
+var _saveInFlight = null;       // promesse de la sauvegarde en cours — une seule à la fois
+var _saveQueued = false;        // des modifications sont arrivées pendant la sauvegarde en cours
+var _saveQueuedRerender = false;
+var _unsavedChanges = false;    // modifications utilisateur pas encore confirmées sur Drive
+var _driveLastAttemptMd5 = {};  // accountId → empreinte du dernier envoi dont la réponse n'est jamais revenue
+var _driveKnownMd5 = {};        // accountId → empreinte du fichier Drive tel qu'on l'a lu/écrit en dernier
+var _saveRetryTimer = null, _saveRetryCount = 0; // nouvel essai automatique après un échec d'envoi
+var _tokenRefreshWaiters = [];  // promesses en attente d'un renouvellement silencieux du jeton Google
 // ── Multi-compte ──
 var accounts = JSON.parse(localStorage.getItem('f_accounts')||'[{"id":"default","name":"Mon Compte"}]');
 var currentAccountId = localStorage.getItem('f_current_account')||'default';
@@ -308,12 +324,48 @@ function activateTab(target, silent) {
     $$('.view').forEach(v => v.classList.remove('active'));
     btn.classList.add('active');
     $(target).classList.add('active');
+    // v4.5.0 : sur téléphone la barre d'onglets défile — l'onglet actif est ramené dans l'écran
+    // (avant, on pouvait être sur "Règles" sans voir aucun onglet surligné).
+    let nav = btn.parentElement;
+    if (nav && nav.scrollWidth > nav.clientWidth) {
+        let nr = nav.getBoundingClientRect(), br = btn.getBoundingClientRect();
+        if (window.isMobileLayout()) nav.scrollLeft += (br.left + br.width / 2) - (nr.left + nr.width / 2); // centré : on voit ses voisins
+        else if (br.left < nr.left) nav.scrollLeft -= nr.left - br.left;      // ordinateur : ne bouge que si l'onglet est hors champ
+        else if (br.right > nr.right) nav.scrollLeft += br.right - nr.right;
+    }
     if (!silent) window.renderViewsSafe();
     return true;
 }
+
+// ── v4.5.0 : affichage téléphone ──────────────────────────────────────────────
+window.isMobileLayout = function() { return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches); };
+// Sur téléphone, les filtres/tri d'une liste (l'en-tête du tableau) sont repliés par défaut.
+window.toggleMobileFilters = function(tableId, btn) {
+    let t = $(tableId); if (!t) return;
+    let open = t.classList.toggle('m-filters-open');
+    if (btn) btn.classList.toggle('m-active', open);
+};
+// Bloc de réglages replié par défaut sur téléphone (Tableau de bord, Budget).
+window.toggleMobilePanel = function(panelId, btn) {
+    let el = $(panelId); if (!el) return;
+    let open = el.classList.toggle('m-open');
+    if (btn) btn.classList.toggle('m-active', open);
+};
+// Le bouton "Filtres et tri" affiche le nombre de filtres actifs, pour ne pas oublier un filtre replié.
+function updateMobileFilterCount(tableId, btnId) {
+    let t = $(tableId), b = $(btnId); if (!t || !b) return;
+    let n = Array.from(t.querySelectorAll('thead .col-filter')).filter(i => i.value !== '').length;
+    b.textContent = '🔎 Filtres et tri' + (n ? ' (' + n + ')' : '');
+    b.classList.toggle('m-has-filters', n > 0);
+}
+document.addEventListener('input', e => {
+    if (!e.target.classList || !e.target.classList.contains('col-filter')) return;
+    updateMobileFilterCount('uncatTable', 'uncatFiltersBtn'); updateMobileFilterCount('dataTable', 'dataFiltersBtn');
+});
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     tcdSaveScroll();
     activateTab(btn.dataset.target);
+    if (window.isMobileLayout()) { let m = document.querySelector('main'); if (m) m.scrollTop = 0; } // chaque onglet s'ouvre en haut
     localStorage.setItem('f_active_tab_' + currentAccountId, btn.dataset.target);
     triggerSave(false, true); // silencieux : changer d'onglet ne doit pas afficher "Sauvegarde en cours..."
     window.closeMobileHeaderMenu();
@@ -374,11 +426,12 @@ const driveShowLogin=()=>{driveDataLoaded=true; driveHideLoading();$('driveLogin
 
 $('appPassword').addEventListener('keypress', e => { if(e.key==='Enter') $('unlockBtn').click(); });
 $('unlockBtn').addEventListener('click', () => {
+    window._initialAccountLoad = true; // 1re ouverture après saisie du mot de passe (voir fetchDriveData)
     const pwd = $('appPassword').value.trim(); if(!pwd) return alert("Mot de passe requis.");
     appSecretKey = pwd;
     $('authOverlay').classList.remove('open');
     driveShowLoading('Chargement des données...');
-    fetchDriveData().catch(() => { driveDataLoaded=true; driveShowLogin(); });
+    fetchDriveData().catch(() => { driveShowLogin(); });
 });
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -563,11 +616,15 @@ function decryptPayload(remoteData) {
                 window._redirectCount = 0;
                 driveHideLoading();
                 alert('Impossible de charger le bon compte. Vérifiez votre configuration.');
-                return 'redirect';
+                return 'error';
             }
             setTimeout(() => fetchDriveData(), 300);
-            return false; // signaler qu'il faut recharger
+            // v4.4.0 : renvoyait `false`, que fetchDriveData interprète comme "mot de passe
+            // incorrect" (clé effacée + alerte) — le rechargement programmé juste au-dessus
+            // échouait alors à son tour faute de clé.
+            return 'redirect';
         }
+        window._redirectCount = 0;
         transactions=p.transactions||[]; rules=p.rules||[];
         if(p.categories) categories = p.categories;
         if(p.savedCharts) savedCharts = p.savedCharts;
@@ -693,7 +750,11 @@ function initDrive() {
             driveTokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: DRIVE_CLIENT_ID, scope: DRIVE_SCOPE,
                 callback: async (resp) => {
-                    if (resp.error) { driveShowLogin(); return; }
+                    let waiters = _tokenRefreshWaiters.splice(0);
+                    if (resp.error) {
+                        if (waiters.length) { waiters.forEach(w => w.reject(new Error('autorisation Google refusée'))); return; }
+                        driveShowLogin(); return;
+                    }
                     driveAccessToken = resp.access_token;
                     gapi.client.setToken({ access_token: driveAccessToken });
                     localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
@@ -702,10 +763,31 @@ function initDrive() {
                     localStorage.setItem(DRIVE_LS+'granted_scope', resp.scope || '');
                     $('driveLoginOverlay').classList.remove('open');
                     $('logoutBtn').style.display = 'inline-flex';
+                    // v4.4.0 : renouvellement du jeton EN COURS de session (expiration au bout d'1h).
+                    // Avant, ce cas rouvrait la demande de mot de passe, et le déverrouillage
+                    // rechargeait les données depuis Drive — en écrasant les modifications en
+                    // mémoire que la sauvegarde en échec n'avait pas encore envoyées.
+                    if (waiters.length || (appSecretKey && saveReady)) {
+                        driveHideLoading();
+                        waiters.forEach(w => w.resolve());
+                        return;
+                    }
+                    if (appSecretKey) {
+                        // Mot de passe déjà saisi, mais le chargement avait échoué (jeton expiré) : on recharge.
+                        driveShowLoading('Chargement des données...');
+                        fetchDriveData();
+                        return;
+                    }
                     // Google OK → demander MDP
                     driveHideLoading();
                     $('authOverlay').classList.add('open');
                     $('appPassword').focus();
+                },
+                // Fenêtre Google bloquée ou fermée : sans ce rappel, une demande de renouvellement
+                // restait en attente jusqu'à son délai maximal.
+                error_callback: (err) => {
+                    let waiters = _tokenRefreshWaiters.splice(0);
+                    waiters.forEach(w => w.reject(new Error((err && err.type) || 'fenêtre Google indisponible')));
                 }
             });
             const token = localStorage.getItem(DRIVE_LS+'token'), tokenExp = localStorage.getItem(DRIVE_LS+'token_exp');
@@ -734,12 +816,14 @@ function initDrive() {
 
 $('googleLoginBtnReal').addEventListener('click', () => { driveShowLoading("Authentification..."); driveTokenClient.requestAccessToken({ prompt: 'consent' }); });
 $('logoutBtn').addEventListener('click', () => { if(driveAccessToken)google.accounts.oauth2.revoke(driveAccessToken); localStorage.removeItem(DRIVE_LS+'token'); localStorage.removeItem(DRIVE_LS+'token_exp'); localStorage.removeItem(DRIVE_LS+'scope'); localStorage.removeItem(DRIVE_LS+'granted_scope'); location.reload(); });
-const updateSyncBadge=(st,txt,detail)=>{
+// onClick (facultatif) : action au clic sur un badge en erreur ; par défaut, relance la sauvegarde.
+const updateSyncBadge=(st,txt,detail,onClick)=>{
     let b=$('syncBadge');
     b.textContent=txt;
     b.className=`badge badge-sync ${st==='ok'?'synced':st==='syncing'?'syncing':st==='error'?'error':''}`;
-    b.onclick = st==='error' ? ()=>{ triggerSave(false); } : null;
-    b.title   = st==='error' ? 'Cliquez pour réessayer la sauvegarde' : (detail || '');
+    b.onclick = st==='error' ? (onClick || (()=>{ triggerSave(false); })) : null;
+    b.style.cursor = (st==='error' && b.onclick) ? 'pointer' : '';
+    b.title   = st==='error' ? (detail || 'Cliquez pour réessayer la sauvegarde') : (detail || '');
 };
 
 // v3.4.5 : scanne une seule fois par session les anciens fichiers "appsysdata-<index>.dat"
@@ -795,6 +879,8 @@ let driveAccountsRegistryFileId = null;
 async function driveGetAccountsRegistryFileId() {
     if (driveAccountsRegistryFileId) return driveAccountsRegistryFileId;
     let r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${ACCOUNTS_REGISTRY_FILENAME}'&fields=files(id)`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+    // v4.4.0 : une erreur Drive n'est plus lue comme "registre absent" (ce qui en créait un doublon).
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     let d = await r.json();
     let fid = (d.files && d.files.length > 0) ? d.files[0].id : null;
     if (fid) driveAccountsRegistryFileId = fid;
@@ -807,6 +893,7 @@ async function loadAccountsRegistry() {
         let fileId = await driveGetAccountsRegistryFileId();
         if (!fileId) return false;
         let resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+        if (!resp.ok) return false;
         let text = await resp.text();
         if (!text || !text.trim().startsWith('{')) return false;
         let remoteData = JSON.parse(text);
@@ -834,11 +921,16 @@ async function saveAccountsRegistry() {
     } catch (e) { console.warn('Écriture du registre des comptes échouée:', e); }
 }
 
+function driveHttpError(status) { let e = new Error('HTTP ' + status); e.httpStatus = status; return e; }
+
+// v4.4.0 : toute réponse Drive en erreur lève une exception. Avant, une erreur (401, 429, 500...)
+// était lue comme "aucun fichier trouvé", donc comme un compte neuf et vide.
 async function driveGetFileId(accountId) {
     let id = accountId || currentAccountId;
     let fname = getAccountDriveFilename(id);
     if(driveFileIdMap[id]) return driveFileIdMap[id];
     let r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${fname}'&fields=files(id)`,{headers:{Authorization:'Bearer '+driveAccessToken}});
+    if (!r.ok) throw driveHttpError(r.status);
     let d = await r.json();
     let fid = (d.files&&d.files.length>0) ? d.files[0].id : null;
     if (!fid && id !== 'default') {
@@ -849,24 +941,128 @@ async function driveGetFileId(accountId) {
     return fid;
 }
 
+// Empreinte (md5) du contenu actuel du fichier sur Drive — sert à détecter qu'un autre appareil,
+// navigateur ou onglet l'a modifié depuis notre dernier chargement/enregistrement.
+async function driveGetRemoteMd5(fileId) {
+    let r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=md5Checksum`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
+    if (r.status === 404) return { missing: true };
+    if (!r.ok) throw driveHttpError(r.status);
+    let d = await r.json();
+    return { md5: d.md5Checksum || null };
+}
+
+// Renouvelle le jeton Google sans repasser par le mot de passe. Rejette si Google ne répond pas
+// (fenêtre bloquée par le navigateur, refus, délai dépassé).
+function refreshDriveToken(timeoutMs) {
+    return new Promise((resolve, reject) => {
+        if (!driveTokenClient) { reject(new Error('client Google indisponible')); return; }
+        let w = { resolve, reject };
+        _tokenRefreshWaiters.push(w);
+        setTimeout(() => {
+            let i = _tokenRefreshWaiters.indexOf(w);
+            if (i !== -1) { _tokenRefreshWaiters.splice(i, 1); reject(new Error('délai dépassé')); }
+        }, timeoutMs || 20000);
+        try { driveTokenClient.requestAccessToken({ prompt: '' }); }
+        catch (e) { let i = _tokenRefreshWaiters.indexOf(w); if (i !== -1) _tokenRefreshWaiters.splice(i, 1); reject(e); }
+    });
+}
+
+function markDriveSessionExpired() {
+    updateSyncBadge('error', '⚠ Session Google expirée — cliquez',
+        'Votre session Google a expiré. Cliquez pour vous reconnecter : vos modifications seront alors enregistrées.',
+        () => window.reconnectDriveAndSave());
+}
+
+// Appelé par un clic sur le badge : la fenêtre Google n'est autorisée par le navigateur que
+// dans le prolongement direct d'un geste de l'utilisateur.
+window.reconnectDriveAndSave = function() {
+    updateSyncBadge('syncing', 'Reconnexion à Google...');
+    refreshDriveToken(60000).then(() => { _unsavedChanges = true; performSave(false); }).catch(() => markDriveSessionExpired());
+};
+
+function showErrorToast(msg, ms) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show','toast-error');
+    setTimeout(()=>{ t.classList.remove('show','toast-error'); }, ms || 8000);
+}
+
+// Demande à l'utilisateur quoi faire quand Drive contient une version plus récente que celle
+// chargée dans cet onglet. Résout 'reload' ou 'overwrite'.
+function askSyncConflict() {
+    return new Promise(resolve => {
+        let ov = $('syncConflictOverlay');
+        if (!ov) { resolve(confirm('Ce compte a été modifié depuis un autre appareil ou onglet.\n\nOK = recharger depuis Drive (abandonne les modifications non enregistrées de cet onglet)\nAnnuler = conserver les données de cet onglet et écraser Drive') ? 'reload' : 'overwrite'); return; }
+        const done = choice => { ov.classList.remove('open'); $('syncConflictReloadBtn').onclick = null; $('syncConflictOverwriteBtn').onclick = null; resolve(choice); };
+        $('syncConflictReloadBtn').onclick = () => done('reload');
+        $('syncConflictOverwriteBtn').onclick = () => done('overwrite');
+        ov.classList.add('open');
+    });
+}
+
 async function fetchDriveData() {
+    const seq = ++_loadSeq;          // un chargement plus récent (changement de compte) rend celui-ci caduc
+    const acct = currentAccountId;
+    saveReady = false;               // rien ne part vers Drive tant que ce chargement n'a pas abouti
     try {
         // Charge le registre central des comptes AVANT de résoudre le fichier du compte courant :
         // c'est désormais la référence, prioritaire sur la copie locale (localStorage) et sur
         // les copies embarquées dans les fichiers de comptes (fusionnées, elles, en aval).
         await loadAccountsRegistry();
-        const fileId = await driveGetFileId();
+        if (seq !== _loadSeq) return;
+        let fileId = await driveGetFileId(acct);
+        if (seq !== _loadSeq) return;
+        // v4.5.3 : appareil neuf. Le compte à ouvrir vient de la mémoire locale du navigateur ; vide sur un
+        // appareil jamais utilisé, elle donne "default". Si vos données sont dans un autre compte, l'appli
+        // ouvrait un compte vide ("✓ Nouveau") sans erreur. À la 1re ouverture seulement, si le compte
+        // choisi n'a aucun fichier sur Drive alors que le registre en connaît d'autres, on ouvre le
+        // premier compte qui en a un (jamais lors d'un changement de compte volontaire).
+        if (!fileId && window._initialAccountLoad && accounts.length > 1) {
+            window._initialAccountLoad = false;
+            for (const a of accounts) {
+                if (a.id === acct) continue;
+                let otherId = null;
+                try { otherId = await driveGetFileId(a.id); } catch (e) { otherId = null; }
+                if (seq !== _loadSeq) return;
+                if (otherId) {
+                    currentAccountId = a.id;
+                    localStorage.setItem('f_current_account', a.id);
+                    driveFileIdMap = driveFileIdMap || {};
+                    if (window.renderAccountUI) window.renderAccountUI();
+                    return fetchDriveData();
+                }
+            }
+        }
+        window._initialAccountLoad = false;
+        if (seq !== _loadSeq) return;
         if (fileId) {
-            const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${driveAccessToken}` } });
-            let text = await resp.text(), remoteData={}; if(text && text.trim().startsWith('{')) remoteData = JSON.parse(text);
+            const [resp, meta] = await Promise.all([
+                fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${driveAccessToken}` } }),
+                driveGetRemoteMd5(fileId).catch(() => null)
+            ]);
+            if (seq !== _loadSeq) return;
+            // v4.4.0 : une réponse en erreur (jeton expiré, quota, panne Google) n'est plus lue
+            // comme un fichier vide — c'est ce qui permettait d'écraser le vrai fichier ensuite.
+            if (!resp.ok) throw driveHttpError(resp.status);
+            let text = await resp.text(), remoteData = {};
+            if (seq !== _loadSeq) return;
+            let trimmed = (text || '').trim();
+            if (trimmed) {
+                if (!trimmed.startsWith('{')) throw new Error('fichier Drive illisible (contenu inattendu)');
+                remoteData = JSON.parse(trimmed);
+                if (!remoteData.vault && Object.keys(remoteData).length) throw new Error('fichier Drive illisible (coffre absent)');
+            }
             const decryptResult = decryptPayload(remoteData);
             if(decryptResult === true) {
                 driveDataLoaded=true;
+                if (meta && meta.md5) _driveKnownMd5[acct] = meta.md5; else delete _driveKnownMd5[acct];
                 window._suppressSave = true;
-                localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
-                tcdLoadCollapsed(); loadTcdFilter();
-                window.renderAccountUI(); window.renderViewsSafe();
-                window._suppressSave = false;
+                try {
+                    localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
+                    tcdLoadCollapsed(); loadTcdFilter();
+                    window.renderAccountUI(); window.renderViewsSafe();
+                } finally { window._suppressSave = false; } // un rendu en erreur ne doit pas bloquer les sauvegardes à vie
+                saveReady = true; _unsavedChanges = false;
                 // Remonte au registre toute entrée que la fusion locale aurait ajoutée
                 // (migration en douceur des anciennes copies embarquées, compte par compte).
                 saveAccountsRegistry();
@@ -874,6 +1070,9 @@ async function fetchDriveData() {
             } else if(decryptResult === 'redirect') {
                 // Mauvais fichier de compte → rechargement en cours, patienter
                 updateSyncBadge('syncing', 'Chargement du compte...');
+            } else if(decryptResult === 'error') {
+                updateSyncBadge('error', 'Erreur compte', 'Le fichier de ce compte n\'a pas pu être associé au bon compte. Rien n\'a été modifié sur Drive.', () => {});
+                driveHideLoading();
             } else {
                 // false = MDP incorrect
                 appSecretKey = null;
@@ -884,62 +1083,174 @@ async function fetchDriveData() {
                 $('appPassword').focus();
                 alert('❌ Mot de passe incorrect. Veuillez réessayer.');
             }
-        } else { updateSyncBadge('ok', '✓ Nouveau'); tcdLoadCollapsed(); window.renderViewsSafe();  driveHideLoading(); }
-    } catch (e) { updateSyncBadge('error', 'Erreur Sync'); driveHideLoading(); $('authOverlay').classList.add('open'); }
+        } else {
+            // Drive a répondu correctement et ne contient aucun fichier pour ce compte : compte neuf.
+            delete _driveKnownMd5[acct];
+            driveDataLoaded = true;
+            window._suppressSave = true; // l'affichage d'un compte vide n'est pas une modification à enregistrer
+            try { tcdLoadCollapsed(); window.renderViewsSafe(); } finally { window._suppressSave = false; }
+            saveReady = true; _unsavedChanges = false;
+            updateSyncBadge('ok', '✓ Nouveau'); driveHideLoading();
+        }
+    } catch (e) {
+        if (seq !== _loadSeq) return;
+        console.warn('[Chargement] échec :', e);
+        driveHideLoading();
+        if (e && e.httpStatus === 401) {
+            // Jeton Google expiré : repasser par la connexion Google plutôt que par le mot de passe.
+            localStorage.removeItem(DRIVE_LS+'token'); localStorage.removeItem(DRIVE_LS+'token_exp');
+            updateSyncBadge('error', 'Session expirée', 'Reconnectez-vous à Google.', () => {});
+            driveShowLogin();
+            return;
+        }
+        updateSyncBadge('error', 'Erreur Sync', 'Le chargement depuis Drive a échoué. Rien n\'a été modifié sur Drive.', () => {});
+        $('authOverlay').classList.add('open');
+        showErrorToast('⚠ Chargement depuis Drive impossible (' + (e && e.message ? e.message : 'erreur inconnue') + '). Vos données sur Drive ne sont pas modifiées — vérifiez votre connexion puis réessayez.');
+    }
 }
 
-async function performSave(reRenderDbView) {
-    let quiet = pendingSaveQuiet;
-    pendingSaveQuiet = true; // repart silencieux pour le prochain lot de modifications
+// v4.4.0 : une seule sauvegarde à la fois. Avant, deux sauvegardes pouvaient se chevaucher (un
+// upload dure plusieurs secondes) et la plus ancienne arriver sur Drive APRÈS la plus récente,
+// effaçant les dernières modifications. Les modifications survenues pendant un envoi déclenchent
+// désormais une nouvelle sauvegarde dès que l'envoi en cours est terminé.
+function performSave(reRenderDbView) {
     clearTimeout(saveTimer); saveTimer = null;
     clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
-    if (!driveAccessToken || !appSecretKey) return;
-    // v4.3.15 : chronométrage détaillé (demandé pour identifier précisément où passe le temps —
-    // chiffrement, résolution du fichier Drive, ou upload réseau) — un seul message récapitulatif
-    // dans la console, préfixé "[Sauvegarde]", à chaque sauvegarde réelle.
+    clearTimeout(_saveRetryTimer); _saveRetryTimer = null;
+    if (!appSecretKey) return;
+    if (!saveReady) {
+        if (_unsavedChanges) updateSyncBadge('error', '⚠ Non enregistré — données non chargées',
+            'Les données de ce compte n\'ont pas été chargées depuis Drive : l\'enregistrement est bloqué pour ne pas écraser votre fichier. Rechargez la page.', () => {});
+        return;
+    }
+    if (!driveAccessToken) { markDriveSessionExpired(); return; }
+    if (_saveInFlight) {
+        _saveQueued = true;
+        _saveQueuedRerender = _saveQueuedRerender || !!reRenderDbView;
+        return _saveInFlight;
+    }
+    let quiet = pendingSaveQuiet;
+    pendingSaveQuiet = true; // repart silencieux pour le prochain lot de modifications
+    _saveInFlight = _doSave(reRenderDbView, quiet, false).finally(() => {
+        _saveInFlight = null;
+        if (_saveQueued) {
+            let rr = _saveQueuedRerender;
+            _saveQueued = false; _saveQueuedRerender = false;
+            performSave(rr);
+        }
+    });
+    return _saveInFlight;
+}
+
+async function _doSave(reRenderDbView, quiet, isRetry) {
+    // Le compte est figé ICI : si l'utilisateur change de compte pendant l'envoi, ces données
+    // partent quand même dans le fichier du compte auquel elles appartiennent, jamais dans l'autre.
+    const acct = currentAccountId;
     const _t0 = performance.now();
     try {
-        const payload = await buildEncryptedPayload();
+        const payloadP = buildEncryptedPayload(); // instantané des données pris maintenant, de façon synchrone
+        payloadP.catch(() => {});
+        let fileId = await driveGetFileId(acct);
+        // Vérification de l'empreinte Drive en parallèle du chiffrement : pas d'attente ajoutée.
+        let [payload, remote] = await Promise.all([payloadP, fileId ? driveGetRemoteMd5(fileId) : Promise.resolve(null)]);
         const _t1 = performance.now();
-        const fileId = await driveGetFileId();
-        const _t2 = performance.now();
-        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', method = 'POST'; const form = new FormData();
-        if (fileId) { url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`; method = 'PATCH'; }
-        else { const meta = { name: getAccountDriveFilename(), parents: ['appDataFolder'] }; form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' })); }
-        form.append('file', new Blob([payload], { type: 'application/json' }));
-        const _sr=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
-        const _t3 = performance.now();
-        if(!_sr.ok) {
-            // Token expiré → on le renouvelle et on réessaie une fois
-            if(_sr.status===401) {
-                driveAccessToken = null;
-                try {
-                    await new Promise((res,rej)=>{ driveTokenClient.requestAccessToken({prompt:''}); setTimeout(res,3000); });
-                    const _sr2=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
-                    if(!_sr2.ok) throw new Error('HTTP '+_sr2.status);
-                } catch(e2) { throw new Error('401 retry failed'); }
-            } else {
-                throw new Error('HTTP '+_sr.status);
+        if (remote && remote.missing) {
+            // Fichier supprimé entre-temps (ex. depuis Administration Drive ailleurs) : on le recrée.
+            delete driveFileIdMap[acct]; delete _driveKnownMd5[acct]; fileId = null;
+        } else if (remote && remote.md5 && _driveKnownMd5[acct] && remote.md5 === _driveLastAttemptMd5[acct]) {
+            // C'est notre propre envoi précédent : il a bien atteint Drive, seule la réponse s'est perdue.
+            _driveKnownMd5[acct] = remote.md5;
+        } else if (remote && remote.md5 && _driveKnownMd5[acct] && remote.md5 !== _driveKnownMd5[acct]) {
+            const choice = await askSyncConflict();
+            if (choice === 'reload') {
+                clearTimeout(saveTimer); saveTimer = null;
+                clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
+                _saveQueued = false; _saveQueuedRerender = false; _unsavedChanges = false; pendingSaveQuiet = true;
+                if (acct === currentAccountId) { driveShowLoading('Rechargement depuis Drive...'); fetchDriveData(); }
+                return;
             }
         }
-        if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
-        // v4.3.16 : le détail du chronométrage était seulement loggé dans la console du
-        // navigateur ; affiché aussi directement dans l'app (tooltip du badge de synchronisation
-        // + ligne dédiée dans Paramètres → Administration Drive) pour ne pas avoir à ouvrir les
-        // outils de développement pour le lire.
+        const _t2 = performance.now(); // exclut le temps passé devant la fenêtre de conflit
+        let url, method, body;
+        if (fileId) {
+            url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=id,md5Checksum`; method = 'PATCH'; body = payload;
+        } else {
+            url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,md5Checksum'; method = 'POST';
+            body = new FormData();
+            body.append('metadata', new Blob([JSON.stringify({ name: getAccountDriveFilename(acct), parents: ['appDataFolder'] })], { type: 'application/json' }));
+            body.append('file', new Blob([payload], { type: 'application/json' }));
+        }
+        let _sr;
+        try { _sr = await fetch(url, { method, headers: { Authorization: `Bearer ${driveAccessToken}` }, body }); }
+        catch (netErr) {
+            // Coupure réseau pendant l'envoi : impossible de savoir si Drive l'a reçu. On note
+            // l'empreinte de ce qu'on a tenté d'écrire pour ne pas prendre ensuite notre propre
+            // écriture pour une modification venue d'un autre appareil.
+            try { _driveLastAttemptMd5[acct] = CryptoJS.MD5(payload).toString(); } catch (e3) {}
+            throw netErr;
+        }
+        const _t3 = performance.now();
+        if (!_sr.ok) {
+            if (_sr.status === 404 && fileId) { delete driveFileIdMap[acct]; delete _driveKnownMd5[acct]; }
+            throw driveHttpError(_sr.status);
+        }
+        let _d = {}; try { _d = await _sr.json(); } catch(e) {}
+        if (_d.id) driveFileIdMap[acct] = _d.id;
+        if (_d.md5Checksum) _driveKnownMd5[acct] = _d.md5Checksum; else delete _driveKnownMd5[acct];
+        delete _driveLastAttemptMd5[acct];
+        _saveRetryCount = 0;
+
         let sizeKo = Math.round(payload.length/1024);
-        let msEncrypt = Math.round(_t1-_t0), msFileId = Math.round(_t2-_t1), msUpload = Math.round(_t3-_t2), msTotal = Math.round(_t3-_t0);
-        let detail = 'Taille ' + sizeKo + ' Ko — chiffrement ' + msEncrypt + 'ms, résolution fichier Drive ' + msFileId + 'ms, upload réseau ' + msUpload + 'ms, TOTAL ' + msTotal + 'ms (hors débounce avant déclenchement).';
+        let msPrep = Math.round(_t1-_t0), msUpload = Math.round(_t3-_t2), msTotal = msPrep + msUpload;
+        let detail = 'Taille ' + sizeKo + ' Ko — préparation (chiffrement + vérification Drive) ' + msPrep + 'ms, upload réseau ' + msUpload + 'ms, TOTAL ' + msTotal + 'ms (hors débounce avant déclenchement).';
         let timingLabel = $('lastSaveTimingLabel');
-        if (timingLabel) timingLabel.textContent = detail;
-        if (!quiet) updateSyncBadge('ok', '✓ Sauvegardé (' + (msTotal/1000).toFixed(1) + 's)', detail);
-        if(reRenderDbView) window.renderDataTable();
+        if (timingLabel && acct === currentAccountId) timingLabel.textContent = detail;
         console.log('[Sauvegarde] ' + detail);
+        if (acct !== currentAccountId) return; // compte quitté entre-temps : ses données sont à l'abri, l'écran appartient au nouveau compte
+        let morePending = _saveQueued || !!saveTimer;
+        if (!morePending) {
+            _unsavedChanges = false;
+            // Un lot "silencieux" ne touche pas au badge, sauf s'il affichait une erreur ou un envoi en cours.
+            if (!quiet || !$('syncBadge').classList.contains('synced')) updateSyncBadge('ok', '✓ Sauvegardé (' + (msTotal/1000).toFixed(1) + 's)', detail);
+        }
+        if (reRenderDbView) {
+            // Ne pas reconstruire le tableau sous les doigts de l'utilisateur : il perdrait le
+            // champ en cours de saisie (l'envoi peut se terminer plusieurs secondes après le clic).
+            let ae = document.activeElement;
+            let editing = ae && ae.closest && ae.closest('#dataTable') && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName);
+            if (!editing) window.renderDataTable();
+        }
     } catch (e) {
-        updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez'); // toujours visible, même pour un lot silencieux
-        showSaveError(e);
-        console.log('[Sauvegarde] échec après ' + Math.round(performance.now()-_t0) + 'ms :', e.message);
+        console.log('[Sauvegarde] échec après ' + Math.round(performance.now()-_t0) + 'ms :', e && e.message);
+        if (e && e.httpStatus === 401) {
+            // Jeton expiré (1h) : renouvellement silencieux puis nouvel essai, une seule fois.
+            if (!isRetry) {
+                try { await refreshDriveToken(); } catch (e2) { markDriveSessionExpired(); return; }
+                return _doSave(reRenderDbView, quiet, true);
+            }
+            markDriveSessionExpired();
+            return;
+        }
+        if (acct !== currentAccountId) return;
+        // Coupure réseau ou panne passagère de Drive : on réessaie tout seul (5 s, 15 s, 30 s puis
+        // toutes les minutes) au lieu d'attendre que l'utilisateur remarque le badge et clique.
+        let firstFailure = _saveRetryCount === 0, retryIn = null;
+        if (_unsavedChanges && saveReady) {
+            retryIn = [5000, 15000, 30000, 60000][Math.min(_saveRetryCount, 3)];
+            _saveRetryCount++;
+            clearTimeout(_saveRetryTimer);
+            _saveRetryTimer = setTimeout(() => { _saveRetryTimer = null; if (_unsavedChanges && saveReady && !_saveInFlight) performSave(false); }, retryIn);
+        }
+        updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez', // toujours visible, même pour un lot silencieux
+            retryIn ? 'Vos modifications sont conservées dans cet onglet. Nouvel essai automatique dans ' + Math.round(retryIn/1000) + ' s — ou cliquez pour réessayer tout de suite.' : '');
+        if (firstFailure) showSaveError(e); // un seul message par série d'échecs
     }
+}
+
+// Attend que tout ce qui est en attente soit réellement parti sur Drive (avant un changement de compte).
+async function flushPendingSave() {
+    if (saveTimer || saveMaxWaitTimer || _unsavedChanges) { let p = performSave(false); if (p) await p; }
+    while (_saveInFlight) await _saveInFlight;
 }
 
 // v3.4.10 : lot de sauvegarde "silencieux" — reste true tant qu'aucun appel non silencieux n'a
@@ -949,6 +1260,7 @@ async function performSave(reRenderDbView) {
 let pendingSaveQuiet = true;
 function triggerSave(reRenderDbView = false, quiet = false) {
     if(window._suppressSave) return; // bloqué pendant chargement initial
+    if (!quiet) _unsavedChanges = true;
     pendingSaveQuiet = pendingSaveQuiet && quiet;
     if (!pendingSaveQuiet) updateSyncBadge('syncing', 'Sauvegarde en cours...');
     clearTimeout(saveTimer);
@@ -964,6 +1276,20 @@ function triggerSave(reRenderDbView = false, quiet = false) {
         saveMaxWaitTimer = setTimeout(() => performSave(reRenderDbView), 5000);
     }
 }
+
+// Fermer ou recharger l'onglet pendant qu'une modification n'est pas encore sur Drive la perdait
+// sans prévenir (un envoi dure plusieurs secondes) : le navigateur demande maintenant confirmation.
+window.addEventListener('beforeunload', (e) => {
+    if (_unsavedChanges && saveReady) { e.preventDefault(); e.returnValue = ''; }
+});
+// Connexion Internet revenue : renvoyer tout de suite ce qui n'avait pas pu partir.
+window.addEventListener('online', () => {
+    if (_unsavedChanges && saveReady && !_saveInFlight && !saveTimer) performSave(false);
+});
+// Onglet mis en arrière-plan (ou appli quittée sur mobile) : envoyer tout de suite ce qui attend.
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden && (saveTimer || saveMaxWaitTimer)) performSave(false);
+});
 
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
@@ -1481,6 +1807,32 @@ window.renderBudget = function() {
     let totalHeaderLabel = hasValidated ? 'TOTAL PROJETÉ' : 'TOTAL BUDGET';
     let validatedHeaderHtml = hasValidated ? '<th class="tcd-th-grand">BUDGET VALIDÉ</th>' : '';
 
+    // ── v4.5.1 : vue téléphone ────────────────────────────────────────────────────────────
+    // Sur un écran étroit, les 12 colonnes de mois du tableau (table-layout:fixed, largeur 100%)
+    // tombaient à 0 px et leurs montants s'empilaient les uns sur les autres : illisible. Sur
+    // téléphone on affiche donc UNE période à la fois (un mois, ou le total de l'exercice) sur
+    // trois colonnes — Catégorie · Budget · Réel — avec un sélecteur de mois. Mêmes cellules,
+    // mêmes gestes (saisie du budget, pastille de synchro, détail des opérations au toucher).
+    const mob = window.isMobileLayout();
+    let mobM = window._budgetMobileMonth;
+    if (mob) {
+        if (mobM !== 'ALL' && !months.includes(mobM)) mobM = null;
+        if (!mobM) {
+            // Par défaut : le mois en cours s'il fait partie de l'exercice affiché, sinon le total.
+            let d0 = new Date(), k0 = String(d0.getMonth() + 1).padStart(2, '0');
+            mobM = (months.includes(k0) && getFiscalYearLabel(String(d0.getFullYear()), k0, fiscalStartMonth) === ex) ? k0 : 'ALL';
+        }
+        window._budgetMobileMonth = mobM; window._budgetMobileMonths = months.slice();
+    }
+    const mobAll = mobM === 'ALL';
+    const mobTotalBudgetCell = (bVal, cls, vVal) => `<td class="tcd-cell budget-agg-cell ${cls}"><span class="budget-val-ro">${formatCurrency(bVal || 0)}</span>${deltaHtml(bVal, vVal)}${hasValidated ? `<div class="bm-validated">validé ${formatCurrency(vVal || 0)}</div>` : ''}</td>`;
+    let htmlMob = '';
+    if (mob) {
+        htmlMob = '<table class="tcd-native budget-table budget-mobile" cellspacing="0" cellpadding="0"><colgroup><col style="width:38%;"><col style="width:33%;"><col style="width:29%;"></colgroup>'
+            + '<thead><tr><th class="tcd-col-axis" style="text-align:left;"><span id="budgetFilterBtn" class="' + (hasBudgetFilter() ? 'active' : '') + '" title="Filtrer" onclick="window.openBudgetFilter(event)" style="cursor:pointer;">⚙️</span> Catégorie</th>'
+            + '<th class="tcd-th-grand">' + (mobAll && hasValidated ? 'Projeté' : 'Budget') + '</th><th class="tcd-th-grand">Réel</th></tr></thead><tbody>';
+    }
+
     let htmlBudget = '<table class="tcd-native budget-table" cellspacing="0" cellpadding="0">';
     htmlBudget += colGroupHtml;
     htmlBudget += '<thead><tr><th class="tcd-col-axis" style="text-align:center;"><span id="budgetFilterBtn" class="' + (hasBudgetFilter() ? 'active' : '') + '" title="Filtrer" onclick="window.openBudgetFilter(event)" style="cursor:pointer;">⚙️</span> Catégorie</th>';
@@ -1536,6 +1888,13 @@ window.renderBudget = function() {
         if (hasValidated) htmlReal += `<td class="tcd-cell tcd-total-col tcd-grand tcd-row-main-cell"><span class="budget-val-ro">${formatCurrency(c1ValidatedTotal)}</span></td>`;
         htmlBudget += '</tr>';
         htmlReal += '</tr>';
+        if (mob) {
+            htmlMob += `<tr class="tcd-row-main-tr"><td class="tcd-col-axis"><div class="tcd-row-main">${escapeHtml(c1)}</div></td>`
+                + (mobAll
+                    ? mobTotalBudgetCell(c1BudgetTotal, 'tcd-grand tcd-row-main-cell', c1ValidatedTotal) + realCell(c1RealTotal, 'tcd-grand tcd-row-main-cell', true, `${c1}::ALL::ALL`)
+                    : budgetAggCell(c1BudgetByMonth[mobM] || 0, 'tcd-row-main-cell ' + monthColorClass(mobM), c2List.length > 0, c1ValidatedByMonth[mobM] || 0, false) + realCell(c1RealByMonth[mobM] || 0, 'tcd-row-main-cell', false, `${c1}::ALL::${mobM}`))
+                + '</tr>';
+        }
 
         c2List.forEach(c2 => {
             htmlBudget += `<tr class="tcd-row-sub-tr"><td class="tcd-col-axis"><div class="tcd-row-sub">↳ ${escapeHtml(c2)}</div></td>`;
@@ -1555,6 +1914,13 @@ window.renderBudget = function() {
             if (hasValidated) htmlReal += `<td class="tcd-cell tcd-total-col tcd-grand"><span class="budget-val-ro">${formatCurrency(c2ValidatedTotal)}</span></td>`;
             htmlBudget += '</tr>';
             htmlReal += '</tr>';
+            if (mob) {
+                htmlMob += `<tr class="tcd-row-sub-tr"><td class="tcd-col-axis"><div class="tcd-row-sub">↳&nbsp;${escapeHtml(c2)}</div></td>`
+                    + (mobAll
+                        ? mobTotalBudgetCell(c2BudgetTotal, 'tcd-grand', c2ValidatedTotal) + realCell(c2RealTotal, 'tcd-grand', true, `${c1}::${c2}::ALL`)
+                        : budgetEditableCell(c1, c2, mobM) + realCell(realByC1C2Month[`${c1}::${c2}::${mobM}`] || 0, '', false, `${c1}::${c2}::${mobM}`))
+                    + '</tr>';
+            }
         });
     });
 
@@ -1573,6 +1939,13 @@ window.renderBudget = function() {
 
     htmlBudget += '</tbody></table>';
     htmlReal += '</tbody></table>';
+    if (mob) {
+        htmlMob += '<tr class="tcd-total-row"><td class="tcd-col-axis"><div class="tcd-row-main">TOTAL GLOBAL</div></td>'
+            + (mobAll
+                ? mobTotalBudgetCell(grandBudgetTotal, 'tcd-grand tcd-total-row-cell', grandValidatedTotal) + realCell(grandRealTotal, 'tcd-grand tcd-total-row-cell', true, 'GRAND_TOTAL')
+                : budgetAggCell(grandBudgetByMonth[mobM] || 0, 'tcd-total-row-cell ' + monthColorClass(mobM), true, grandValidatedByMonth[mobM] || 0, false) + realCell(grandRealByMonth[mobM] || 0, 'tcd-total-row-cell', true, `MONTH_TOTAL::${mobM}`))
+            + '</tr></tbody></table>';
+    }
 
     let banner = $('budgetValidatedBanner');
     if (hasValidated) {
@@ -1628,12 +2001,27 @@ window.renderBudget = function() {
     let compactBtn = $('btnBudgetCompactView');
     if (compactBtn) compactBtn.textContent = budgetCompactView ? '🔍 Agrandir' : '🔎 Réduire';
 
+    if (mob) {
+        let periodOpts = months.map(m => `<option value="${m}" ${m === mobM ? 'selected' : ''}>${monthLabel(m, extraMonthsMap)}</option>`).join('')
+            + `<option value="ALL" ${mobAll ? 'selected' : ''}>Total de l'exercice</option>`;
+        let atStart = !mobAll && months.indexOf(mobM) === 0;
+        container.innerHTML = `
+            <div class="bm-period">
+                <button class="btn btn-outline" onclick="window.stepBudgetMobileMonth(-1)" title="Période précédente" ${atStart ? 'disabled' : ''}>‹</button>
+                <select class="input-text" id="budgetMobileMonthSelect" onchange="window.setBudgetMobileMonth(this.value)">${periodOpts}</select>
+                <button class="btn btn-outline" onclick="window.stepBudgetMobileMonth(1)" title="Période suivante" ${mobAll ? 'disabled' : ''}>›</button>
+            </div>
+            <div class="budget-mirror-wrap">${htmlMob}</div>
+            <p class="bm-note">${(mobAll || budgetLocked) ? '' : 'Touchez un montant <strong>Budget</strong> pour le modifier. '}Touchez un montant <strong>Réel</strong> pour voir les opérations. Réel : sélection par date réelle, affiché par date d'écriture.</p>
+        `;
+    } else {
     container.innerHTML = `
         <div class="budget-block-title">💰 Budget / Projection <span class="budget-badge badge-budget">Éditable</span></div>
         <div class="budget-mirror-wrap">${htmlBudget}</div>
         <div class="budget-block-title" style="margin-top:20px;">📈 Réel <span class="budget-badge badge-real">Sélection par date réelle, affiché par date écriture</span></div>
         <div class="budget-mirror-wrap">${htmlReal}</div>
     `;
+    }
 
     let fs = parseInt(localStorage.getItem('f_budget_fontsize') || '13', 10);
     document.querySelectorAll('#budgetGrid .tcd-native th, #budgetGrid .tcd-native td').forEach(el => {
@@ -1648,6 +2036,22 @@ window.renderBudget = function() {
 };
 
 let _budgetClickHandler = null;
+// v4.5.1 : sélecteur de période de la vue téléphone du Budget
+window.setBudgetMobileMonth = function(m) { window._budgetMobileMonth = m; window.renderBudget(); };
+window.stepBudgetMobileMonth = function(dir) {
+    let list = (window._budgetMobileMonths || []).concat(['ALL']);
+    let i = list.indexOf(window._budgetMobileMonth); if (i < 0) i = list.length - 1;
+    window._budgetMobileMonth = list[Math.max(0, Math.min(list.length - 1, i + dir))];
+    window.renderBudget();
+};
+// Rotation du téléphone / redimensionnement : le Budget n'a pas le même tableau des deux côtés du seuil.
+(function() {
+    if (!window.matchMedia) return;
+    let mq = window.matchMedia('(max-width: 768px)');
+    let onChange = () => { let v = $('view-budget'); if (v && v.classList.contains('active') && typeof window.renderBudget === 'function') window.renderBudget(); };
+    if (mq.addEventListener) mq.addEventListener('change', onChange); else if (mq.addListener) mq.addListener(onChange);
+})();
+
 window.bindBudgetDrillDown = function() {
     let grid = $('budgetGrid');
     if (!grid) return;
@@ -3531,7 +3935,6 @@ window.toggleUncatCb = function(cb, event) {
     }
     selectedUncatTxId = selectedUncatIds.size > 0 ? Array.from(selectedUncatIds)[0] : null;
     let wrap = $('quickCatSearchWrap'); if(wrap) wrap.style.display = selectedUncatIds.size > 0 ? 'flex' : 'none';
-    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 window.toggleSelectAllUncat = function() {
     let v = $('selectAllUncatCb').checked;
@@ -3549,7 +3952,6 @@ window.toggleSelectAllUncat = function() {
     });
     selectedUncatTxId = selectedUncatIds.size > 0 ? Array.from(selectedUncatIds)[0] : null;
     let wrap = $('quickCatSearchWrap'); if(wrap) wrap.style.display = selectedUncatIds.size > 0 ? 'flex' : 'none';
-    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 window.applyQuickPredictiveCat = function(c1, c2) {};;
 // Stub pour compatibilité (le reste de l'ancienne applyQuickPredictiveCat est remplacé)
@@ -3611,7 +4013,9 @@ window.renderDataTable = function() {
     if(duplicateFilterActive) flt = flt.filter(t => duplicateIds.has(String(t.id)));
     if(fltNoteNotEmpty) flt = flt.filter(t => String(t.note||'').trim() !== '');
     flt.sort((a,b) => { let va=a[dbSortCol]||'', vb=b[dbSortCol]||''; if(typeof va==='string')va=va.toLowerCase(); if(typeof vb==='string')vb=vb.toLowerCase(); return (va<vb?-1:va>vb?1:0)*dbSortDir; });
-    let dbPageSize = 300, dbPageCount = Math.max(1, Math.ceil(flt.length / dbPageSize));
+    // v4.5.0 : sur téléphone chaque ligne est une carte (plus haute, 10 champs) — pages de 50
+    // au lieu de 300 pour garder un défilement fluide.
+    let dbPageSize = window.isMobileLayout() ? 50 : 300, dbPageCount = Math.max(1, Math.ceil(flt.length / dbPageSize));
     if (dbPage >= dbPageCount) dbPage = Math.max(0, dbPageCount - 1);
     let fltPage = flt.slice(dbPage * dbPageSize, (dbPage + 1) * dbPageSize);
     let nav = dbPageCount > 1
@@ -3621,6 +4025,7 @@ window.renderDataTable = function() {
           + (dbPage < dbPageCount-1 ? '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.85em;" onclick="dbPage++;window.renderDataTable()">Suivantes ▶</button>' : '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.85em;opacity:.4;" disabled>Suivantes ▶</button>')
           + '</div>' : '';
     let _pnav=$('dbPaginationNav'); if(_pnav) _pnav.innerHTML = nav;
+    let _pnavB=$('dbPaginationNavBottom'); if(_pnavB) _pnavB.innerHTML = nav.replace(/window\.renderDataTable\(\)/g, "window.renderDataTable();document.querySelector('main').scrollTop=0");
     $('dataCountLabel').textContent = flt.length + (dbPageCount > 1 ? ' · p.'+(dbPage+1)+'/'+dbPageCount : '');
     let _liEl = $('lastImportDateLabel');
     if (_liEl) _liEl.textContent = lastImportDate ? (' · Dernier import : ' + lastImportDate.split('-').reverse().join('/')) : '';
@@ -3679,6 +4084,7 @@ window.handleInlineChange = function(e) {
 window.updateBulkActions = function() { 
     let c=$$('.row-cb:checked').length; $('selCount').textContent=c; 
     $('bulkActions').style.display=c>0?'flex':'none'; $('dbHeaderNormal').style.display=c>0?'none':'flex';
+    let _host = $('bulkActions').parentElement; if (_host) _host.classList.toggle('bulk-active', c>0);
 };
 window.toggleSelectAll = function() { let v=$('selectAllCb').checked; $$('.row-cb').forEach(c=>c.checked=v); window.updateBulkActions(); };
 window.bulkDelete = function() { if(confirm("Supprimer la sélection ?")){ let ids=Array.from($$('.row-cb:checked')).map(c=>c.value); transactions=transactions.filter(t=>!ids.includes(String(t.id))); $('selectAllCb').checked=false; triggerSave(false); window.renderDataTable(); window.updateBulkActions(); showToast("Supprimées"); } };
@@ -4001,21 +4407,36 @@ $('backupBtn').addEventListener('click',()=>{let a=document.createElement('a');a
 $('deleteAllBtn').addEventListener('click', async () => {
     let _acName=accounts.find(a=>a.id===currentAccountId)?.name||currentAccountId;
     if (!confirm(`⚠️ EFFACEMENT du compte "${_acName}" — données, catégories, règles et fichier Drive. Confirmer ?`)) return;
-    transactions = []; rules = []; categories = {}; lastImportDate = '';
-    driveFileId = null;
-    delete driveFileIdMap[currentAccountId];
+    // v4.4.0 : plus aucune sauvegarde ne doit partir pendant ni après l'effacement (elle recréerait
+    // le fichier), et le fichier Drive est supprimé AVANT de vider l'écran : si Drive refuse,
+    // rien n'est effacé et on le dit, au lieu d'annoncer une réinitialisation qui n'a pas eu lieu.
+    clearTimeout(saveTimer); saveTimer = null;
+    clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
+    _saveQueued = false; _saveQueuedRerender = false;
+    while (_saveInFlight) { try { await _saveInFlight; } catch (e) {} }
+    clearTimeout(saveTimer); saveTimer = null;
+    clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
     if (driveAccessToken) {
         try {
+            delete driveFileIdMap[currentAccountId];
             const fileId = await driveGetFileId();
             if (fileId) {
-                await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+                let del = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
                     method: 'DELETE',
                     headers: { Authorization: `Bearer ${driveAccessToken}` }
                 });
-                driveFileId = null;
+                if (!del.ok && del.status !== 404) throw driveHttpError(del.status);
             }
-        } catch(err) { console.warn('Erreur suppression Drive:', err.message); }
+        } catch(err) {
+            console.warn('Erreur suppression Drive:', err && err.message);
+            alert('❌ La suppression du fichier sur Google Drive a échoué (' + ((err && err.message) || 'erreur inconnue') + ').\n\nRien n\'a été effacé. Vérifiez votre connexion puis réessayez.');
+            return;
+        }
     }
+    delete driveFileIdMap[currentAccountId]; delete _driveKnownMd5[currentAccountId]; delete _driveLastAttemptMd5[currentAccountId];
+    _unsavedChanges = false; saveReady = false;
+    transactions = []; rules = []; categories = {}; lastImportDate = '';
+    driveFileId = null;
     // Reset clé de chiffrement et proposer nouvelle clé
     appSecretKey = null;
     driveFileId = null;
@@ -4039,7 +4460,7 @@ const parseAmount = s => parseFloat((s||'').toString().replace(/[\s\u00A0\u202F�
 
 $('bankFileInput').addEventListener('change',e=>{
     let f=e.target.files[0]; if(!f)return;
-    if(!driveDataLoaded){ alert('⚠️ Les données ne sont pas encore chargées depuis Drive.\nVeuillez patienter que la synchronisation soit terminée avant d\'importer.'); e.target.value=''; return; }
+    if(!saveReady){ alert('⚠️ Les données ne sont pas encore chargées depuis Drive.\nVeuillez patienter que la synchronisation soit terminée avant d\'importer.'); e.target.value=''; return; }
     $('importOverlay').classList.remove('open'); let r=new FileReader(); r.onload=ev=>{
         try {
             let rows, bankType = selectedBankForImport==='SOGE'?'SOGE':selectedBankForImport==='FORTUNEO'?'FORT':selectedBankForImport==='CE'?'CE':'GEN';
@@ -4203,7 +4624,8 @@ window.openCatModal = function(tid, p1, p2, isRule, source) {
     if($('catModalSearchInput') && $('catModalSearchInput').value) window.onCatModalSearch();
     // v3.4.13 : focus direct sur la recherche par mots-clés à l'ouverture, pour pouvoir taper
     // sans avoir à cliquer dans le champ au préalable.
-    if ($('catModalSearchInput')) { $('catModalSearchInput').focus(); $('catModalSearchInput').select(); }
+    // v4.5.0 : pas sur téléphone, où le focus ouvre le clavier par-dessus la liste des catégories.
+    if ($('catModalSearchInput') && !window.isMobileLayout()) { $('catModalSearchInput').focus(); $('catModalSearchInput').select(); }
 };
 // Si la frappe démarre pendant que le focus est ailleurs dans la modale (ex: après avoir
 // cliqué un bouton de catégorie), on la redirige vers la recherche par mots-clés au lieu de
@@ -4587,7 +5009,33 @@ document.addEventListener('click', function(e) {
 
 window.switchAccount = async function(newId) {
     if (newId === currentAccountId) return;
-    // Ne pas sauver immédiatement le compte courant au moment du switch: éviter tout écrasement croisé
+    if (window._switchingAccount) return; // double-clic : un seul changement de compte à la fois
+    window._switchingAccount = true;
+    try {
+        // v4.4.0 : avant de quitter un compte, ses modifications en attente partent sur Drive.
+        // Avant, la sauvegarde encore en attente s'exécutait APRÈS le changement de compte et
+        // pouvait écrire un état vide — ou les données de l'ancien compte — dans le fichier du nouveau.
+        if (saveReady && _unsavedChanges) {
+            driveShowLoading('Enregistrement du compte en cours...');
+            await flushPendingSave();
+            if (_unsavedChanges && saveReady) {
+                driveHideLoading();
+                if (!confirm('⚠️ Les dernières modifications de ce compte n\'ont pas pu être enregistrées sur Drive.\n\nChanger de compte quand même ? Ces modifications seront perdues.')) return;
+            }
+        } else if (saveReady && (saveTimer || saveMaxWaitTimer)) {
+            // Seulement des réglages d'affichage en attente : on les envoie sans faire patienter
+            // (l'envoi fige le compte et les données au moment où il démarre).
+            performSave(false);
+        }
+        clearTimeout(saveTimer); saveTimer = null;
+        clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
+        clearTimeout(_saveRetryTimer); _saveRetryTimer = null; _saveRetryCount = 0;
+        _saveQueued = false; _saveQueuedRerender = false; pendingSaveQuiet = true;
+        _unsavedChanges = false; saveReady = false;
+        await _switchAccountNow(newId);
+    } finally { window._switchingAccount = false; }
+};
+async function _switchAccountNow(newId) {
     currentAccountId = newId;
     localStorage.setItem('f_current_account', newId);
     window._isFirstTcdScrollRestored = false;
@@ -4612,7 +5060,7 @@ window.switchAccount = async function(newId) {
     driveShowLoading('Chargement du compte...');
     driveDataLoaded=false;
     try { await fetchDriveData(); } catch(e) { driveHideLoading(); window.renderViewsSafe(); }
-};
+}
 
 window.openAccountManager = function() {
     window.renderAccountManagerList();
@@ -7843,7 +8291,7 @@ window.deleteAccount = async function(id) {
         } catch(e) { console.warn('Erreur suppression Drive:', e); }
     }
     accounts = accounts.filter(a => a.id !== id);
-    delete driveFileIdMap[id];
+    delete driveFileIdMap[id]; delete _driveKnownMd5[id]; delete _driveLastAttemptMd5[id];
     saveAccountsList();
     await saveAccountsRegistry(); // met à jour la référence unique pour que ce compte ne ressurgisse pas ailleurs
     triggerSave(false);
@@ -8382,7 +8830,7 @@ window.toggleUfCatNotEmpty = function() {
     let btn = $('ufCatNotEmptyBtn');
     if (btn) {
         btn.style.background = uncatColFilters.catNotEmpty ? 'var(--accent,#e07b54)' : 'var(--surface)';
-        btn.style.color      = uncatColFilters.catNotEmpty ? '#fff' : 'var(--ink-muted)';
+        btn.style.color      = uncatColFilters.catNotEmpty ? '#fff' : 'var(--ink-muted, #6B7280)'; // repli : --ink-muted n'est pas défini, le libellé héritait du blanc de l'en-tête (invisible)
         btn.style.borderColor= uncatColFilters.catNotEmpty ? 'var(--accent,#e07b54)' : 'var(--ink-faint)';
     }
     let i=$('ufCat'); if(i) { i.value=''; } uncatColFilters.cat='';
@@ -8401,7 +8849,7 @@ window.applyUncatFilters = function() {
 window.resetUncatFilters = function() {
     uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty:false, noteNotEmpty:false};
     ['ufDateOp','ufDateExpense','ufDetails','ufNote','ufAmount'].forEach(id => { let el=document.getElementById(id); if(el) el.value=''; });
-    let b=$('ufCatNotEmptyBtn'); if(b){b.style.background='var(--surface)';b.style.color='var(--ink-muted)';b.style.borderColor='var(--ink-faint)';}
+    let b=$('ufCatNotEmptyBtn'); if(b){b.style.background='var(--surface)';b.style.color='var(--ink-muted, #6B7280)';b.style.borderColor='var(--ink-faint)';}
     window.renderUncategorized();
 };
 
