@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.4.0';
+const APP_VERSION = '4.3.17';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -11,22 +11,6 @@ var appSecretKey=null; var transactions=[], rules=[], categories={}, selectedBan
 let dbSortCol='dateOp', dbSortDir=-1, catModalTxId=null, catModalSelectedCat1=null, catModalSelectedCat2=null, catModalSource=null;
 var driveAccessToken=null, driveFileId=null, driveTokenClient=null, saveTimer=null, saveMaxWaitTimer=null;
 var driveDataLoaded = false; // true uniquement après chargement confirmé depuis Drive
-// ── v4.4.0 : garde-fous de synchronisation ───────────────────────────────────
-// saveReady : aucune sauvegarde vers Drive n'est autorisée tant que les données du compte courant
-// n'ont pas été POSITIVEMENT chargées (ou le compte POSITIVEMENT confirmé comme nouveau, c.-à-d.
-// Drive a répondu 200 avec zéro fichier). Sans ça, un chargement en échec (erreur réseau, 401,
-// 429, 500...) laissait l'app avec un état vide en mémoire que la première sauvegarde venue
-// écrivait par-dessus le vrai fichier.
-var saveReady = false;
-var _loadSeq = 0;               // invalide un chargement devenu obsolète (changement de compte entre-temps)
-var _saveInFlight = null;       // promesse de la sauvegarde en cours — une seule à la fois
-var _saveQueued = false;        // des modifications sont arrivées pendant la sauvegarde en cours
-var _saveQueuedRerender = false;
-var _unsavedChanges = false;    // modifications utilisateur pas encore confirmées sur Drive
-var _driveLastAttemptMd5 = {};  // accountId → empreinte du dernier envoi dont la réponse n'est jamais revenue
-var _driveKnownMd5 = {};        // accountId → empreinte du fichier Drive tel qu'on l'a lu/écrit en dernier
-var _saveRetryTimer = null, _saveRetryCount = 0; // nouvel essai automatique après un échec d'envoi
-var _tokenRefreshWaiters = [];  // promesses en attente d'un renouvellement silencieux du jeton Google
 // ── Multi-compte ──
 var accounts = JSON.parse(localStorage.getItem('f_accounts')||'[{"id":"default","name":"Mon Compte"}]');
 var currentAccountId = localStorage.getItem('f_current_account')||'default';
@@ -394,7 +378,7 @@ $('unlockBtn').addEventListener('click', () => {
     appSecretKey = pwd;
     $('authOverlay').classList.remove('open');
     driveShowLoading('Chargement des données...');
-    fetchDriveData().catch(() => { driveShowLogin(); });
+    fetchDriveData().catch(() => { driveDataLoaded=true; driveShowLogin(); });
 });
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -579,15 +563,11 @@ function decryptPayload(remoteData) {
                 window._redirectCount = 0;
                 driveHideLoading();
                 alert('Impossible de charger le bon compte. Vérifiez votre configuration.');
-                return 'error';
+                return 'redirect';
             }
             setTimeout(() => fetchDriveData(), 300);
-            // v4.4.0 : renvoyait `false`, que fetchDriveData interprète comme "mot de passe
-            // incorrect" (clé effacée + alerte) — le rechargement programmé juste au-dessus
-            // échouait alors à son tour faute de clé.
-            return 'redirect';
+            return false; // signaler qu'il faut recharger
         }
-        window._redirectCount = 0;
         transactions=p.transactions||[]; rules=p.rules||[];
         if(p.categories) categories = p.categories;
         if(p.savedCharts) savedCharts = p.savedCharts;
@@ -713,11 +693,7 @@ function initDrive() {
             driveTokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: DRIVE_CLIENT_ID, scope: DRIVE_SCOPE,
                 callback: async (resp) => {
-                    let waiters = _tokenRefreshWaiters.splice(0);
-                    if (resp.error) {
-                        if (waiters.length) { waiters.forEach(w => w.reject(new Error('autorisation Google refusée'))); return; }
-                        driveShowLogin(); return;
-                    }
+                    if (resp.error) { driveShowLogin(); return; }
                     driveAccessToken = resp.access_token;
                     gapi.client.setToken({ access_token: driveAccessToken });
                     localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
@@ -726,31 +702,10 @@ function initDrive() {
                     localStorage.setItem(DRIVE_LS+'granted_scope', resp.scope || '');
                     $('driveLoginOverlay').classList.remove('open');
                     $('logoutBtn').style.display = 'inline-flex';
-                    // v4.4.0 : renouvellement du jeton EN COURS de session (expiration au bout d'1h).
-                    // Avant, ce cas rouvrait la demande de mot de passe, et le déverrouillage
-                    // rechargeait les données depuis Drive — en écrasant les modifications en
-                    // mémoire que la sauvegarde en échec n'avait pas encore envoyées.
-                    if (waiters.length || (appSecretKey && saveReady)) {
-                        driveHideLoading();
-                        waiters.forEach(w => w.resolve());
-                        return;
-                    }
-                    if (appSecretKey) {
-                        // Mot de passe déjà saisi, mais le chargement avait échoué (jeton expiré) : on recharge.
-                        driveShowLoading('Chargement des données...');
-                        fetchDriveData();
-                        return;
-                    }
                     // Google OK → demander MDP
                     driveHideLoading();
                     $('authOverlay').classList.add('open');
                     $('appPassword').focus();
-                },
-                // Fenêtre Google bloquée ou fermée : sans ce rappel, une demande de renouvellement
-                // restait en attente jusqu'à son délai maximal.
-                error_callback: (err) => {
-                    let waiters = _tokenRefreshWaiters.splice(0);
-                    waiters.forEach(w => w.reject(new Error((err && err.type) || 'fenêtre Google indisponible')));
                 }
             });
             const token = localStorage.getItem(DRIVE_LS+'token'), tokenExp = localStorage.getItem(DRIVE_LS+'token_exp');
@@ -779,14 +734,12 @@ function initDrive() {
 
 $('googleLoginBtnReal').addEventListener('click', () => { driveShowLoading("Authentification..."); driveTokenClient.requestAccessToken({ prompt: 'consent' }); });
 $('logoutBtn').addEventListener('click', () => { if(driveAccessToken)google.accounts.oauth2.revoke(driveAccessToken); localStorage.removeItem(DRIVE_LS+'token'); localStorage.removeItem(DRIVE_LS+'token_exp'); localStorage.removeItem(DRIVE_LS+'scope'); localStorage.removeItem(DRIVE_LS+'granted_scope'); location.reload(); });
-// onClick (facultatif) : action au clic sur un badge en erreur ; par défaut, relance la sauvegarde.
-const updateSyncBadge=(st,txt,detail,onClick)=>{
+const updateSyncBadge=(st,txt,detail)=>{
     let b=$('syncBadge');
     b.textContent=txt;
     b.className=`badge badge-sync ${st==='ok'?'synced':st==='syncing'?'syncing':st==='error'?'error':''}`;
-    b.onclick = st==='error' ? (onClick || (()=>{ triggerSave(false); })) : null;
-    b.style.cursor = (st==='error' && b.onclick) ? 'pointer' : '';
-    b.title   = st==='error' ? (detail || 'Cliquez pour réessayer la sauvegarde') : (detail || '');
+    b.onclick = st==='error' ? ()=>{ triggerSave(false); } : null;
+    b.title   = st==='error' ? 'Cliquez pour réessayer la sauvegarde' : (detail || '');
 };
 
 // v3.4.5 : scanne une seule fois par session les anciens fichiers "appsysdata-<index>.dat"
@@ -842,8 +795,6 @@ let driveAccountsRegistryFileId = null;
 async function driveGetAccountsRegistryFileId() {
     if (driveAccountsRegistryFileId) return driveAccountsRegistryFileId;
     let r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${ACCOUNTS_REGISTRY_FILENAME}'&fields=files(id)`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
-    // v4.4.0 : une erreur Drive n'est plus lue comme "registre absent" (ce qui en créait un doublon).
-    if (!r.ok) throw new Error('HTTP ' + r.status);
     let d = await r.json();
     let fid = (d.files && d.files.length > 0) ? d.files[0].id : null;
     if (fid) driveAccountsRegistryFileId = fid;
@@ -856,7 +807,6 @@ async function loadAccountsRegistry() {
         let fileId = await driveGetAccountsRegistryFileId();
         if (!fileId) return false;
         let resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
-        if (!resp.ok) return false;
         let text = await resp.text();
         if (!text || !text.trim().startsWith('{')) return false;
         let remoteData = JSON.parse(text);
@@ -884,16 +834,11 @@ async function saveAccountsRegistry() {
     } catch (e) { console.warn('Écriture du registre des comptes échouée:', e); }
 }
 
-function driveHttpError(status) { let e = new Error('HTTP ' + status); e.httpStatus = status; return e; }
-
-// v4.4.0 : toute réponse Drive en erreur lève une exception. Avant, une erreur (401, 429, 500...)
-// était lue comme "aucun fichier trouvé", donc comme un compte neuf et vide.
 async function driveGetFileId(accountId) {
     let id = accountId || currentAccountId;
     let fname = getAccountDriveFilename(id);
     if(driveFileIdMap[id]) return driveFileIdMap[id];
     let r = await fetch(`https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${fname}'&fields=files(id)`,{headers:{Authorization:'Bearer '+driveAccessToken}});
-    if (!r.ok) throw driveHttpError(r.status);
     let d = await r.json();
     let fid = (d.files&&d.files.length>0) ? d.files[0].id : null;
     if (!fid && id !== 'default') {
@@ -904,105 +849,24 @@ async function driveGetFileId(accountId) {
     return fid;
 }
 
-// Empreinte (md5) du contenu actuel du fichier sur Drive — sert à détecter qu'un autre appareil,
-// navigateur ou onglet l'a modifié depuis notre dernier chargement/enregistrement.
-async function driveGetRemoteMd5(fileId) {
-    let r = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?fields=md5Checksum`, { headers: { Authorization: 'Bearer ' + driveAccessToken } });
-    if (r.status === 404) return { missing: true };
-    if (!r.ok) throw driveHttpError(r.status);
-    let d = await r.json();
-    return { md5: d.md5Checksum || null };
-}
-
-// Renouvelle le jeton Google sans repasser par le mot de passe. Rejette si Google ne répond pas
-// (fenêtre bloquée par le navigateur, refus, délai dépassé).
-function refreshDriveToken(timeoutMs) {
-    return new Promise((resolve, reject) => {
-        if (!driveTokenClient) { reject(new Error('client Google indisponible')); return; }
-        let w = { resolve, reject };
-        _tokenRefreshWaiters.push(w);
-        setTimeout(() => {
-            let i = _tokenRefreshWaiters.indexOf(w);
-            if (i !== -1) { _tokenRefreshWaiters.splice(i, 1); reject(new Error('délai dépassé')); }
-        }, timeoutMs || 20000);
-        try { driveTokenClient.requestAccessToken({ prompt: '' }); }
-        catch (e) { let i = _tokenRefreshWaiters.indexOf(w); if (i !== -1) _tokenRefreshWaiters.splice(i, 1); reject(e); }
-    });
-}
-
-function markDriveSessionExpired() {
-    updateSyncBadge('error', '⚠ Session Google expirée — cliquez',
-        'Votre session Google a expiré. Cliquez pour vous reconnecter : vos modifications seront alors enregistrées.',
-        () => window.reconnectDriveAndSave());
-}
-
-// Appelé par un clic sur le badge : la fenêtre Google n'est autorisée par le navigateur que
-// dans le prolongement direct d'un geste de l'utilisateur.
-window.reconnectDriveAndSave = function() {
-    updateSyncBadge('syncing', 'Reconnexion à Google...');
-    refreshDriveToken(60000).then(() => { _unsavedChanges = true; performSave(false); }).catch(() => markDriveSessionExpired());
-};
-
-function showErrorToast(msg, ms) {
-    const t = $('toast');
-    t.textContent = msg;
-    t.classList.add('show','toast-error');
-    setTimeout(()=>{ t.classList.remove('show','toast-error'); }, ms || 8000);
-}
-
-// Demande à l'utilisateur quoi faire quand Drive contient une version plus récente que celle
-// chargée dans cet onglet. Résout 'reload' ou 'overwrite'.
-function askSyncConflict() {
-    return new Promise(resolve => {
-        let ov = $('syncConflictOverlay');
-        if (!ov) { resolve(confirm('Ce compte a été modifié depuis un autre appareil ou onglet.\n\nOK = recharger depuis Drive (abandonne les modifications non enregistrées de cet onglet)\nAnnuler = conserver les données de cet onglet et écraser Drive') ? 'reload' : 'overwrite'); return; }
-        const done = choice => { ov.classList.remove('open'); $('syncConflictReloadBtn').onclick = null; $('syncConflictOverwriteBtn').onclick = null; resolve(choice); };
-        $('syncConflictReloadBtn').onclick = () => done('reload');
-        $('syncConflictOverwriteBtn').onclick = () => done('overwrite');
-        ov.classList.add('open');
-    });
-}
-
 async function fetchDriveData() {
-    const seq = ++_loadSeq;          // un chargement plus récent (changement de compte) rend celui-ci caduc
-    const acct = currentAccountId;
-    saveReady = false;               // rien ne part vers Drive tant que ce chargement n'a pas abouti
     try {
         // Charge le registre central des comptes AVANT de résoudre le fichier du compte courant :
         // c'est désormais la référence, prioritaire sur la copie locale (localStorage) et sur
         // les copies embarquées dans les fichiers de comptes (fusionnées, elles, en aval).
         await loadAccountsRegistry();
-        if (seq !== _loadSeq) return;
-        const fileId = await driveGetFileId(acct);
-        if (seq !== _loadSeq) return;
+        const fileId = await driveGetFileId();
         if (fileId) {
-            const [resp, meta] = await Promise.all([
-                fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${driveAccessToken}` } }),
-                driveGetRemoteMd5(fileId).catch(() => null)
-            ]);
-            if (seq !== _loadSeq) return;
-            // v4.4.0 : une réponse en erreur (jeton expiré, quota, panne Google) n'est plus lue
-            // comme un fichier vide — c'est ce qui permettait d'écraser le vrai fichier ensuite.
-            if (!resp.ok) throw driveHttpError(resp.status);
-            let text = await resp.text(), remoteData = {};
-            if (seq !== _loadSeq) return;
-            let trimmed = (text || '').trim();
-            if (trimmed) {
-                if (!trimmed.startsWith('{')) throw new Error('fichier Drive illisible (contenu inattendu)');
-                remoteData = JSON.parse(trimmed);
-                if (!remoteData.vault && Object.keys(remoteData).length) throw new Error('fichier Drive illisible (coffre absent)');
-            }
+            const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: `Bearer ${driveAccessToken}` } });
+            let text = await resp.text(), remoteData={}; if(text && text.trim().startsWith('{')) remoteData = JSON.parse(text);
             const decryptResult = decryptPayload(remoteData);
             if(decryptResult === true) {
                 driveDataLoaded=true;
-                if (meta && meta.md5) _driveKnownMd5[acct] = meta.md5; else delete _driveKnownMd5[acct];
                 window._suppressSave = true;
-                try {
-                    localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
-                    tcdLoadCollapsed(); loadTcdFilter();
-                    window.renderAccountUI(); window.renderViewsSafe();
-                } finally { window._suppressSave = false; } // un rendu en erreur ne doit pas bloquer les sauvegardes à vie
-                saveReady = true; _unsavedChanges = false;
+                localStorage.setItem(DRIVE_LS+'token', driveAccessToken);
+                tcdLoadCollapsed(); loadTcdFilter();
+                window.renderAccountUI(); window.renderViewsSafe();
+                window._suppressSave = false;
                 // Remonte au registre toute entrée que la fusion locale aurait ajoutée
                 // (migration en douceur des anciennes copies embarquées, compte par compte).
                 saveAccountsRegistry();
@@ -1010,9 +874,6 @@ async function fetchDriveData() {
             } else if(decryptResult === 'redirect') {
                 // Mauvais fichier de compte → rechargement en cours, patienter
                 updateSyncBadge('syncing', 'Chargement du compte...');
-            } else if(decryptResult === 'error') {
-                updateSyncBadge('error', 'Erreur compte', 'Le fichier de ce compte n\'a pas pu être associé au bon compte. Rien n\'a été modifié sur Drive.', () => {});
-                driveHideLoading();
             } else {
                 // false = MDP incorrect
                 appSecretKey = null;
@@ -1023,174 +884,62 @@ async function fetchDriveData() {
                 $('appPassword').focus();
                 alert('❌ Mot de passe incorrect. Veuillez réessayer.');
             }
-        } else {
-            // Drive a répondu correctement et ne contient aucun fichier pour ce compte : compte neuf.
-            delete _driveKnownMd5[acct];
-            driveDataLoaded = true;
-            window._suppressSave = true; // l'affichage d'un compte vide n'est pas une modification à enregistrer
-            try { tcdLoadCollapsed(); window.renderViewsSafe(); } finally { window._suppressSave = false; }
-            saveReady = true; _unsavedChanges = false;
-            updateSyncBadge('ok', '✓ Nouveau'); driveHideLoading();
-        }
-    } catch (e) {
-        if (seq !== _loadSeq) return;
-        console.warn('[Chargement] échec :', e);
-        driveHideLoading();
-        if (e && e.httpStatus === 401) {
-            // Jeton Google expiré : repasser par la connexion Google plutôt que par le mot de passe.
-            localStorage.removeItem(DRIVE_LS+'token'); localStorage.removeItem(DRIVE_LS+'token_exp');
-            updateSyncBadge('error', 'Session expirée', 'Reconnectez-vous à Google.', () => {});
-            driveShowLogin();
-            return;
-        }
-        updateSyncBadge('error', 'Erreur Sync', 'Le chargement depuis Drive a échoué. Rien n\'a été modifié sur Drive.', () => {});
-        $('authOverlay').classList.add('open');
-        showErrorToast('⚠ Chargement depuis Drive impossible (' + (e && e.message ? e.message : 'erreur inconnue') + '). Vos données sur Drive ne sont pas modifiées — vérifiez votre connexion puis réessayez.');
-    }
+        } else { updateSyncBadge('ok', '✓ Nouveau'); tcdLoadCollapsed(); window.renderViewsSafe();  driveHideLoading(); }
+    } catch (e) { updateSyncBadge('error', 'Erreur Sync'); driveHideLoading(); $('authOverlay').classList.add('open'); }
 }
 
-// v4.4.0 : une seule sauvegarde à la fois. Avant, deux sauvegardes pouvaient se chevaucher (un
-// upload dure plusieurs secondes) et la plus ancienne arriver sur Drive APRÈS la plus récente,
-// effaçant les dernières modifications. Les modifications survenues pendant un envoi déclenchent
-// désormais une nouvelle sauvegarde dès que l'envoi en cours est terminé.
-function performSave(reRenderDbView) {
-    clearTimeout(saveTimer); saveTimer = null;
-    clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
-    clearTimeout(_saveRetryTimer); _saveRetryTimer = null;
-    if (!appSecretKey) return;
-    if (!saveReady) {
-        if (_unsavedChanges) updateSyncBadge('error', '⚠ Non enregistré — données non chargées',
-            'Les données de ce compte n\'ont pas été chargées depuis Drive : l\'enregistrement est bloqué pour ne pas écraser votre fichier. Rechargez la page.', () => {});
-        return;
-    }
-    if (!driveAccessToken) { markDriveSessionExpired(); return; }
-    if (_saveInFlight) {
-        _saveQueued = true;
-        _saveQueuedRerender = _saveQueuedRerender || !!reRenderDbView;
-        return _saveInFlight;
-    }
+async function performSave(reRenderDbView) {
     let quiet = pendingSaveQuiet;
     pendingSaveQuiet = true; // repart silencieux pour le prochain lot de modifications
-    _saveInFlight = _doSave(reRenderDbView, quiet, false).finally(() => {
-        _saveInFlight = null;
-        if (_saveQueued) {
-            let rr = _saveQueuedRerender;
-            _saveQueued = false; _saveQueuedRerender = false;
-            performSave(rr);
-        }
-    });
-    return _saveInFlight;
-}
-
-async function _doSave(reRenderDbView, quiet, isRetry) {
-    // Le compte est figé ICI : si l'utilisateur change de compte pendant l'envoi, ces données
-    // partent quand même dans le fichier du compte auquel elles appartiennent, jamais dans l'autre.
-    const acct = currentAccountId;
+    clearTimeout(saveTimer); saveTimer = null;
+    clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
+    if (!driveAccessToken || !appSecretKey) return;
+    // v4.3.15 : chronométrage détaillé (demandé pour identifier précisément où passe le temps —
+    // chiffrement, résolution du fichier Drive, ou upload réseau) — un seul message récapitulatif
+    // dans la console, préfixé "[Sauvegarde]", à chaque sauvegarde réelle.
     const _t0 = performance.now();
     try {
-        const payloadP = buildEncryptedPayload(); // instantané des données pris maintenant, de façon synchrone
-        payloadP.catch(() => {});
-        let fileId = await driveGetFileId(acct);
-        // Vérification de l'empreinte Drive en parallèle du chiffrement : pas d'attente ajoutée.
-        let [payload, remote] = await Promise.all([payloadP, fileId ? driveGetRemoteMd5(fileId) : Promise.resolve(null)]);
+        const payload = await buildEncryptedPayload();
         const _t1 = performance.now();
-        if (remote && remote.missing) {
-            // Fichier supprimé entre-temps (ex. depuis Administration Drive ailleurs) : on le recrée.
-            delete driveFileIdMap[acct]; delete _driveKnownMd5[acct]; fileId = null;
-        } else if (remote && remote.md5 && _driveKnownMd5[acct] && remote.md5 === _driveLastAttemptMd5[acct]) {
-            // C'est notre propre envoi précédent : il a bien atteint Drive, seule la réponse s'est perdue.
-            _driveKnownMd5[acct] = remote.md5;
-        } else if (remote && remote.md5 && _driveKnownMd5[acct] && remote.md5 !== _driveKnownMd5[acct]) {
-            const choice = await askSyncConflict();
-            if (choice === 'reload') {
-                clearTimeout(saveTimer); saveTimer = null;
-                clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
-                _saveQueued = false; _saveQueuedRerender = false; _unsavedChanges = false; pendingSaveQuiet = true;
-                if (acct === currentAccountId) { driveShowLoading('Rechargement depuis Drive...'); fetchDriveData(); }
-                return;
-            }
-        }
-        const _t2 = performance.now(); // exclut le temps passé devant la fenêtre de conflit
-        let url, method, body;
-        if (fileId) {
-            url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media&fields=id,md5Checksum`; method = 'PATCH'; body = payload;
-        } else {
-            url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,md5Checksum'; method = 'POST';
-            body = new FormData();
-            body.append('metadata', new Blob([JSON.stringify({ name: getAccountDriveFilename(acct), parents: ['appDataFolder'] })], { type: 'application/json' }));
-            body.append('file', new Blob([payload], { type: 'application/json' }));
-        }
-        let _sr;
-        try { _sr = await fetch(url, { method, headers: { Authorization: `Bearer ${driveAccessToken}` }, body }); }
-        catch (netErr) {
-            // Coupure réseau pendant l'envoi : impossible de savoir si Drive l'a reçu. On note
-            // l'empreinte de ce qu'on a tenté d'écrire pour ne pas prendre ensuite notre propre
-            // écriture pour une modification venue d'un autre appareil.
-            try { _driveLastAttemptMd5[acct] = CryptoJS.MD5(payload).toString(); } catch (e3) {}
-            throw netErr;
-        }
+        const fileId = await driveGetFileId();
+        const _t2 = performance.now();
+        let url = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', method = 'POST'; const form = new FormData();
+        if (fileId) { url = `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`; method = 'PATCH'; }
+        else { const meta = { name: getAccountDriveFilename(), parents: ['appDataFolder'] }; form.append('metadata', new Blob([JSON.stringify(meta)], { type: 'application/json' })); }
+        form.append('file', new Blob([payload], { type: 'application/json' }));
+        const _sr=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
         const _t3 = performance.now();
-        if (!_sr.ok) {
-            if (_sr.status === 404 && fileId) { delete driveFileIdMap[acct]; delete _driveKnownMd5[acct]; }
-            throw driveHttpError(_sr.status);
-        }
-        let _d = {}; try { _d = await _sr.json(); } catch(e) {}
-        if (_d.id) driveFileIdMap[acct] = _d.id;
-        if (_d.md5Checksum) _driveKnownMd5[acct] = _d.md5Checksum; else delete _driveKnownMd5[acct];
-        delete _driveLastAttemptMd5[acct];
-        _saveRetryCount = 0;
-
-        let sizeKo = Math.round(payload.length/1024);
-        let msPrep = Math.round(_t1-_t0), msUpload = Math.round(_t3-_t2), msTotal = msPrep + msUpload;
-        let detail = 'Taille ' + sizeKo + ' Ko — préparation (chiffrement + vérification Drive) ' + msPrep + 'ms, upload réseau ' + msUpload + 'ms, TOTAL ' + msTotal + 'ms (hors débounce avant déclenchement).';
-        let timingLabel = $('lastSaveTimingLabel');
-        if (timingLabel && acct === currentAccountId) timingLabel.textContent = detail;
-        console.log('[Sauvegarde] ' + detail);
-        if (acct !== currentAccountId) return; // compte quitté entre-temps : ses données sont à l'abri, l'écran appartient au nouveau compte
-        let morePending = _saveQueued || !!saveTimer;
-        if (!morePending) {
-            _unsavedChanges = false;
-            // Un lot "silencieux" ne touche pas au badge, sauf s'il affichait une erreur ou un envoi en cours.
-            if (!quiet || !$('syncBadge').classList.contains('synced')) updateSyncBadge('ok', '✓ Sauvegardé (' + (msTotal/1000).toFixed(1) + 's)', detail);
-        }
-        if (reRenderDbView) {
-            // Ne pas reconstruire le tableau sous les doigts de l'utilisateur : il perdrait le
-            // champ en cours de saisie (l'envoi peut se terminer plusieurs secondes après le clic).
-            let ae = document.activeElement;
-            let editing = ae && ae.closest && ae.closest('#dataTable') && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName);
-            if (!editing) window.renderDataTable();
-        }
-    } catch (e) {
-        console.log('[Sauvegarde] échec après ' + Math.round(performance.now()-_t0) + 'ms :', e && e.message);
-        if (e && e.httpStatus === 401) {
-            // Jeton expiré (1h) : renouvellement silencieux puis nouvel essai, une seule fois.
-            if (!isRetry) {
-                try { await refreshDriveToken(); } catch (e2) { markDriveSessionExpired(); return; }
-                return _doSave(reRenderDbView, quiet, true);
+        if(!_sr.ok) {
+            // Token expiré → on le renouvelle et on réessaie une fois
+            if(_sr.status===401) {
+                driveAccessToken = null;
+                try {
+                    await new Promise((res,rej)=>{ driveTokenClient.requestAccessToken({prompt:''}); setTimeout(res,3000); });
+                    const _sr2=await fetch(url,{method,headers:{Authorization:`Bearer ${driveAccessToken}`},body:fileId?payload:form});
+                    if(!_sr2.ok) throw new Error('HTTP '+_sr2.status);
+                } catch(e2) { throw new Error('401 retry failed'); }
+            } else {
+                throw new Error('HTTP '+_sr.status);
             }
-            markDriveSessionExpired();
-            return;
         }
-        if (acct !== currentAccountId) return;
-        // Coupure réseau ou panne passagère de Drive : on réessaie tout seul (5 s, 15 s, 30 s puis
-        // toutes les minutes) au lieu d'attendre que l'utilisateur remarque le badge et clique.
-        let firstFailure = _saveRetryCount === 0, retryIn = null;
-        if (_unsavedChanges && saveReady) {
-            retryIn = [5000, 15000, 30000, 60000][Math.min(_saveRetryCount, 3)];
-            _saveRetryCount++;
-            clearTimeout(_saveRetryTimer);
-            _saveRetryTimer = setTimeout(() => { _saveRetryTimer = null; if (_unsavedChanges && saveReady && !_saveInFlight) performSave(false); }, retryIn);
-        }
-        updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez', // toujours visible, même pour un lot silencieux
-            retryIn ? 'Vos modifications sont conservées dans cet onglet. Nouvel essai automatique dans ' + Math.round(retryIn/1000) + ' s — ou cliquez pour réessayer tout de suite.' : '');
-        if (firstFailure) showSaveError(e); // un seul message par série d'échecs
+        if(!fileId){try{const _d=await _sr.clone().json();if(_d.id)driveFileIdMap[currentAccountId]=_d.id;}catch(e){}}
+        // v4.3.16 : le détail du chronométrage était seulement loggé dans la console du
+        // navigateur ; affiché aussi directement dans l'app (tooltip du badge de synchronisation
+        // + ligne dédiée dans Paramètres → Administration Drive) pour ne pas avoir à ouvrir les
+        // outils de développement pour le lire.
+        let sizeKo = Math.round(payload.length/1024);
+        let msEncrypt = Math.round(_t1-_t0), msFileId = Math.round(_t2-_t1), msUpload = Math.round(_t3-_t2), msTotal = Math.round(_t3-_t0);
+        let detail = 'Taille ' + sizeKo + ' Ko — chiffrement ' + msEncrypt + 'ms, résolution fichier Drive ' + msFileId + 'ms, upload réseau ' + msUpload + 'ms, TOTAL ' + msTotal + 'ms (hors débounce avant déclenchement).';
+        let timingLabel = $('lastSaveTimingLabel');
+        if (timingLabel) timingLabel.textContent = detail;
+        if (!quiet) updateSyncBadge('ok', '✓ Sauvegardé (' + (msTotal/1000).toFixed(1) + 's)', detail);
+        if(reRenderDbView) window.renderDataTable();
+        console.log('[Sauvegarde] ' + detail);
+    } catch (e) {
+        updateSyncBadge('error', '⚠ Échec sauvegarde — cliquez'); // toujours visible, même pour un lot silencieux
+        showSaveError(e);
+        console.log('[Sauvegarde] échec après ' + Math.round(performance.now()-_t0) + 'ms :', e.message);
     }
-}
-
-// Attend que tout ce qui est en attente soit réellement parti sur Drive (avant un changement de compte).
-async function flushPendingSave() {
-    if (saveTimer || saveMaxWaitTimer || _unsavedChanges) { let p = performSave(false); if (p) await p; }
-    while (_saveInFlight) await _saveInFlight;
 }
 
 // v3.4.10 : lot de sauvegarde "silencieux" — reste true tant qu'aucun appel non silencieux n'a
@@ -1200,7 +949,6 @@ async function flushPendingSave() {
 let pendingSaveQuiet = true;
 function triggerSave(reRenderDbView = false, quiet = false) {
     if(window._suppressSave) return; // bloqué pendant chargement initial
-    if (!quiet) _unsavedChanges = true;
     pendingSaveQuiet = pendingSaveQuiet && quiet;
     if (!pendingSaveQuiet) updateSyncBadge('syncing', 'Sauvegarde en cours...');
     clearTimeout(saveTimer);
@@ -1216,20 +964,6 @@ function triggerSave(reRenderDbView = false, quiet = false) {
         saveMaxWaitTimer = setTimeout(() => performSave(reRenderDbView), 5000);
     }
 }
-
-// Fermer ou recharger l'onglet pendant qu'une modification n'est pas encore sur Drive la perdait
-// sans prévenir (un envoi dure plusieurs secondes) : le navigateur demande maintenant confirmation.
-window.addEventListener('beforeunload', (e) => {
-    if (_unsavedChanges && saveReady) { e.preventDefault(); e.returnValue = ''; }
-});
-// Connexion Internet revenue : renvoyer tout de suite ce qui n'avait pas pu partir.
-window.addEventListener('online', () => {
-    if (_unsavedChanges && saveReady && !_saveInFlight && !saveTimer) performSave(false);
-});
-// Onglet mis en arrière-plan (ou appli quittée sur mobile) : envoyer tout de suite ce qui attend.
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && (saveTimer || saveMaxWaitTimer)) performSave(false);
-});
 
 // ==== VUES ET TABLEAU CROISE DYNAMIQUE ====
 window.renderViewsSafe = function() {
@@ -4264,36 +3998,21 @@ $('backupBtn').addEventListener('click',()=>{let a=document.createElement('a');a
 $('deleteAllBtn').addEventListener('click', async () => {
     let _acName=accounts.find(a=>a.id===currentAccountId)?.name||currentAccountId;
     if (!confirm(`⚠️ EFFACEMENT du compte "${_acName}" — données, catégories, règles et fichier Drive. Confirmer ?`)) return;
-    // v4.4.0 : plus aucune sauvegarde ne doit partir pendant ni après l'effacement (elle recréerait
-    // le fichier), et le fichier Drive est supprimé AVANT de vider l'écran : si Drive refuse,
-    // rien n'est effacé et on le dit, au lieu d'annoncer une réinitialisation qui n'a pas eu lieu.
-    clearTimeout(saveTimer); saveTimer = null;
-    clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
-    _saveQueued = false; _saveQueuedRerender = false;
-    while (_saveInFlight) { try { await _saveInFlight; } catch (e) {} }
-    clearTimeout(saveTimer); saveTimer = null;
-    clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
+    transactions = []; rules = []; categories = {}; lastImportDate = '';
+    driveFileId = null;
+    delete driveFileIdMap[currentAccountId];
     if (driveAccessToken) {
         try {
-            delete driveFileIdMap[currentAccountId];
             const fileId = await driveGetFileId();
             if (fileId) {
-                let del = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+                await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
                     method: 'DELETE',
                     headers: { Authorization: `Bearer ${driveAccessToken}` }
                 });
-                if (!del.ok && del.status !== 404) throw driveHttpError(del.status);
+                driveFileId = null;
             }
-        } catch(err) {
-            console.warn('Erreur suppression Drive:', err && err.message);
-            alert('❌ La suppression du fichier sur Google Drive a échoué (' + ((err && err.message) || 'erreur inconnue') + ').\n\nRien n\'a été effacé. Vérifiez votre connexion puis réessayez.');
-            return;
-        }
+        } catch(err) { console.warn('Erreur suppression Drive:', err.message); }
     }
-    delete driveFileIdMap[currentAccountId]; delete _driveKnownMd5[currentAccountId]; delete _driveLastAttemptMd5[currentAccountId];
-    _unsavedChanges = false; saveReady = false;
-    transactions = []; rules = []; categories = {}; lastImportDate = '';
-    driveFileId = null;
     // Reset clé de chiffrement et proposer nouvelle clé
     appSecretKey = null;
     driveFileId = null;
@@ -4317,7 +4036,7 @@ const parseAmount = s => parseFloat((s||'').toString().replace(/[\s\u00A0\u202F�
 
 $('bankFileInput').addEventListener('change',e=>{
     let f=e.target.files[0]; if(!f)return;
-    if(!saveReady){ alert('⚠️ Les données ne sont pas encore chargées depuis Drive.\nVeuillez patienter que la synchronisation soit terminée avant d\'importer.'); e.target.value=''; return; }
+    if(!driveDataLoaded){ alert('⚠️ Les données ne sont pas encore chargées depuis Drive.\nVeuillez patienter que la synchronisation soit terminée avant d\'importer.'); e.target.value=''; return; }
     $('importOverlay').classList.remove('open'); let r=new FileReader(); r.onload=ev=>{
         try {
             let rows, bankType = selectedBankForImport==='SOGE'?'SOGE':selectedBankForImport==='FORTUNEO'?'FORT':selectedBankForImport==='CE'?'CE':'GEN';
@@ -4865,33 +4584,7 @@ document.addEventListener('click', function(e) {
 
 window.switchAccount = async function(newId) {
     if (newId === currentAccountId) return;
-    if (window._switchingAccount) return; // double-clic : un seul changement de compte à la fois
-    window._switchingAccount = true;
-    try {
-        // v4.4.0 : avant de quitter un compte, ses modifications en attente partent sur Drive.
-        // Avant, la sauvegarde encore en attente s'exécutait APRÈS le changement de compte et
-        // pouvait écrire un état vide — ou les données de l'ancien compte — dans le fichier du nouveau.
-        if (saveReady && _unsavedChanges) {
-            driveShowLoading('Enregistrement du compte en cours...');
-            await flushPendingSave();
-            if (_unsavedChanges && saveReady) {
-                driveHideLoading();
-                if (!confirm('⚠️ Les dernières modifications de ce compte n\'ont pas pu être enregistrées sur Drive.\n\nChanger de compte quand même ? Ces modifications seront perdues.')) return;
-            }
-        } else if (saveReady && (saveTimer || saveMaxWaitTimer)) {
-            // Seulement des réglages d'affichage en attente : on les envoie sans faire patienter
-            // (l'envoi fige le compte et les données au moment où il démarre).
-            performSave(false);
-        }
-        clearTimeout(saveTimer); saveTimer = null;
-        clearTimeout(saveMaxWaitTimer); saveMaxWaitTimer = null;
-        clearTimeout(_saveRetryTimer); _saveRetryTimer = null; _saveRetryCount = 0;
-        _saveQueued = false; _saveQueuedRerender = false; pendingSaveQuiet = true;
-        _unsavedChanges = false; saveReady = false;
-        await _switchAccountNow(newId);
-    } finally { window._switchingAccount = false; }
-};
-async function _switchAccountNow(newId) {
+    // Ne pas sauver immédiatement le compte courant au moment du switch: éviter tout écrasement croisé
     currentAccountId = newId;
     localStorage.setItem('f_current_account', newId);
     window._isFirstTcdScrollRestored = false;
@@ -4916,7 +4609,7 @@ async function _switchAccountNow(newId) {
     driveShowLoading('Chargement du compte...');
     driveDataLoaded=false;
     try { await fetchDriveData(); } catch(e) { driveHideLoading(); window.renderViewsSafe(); }
-}
+};
 
 window.openAccountManager = function() {
     window.renderAccountManagerList();
@@ -8147,7 +7840,7 @@ window.deleteAccount = async function(id) {
         } catch(e) { console.warn('Erreur suppression Drive:', e); }
     }
     accounts = accounts.filter(a => a.id !== id);
-    delete driveFileIdMap[id]; delete _driveKnownMd5[id]; delete _driveLastAttemptMd5[id];
+    delete driveFileIdMap[id];
     saveAccountsList();
     await saveAccountsRegistry(); // met à jour la référence unique pour que ce compte ne ressurgisse pas ailleurs
     triggerSave(false);

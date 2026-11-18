@@ -9,8 +9,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>Mes finances - v4.4.0</title>
-    <!-- v4.4.0 - Fiabilisation de la synchronisation Drive : une erreur Drive n'est plus prise pour un compte vide (plus d'écrasement), une seule sauvegarde à la fois, changement de compte sécurisé, détection d'un compte modifié depuis un autre appareil, jeton Google renouvelé sans redemander le mot de passe, nouvel essai automatique après un échec, avertissement avant de fermer l'onglet avec des modifications non enregistrées -->
+    <title>Mes finances - v4.3.17</title>
+    <!-- v4.3.17 - Correction Tableau de bord : une cellule (mois, année, ou sous-catégorie) dont les transactions s'annulaient exactement (ex: -420€ et +420€ sur la même catégorie/mois) s'affichait totalement vide et non cliquable, cachant leur existence alors qu'elles étaient bien comptées — la cellule s'affiche désormais (montant "0,00 €" cliquable, détail accessible) dès que des transactions existent pour cette case -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js" integrity="sha384-S3wQ/l0OsbJoFeJC81UIr3JOlx/OzNJpRt1bV+yhpWQxPAahfpQtpxBSfn+Isslc" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://apis.google.com/js/api.js"></script>
@@ -1219,18 +1219,6 @@
         <p style="margin-bottom:16px; color:var(--ink-soft);">✅ Connecté à Google Drive. Saisissez votre mot de passe de déchiffrement pour ouvrir l'application.</p>
         <input type="password" id="appPassword" class="input-text" placeholder="Mot de passe secret" style="margin-bottom:16px; width:100%;">
         <button class="btn btn-primary" style="width:100%;" id="unlockBtn">Déverrouiller l'application</button>
-    </div>
-</div>
-
-<!-- v4.4.0 : conflit de synchronisation (compte modifié ailleurs depuis son chargement dans cet onglet) -->
-<div class="overlay" id="syncConflictOverlay" style="z-index:700;">
-    <div class="modal" style="max-width:520px;">
-        <h2 style="margin-bottom:10px;">Ce compte a été modifié ailleurs</h2>
-        <p style="margin-bottom:12px; color:var(--ink-soft);">Depuis son chargement dans cet onglet, le fichier de ce compte sur Google Drive a été modifié depuis un autre appareil, un autre navigateur ou un autre onglet.</p>
-        <p style="margin-bottom:16px; color:var(--ink-soft);">Enregistrer maintenant remplacerait ces modifications par les données de cet onglet. Que souhaitez-vous faire ?</p>
-        <button class="btn btn-primary" style="width:100%; margin-bottom:8px;" id="syncConflictReloadBtn">Recharger la version de Drive (recommandé)</button>
-        <button class="btn btn-outline" style="width:100%;" id="syncConflictOverwriteBtn">Conserver les données de cet onglet et remplacer Drive</button>
-        <p style="margin-top:12px; font-size:0.85em; color:var(--ink-soft);">Recharger abandonne les modifications faites dans cet onglet qui n'étaient pas encore enregistrées.</p>
     </div>
 </div>
 
