@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.3.17';
+const APP_VERSION = '4.3.18';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -3299,6 +3299,7 @@ window.saveIdeasText = async function() {
 
     // Use event delegation on document — always works after re-render
     document.addEventListener('mouseover', function(e) {
+        if (!e.target || !e.target.closest) return;   // la cible peut être le document lui-même (pas un élément)
         var td = e.target.closest('#summaryGrid td, #summaryGrid th');
         if (!td) return;
         var tbl = getTcdTable();
@@ -3316,7 +3317,9 @@ window.saveIdeasText = async function() {
     });
 
     document.addEventListener('mouseleave', function(e) {
-        if (!e.target.closest('#summaryGrid')) return;
+        // Quand la souris quitte la fenêtre du navigateur, la cible est le document (pas un élément) :
+        // document.closest n'existe pas → TypeError à chaque sortie de fenêtre.
+        if (!e.target || !e.target.closest || !e.target.closest('#summaryGrid')) return;
         var tbl = getTcdTable();
         if (tbl) clearHighlights(tbl);
     }, true);
