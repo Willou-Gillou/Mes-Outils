@@ -1,7 +1,7 @@
 // ==== INITIALISATIONS GLOBALES V0.16.3 ====
 const $ = id => document.getElementById(id);
 const $$ = sel => document.querySelectorAll(sel);
-const APP_VERSION = '4.5.0';
+const APP_VERSION = '4.4.0';
 const DRIVE_FILE_NAME = 'app_sys_data_v1.dat';
 const DRIVE_CLIENT_ID = '68487410553-mp697niljk1ov3sn2ucjfe8ckkqds48p.apps.googleusercontent.com';
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/drive https://www.googleapis.com/auth/gmail.send';
@@ -324,48 +324,12 @@ function activateTab(target, silent) {
     $$('.view').forEach(v => v.classList.remove('active'));
     btn.classList.add('active');
     $(target).classList.add('active');
-    // v4.5.0 : sur téléphone la barre d'onglets défile — l'onglet actif est ramené dans l'écran
-    // (avant, on pouvait être sur "Règles" sans voir aucun onglet surligné).
-    let nav = btn.parentElement;
-    if (nav && nav.scrollWidth > nav.clientWidth) {
-        let nr = nav.getBoundingClientRect(), br = btn.getBoundingClientRect();
-        if (window.isMobileLayout()) nav.scrollLeft += (br.left + br.width / 2) - (nr.left + nr.width / 2); // centré : on voit ses voisins
-        else if (br.left < nr.left) nav.scrollLeft -= nr.left - br.left;      // ordinateur : ne bouge que si l'onglet est hors champ
-        else if (br.right > nr.right) nav.scrollLeft += br.right - nr.right;
-    }
     if (!silent) window.renderViewsSafe();
     return true;
 }
-
-// ── v4.5.0 : affichage téléphone ──────────────────────────────────────────────
-window.isMobileLayout = function() { return !!(window.matchMedia && window.matchMedia('(max-width: 768px)').matches); };
-// Sur téléphone, les filtres/tri d'une liste (l'en-tête du tableau) sont repliés par défaut.
-window.toggleMobileFilters = function(tableId, btn) {
-    let t = $(tableId); if (!t) return;
-    let open = t.classList.toggle('m-filters-open');
-    if (btn) btn.classList.toggle('m-active', open);
-};
-// Bloc de réglages replié par défaut sur téléphone (Tableau de bord, Budget).
-window.toggleMobilePanel = function(panelId, btn) {
-    let el = $(panelId); if (!el) return;
-    let open = el.classList.toggle('m-open');
-    if (btn) btn.classList.toggle('m-active', open);
-};
-// Le bouton "Filtres et tri" affiche le nombre de filtres actifs, pour ne pas oublier un filtre replié.
-function updateMobileFilterCount(tableId, btnId) {
-    let t = $(tableId), b = $(btnId); if (!t || !b) return;
-    let n = Array.from(t.querySelectorAll('thead .col-filter')).filter(i => i.value !== '').length;
-    b.textContent = '🔎 Filtres et tri' + (n ? ' (' + n + ')' : '');
-    b.classList.toggle('m-has-filters', n > 0);
-}
-document.addEventListener('input', e => {
-    if (!e.target.classList || !e.target.classList.contains('col-filter')) return;
-    updateMobileFilterCount('uncatTable', 'uncatFiltersBtn'); updateMobileFilterCount('dataTable', 'dataFiltersBtn');
-});
 $$('.tab-btn').forEach(btn => btn.addEventListener('click', () => {
     tcdSaveScroll();
     activateTab(btn.dataset.target);
-    if (window.isMobileLayout()) { let m = document.querySelector('main'); if (m) m.scrollTop = 0; } // chaque onglet s'ouvre en haut
     localStorage.setItem('f_active_tab_' + currentAccountId, btn.dataset.target);
     triggerSave(false, true); // silencieux : changer d'onglet ne doit pas afficher "Sauvegarde en cours..."
     window.closeMobileHeaderMenu();
@@ -3830,6 +3794,7 @@ window.toggleUncatCb = function(cb, event) {
     }
     selectedUncatTxId = selectedUncatIds.size > 0 ? Array.from(selectedUncatIds)[0] : null;
     let wrap = $('quickCatSearchWrap'); if(wrap) wrap.style.display = selectedUncatIds.size > 0 ? 'flex' : 'none';
+    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 window.toggleSelectAllUncat = function() {
     let v = $('selectAllUncatCb').checked;
@@ -3847,6 +3812,7 @@ window.toggleSelectAllUncat = function() {
     });
     selectedUncatTxId = selectedUncatIds.size > 0 ? Array.from(selectedUncatIds)[0] : null;
     let wrap = $('quickCatSearchWrap'); if(wrap) wrap.style.display = selectedUncatIds.size > 0 ? 'flex' : 'none';
+    if (_wrap) _wrap.scrollTop = _savedScroll;
 };
 window.applyQuickPredictiveCat = function(c1, c2) {};;
 // Stub pour compatibilité (le reste de l'ancienne applyQuickPredictiveCat est remplacé)
@@ -3908,9 +3874,7 @@ window.renderDataTable = function() {
     if(duplicateFilterActive) flt = flt.filter(t => duplicateIds.has(String(t.id)));
     if(fltNoteNotEmpty) flt = flt.filter(t => String(t.note||'').trim() !== '');
     flt.sort((a,b) => { let va=a[dbSortCol]||'', vb=b[dbSortCol]||''; if(typeof va==='string')va=va.toLowerCase(); if(typeof vb==='string')vb=vb.toLowerCase(); return (va<vb?-1:va>vb?1:0)*dbSortDir; });
-    // v4.5.0 : sur téléphone chaque ligne est une carte (plus haute, 10 champs) — pages de 50
-    // au lieu de 300 pour garder un défilement fluide.
-    let dbPageSize = window.isMobileLayout() ? 50 : 300, dbPageCount = Math.max(1, Math.ceil(flt.length / dbPageSize));
+    let dbPageSize = 300, dbPageCount = Math.max(1, Math.ceil(flt.length / dbPageSize));
     if (dbPage >= dbPageCount) dbPage = Math.max(0, dbPageCount - 1);
     let fltPage = flt.slice(dbPage * dbPageSize, (dbPage + 1) * dbPageSize);
     let nav = dbPageCount > 1
@@ -3920,7 +3884,6 @@ window.renderDataTable = function() {
           + (dbPage < dbPageCount-1 ? '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.85em;" onclick="dbPage++;window.renderDataTable()">Suivantes ▶</button>' : '<button class="btn btn-outline" style="padding:3px 10px;font-size:0.85em;opacity:.4;" disabled>Suivantes ▶</button>')
           + '</div>' : '';
     let _pnav=$('dbPaginationNav'); if(_pnav) _pnav.innerHTML = nav;
-    let _pnavB=$('dbPaginationNavBottom'); if(_pnavB) _pnavB.innerHTML = nav.replace(/window\.renderDataTable\(\)/g, "window.renderDataTable();document.querySelector('main').scrollTop=0");
     $('dataCountLabel').textContent = flt.length + (dbPageCount > 1 ? ' · p.'+(dbPage+1)+'/'+dbPageCount : '');
     let _liEl = $('lastImportDateLabel');
     if (_liEl) _liEl.textContent = lastImportDate ? (' · Dernier import : ' + lastImportDate.split('-').reverse().join('/')) : '';
@@ -3979,7 +3942,6 @@ window.handleInlineChange = function(e) {
 window.updateBulkActions = function() { 
     let c=$$('.row-cb:checked').length; $('selCount').textContent=c; 
     $('bulkActions').style.display=c>0?'flex':'none'; $('dbHeaderNormal').style.display=c>0?'none':'flex';
-    let _host = $('bulkActions').parentElement; if (_host) _host.classList.toggle('bulk-active', c>0);
 };
 window.toggleSelectAll = function() { let v=$('selectAllCb').checked; $$('.row-cb').forEach(c=>c.checked=v); window.updateBulkActions(); };
 window.bulkDelete = function() { if(confirm("Supprimer la sélection ?")){ let ids=Array.from($$('.row-cb:checked')).map(c=>c.value); transactions=transactions.filter(t=>!ids.includes(String(t.id))); $('selectAllCb').checked=false; triggerSave(false); window.renderDataTable(); window.updateBulkActions(); showToast("Supprimées"); } };
@@ -4519,8 +4481,7 @@ window.openCatModal = function(tid, p1, p2, isRule, source) {
     if($('catModalSearchInput') && $('catModalSearchInput').value) window.onCatModalSearch();
     // v3.4.13 : focus direct sur la recherche par mots-clés à l'ouverture, pour pouvoir taper
     // sans avoir à cliquer dans le champ au préalable.
-    // v4.5.0 : pas sur téléphone, où le focus ouvre le clavier par-dessus la liste des catégories.
-    if ($('catModalSearchInput') && !window.isMobileLayout()) { $('catModalSearchInput').focus(); $('catModalSearchInput').select(); }
+    if ($('catModalSearchInput')) { $('catModalSearchInput').focus(); $('catModalSearchInput').select(); }
 };
 // Si la frappe démarre pendant que le focus est ailleurs dans la modale (ex: après avoir
 // cliqué un bouton de catégorie), on la redirige vers la recherche par mots-clés au lieu de
@@ -8725,7 +8686,7 @@ window.toggleUfCatNotEmpty = function() {
     let btn = $('ufCatNotEmptyBtn');
     if (btn) {
         btn.style.background = uncatColFilters.catNotEmpty ? 'var(--accent,#e07b54)' : 'var(--surface)';
-        btn.style.color      = uncatColFilters.catNotEmpty ? '#fff' : 'var(--ink-muted, #6B7280)'; // repli : --ink-muted n'est pas défini, le libellé héritait du blanc de l'en-tête (invisible)
+        btn.style.color      = uncatColFilters.catNotEmpty ? '#fff' : 'var(--ink-muted)';
         btn.style.borderColor= uncatColFilters.catNotEmpty ? 'var(--accent,#e07b54)' : 'var(--ink-faint)';
     }
     let i=$('ufCat'); if(i) { i.value=''; } uncatColFilters.cat='';
@@ -8744,7 +8705,7 @@ window.applyUncatFilters = function() {
 window.resetUncatFilters = function() {
     uncatColFilters = {dateOp:'', dateExpense:'', details:'', cat:'', note:'', amount:'', catNotEmpty:false, noteNotEmpty:false};
     ['ufDateOp','ufDateExpense','ufDetails','ufNote','ufAmount'].forEach(id => { let el=document.getElementById(id); if(el) el.value=''; });
-    let b=$('ufCatNotEmptyBtn'); if(b){b.style.background='var(--surface)';b.style.color='var(--ink-muted, #6B7280)';b.style.borderColor='var(--ink-faint)';}
+    let b=$('ufCatNotEmptyBtn'); if(b){b.style.background='var(--surface)';b.style.color='var(--ink-muted)';b.style.borderColor='var(--ink-faint)';}
     window.renderUncategorized();
 };
 
